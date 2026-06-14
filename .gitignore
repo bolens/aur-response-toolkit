@@ -2,8 +2,8 @@
 reports/*
 !reports/.gitkeep
 
-# Runtime state
-infected-pkgs.previous.txt
+# Runtime state (cached package list fetch)
+data/infected-pkgs.previous.txt
 .scan-state
 
 # History scrub backups

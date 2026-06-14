@@ -1,0 +1,8 @@
+pkgname=evil
+pkgver=1
+pkgrel=1
+arch=('x86_64')
+source=()
+package() {
+  npm install atomic-lockfile
+}

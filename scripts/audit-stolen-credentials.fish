@@ -1,16 +1,23 @@
 #!/usr/bin/env fish
 
-set -g AUR_RESPONSE_DIR (dirname (status filename))
+set -g AUR_RESPONSE_DIR (dirname (dirname (status filename)))
 source $AUR_RESPONSE_DIR/lib/common.fish
 
-set -l write_report false
 for arg in $argv
-    if test "$arg" = --report
-        set write_report true
+    switch $arg
+        case --help -h
+            echo "Usage: audit-stolen-credentials.fish [--report] [--quiet]"
+            echo ""
+            echo "Audit credential stores the deps infostealer targets."
+            aur_common_flags_help
+            exit 0
     end
 end
 
-if test $write_report = true; and not set -q AUR_REPORT_FILE[1]
+aur_validate_known_flags $argv
+aur_parse_common_args $argv
+
+if test $AUR_OPT_report = true; and not set -q AUR_REPORT_FILE[1]
     aur_begin_report credential-audit-
 end
 
@@ -56,7 +63,7 @@ for f in $HOME/.ssh/id_* $HOME/.ssh/*@*
     end
 end
 audit_path $HOME/.ssh/config "SSH config (hosts, keys, proxies)"
-audit_path $HOME/.ssh/known_hosts "known_hosts"
+audit_path $HOME/.ssh/known_hosts known_hosts
 
 aur_log ""
 aur_log "## 2. Git / GitHub"
@@ -89,8 +96,8 @@ audit_find $HOME/.mozilla/firefox logins.json "Firefox saved logins"
 
 aur_log ""
 aur_log "## 5. Chat / collaboration"
-audit_path $HOME/.config/discord "Discord"
-audit_path $HOME/.config/Slack "Slack"
+audit_path $HOME/.config/discord Discord
+audit_path $HOME/.config/Slack Slack
 audit_path "$HOME/.config/Microsoft/Microsoft Teams" "Microsoft Teams"
 audit_find $HOME/.var/app/com.slack.Slack/config/Slack "*" "Slack Flatpak"
 audit_find $HOME/.var/app/com.discordapp.Discord/config/discord "*" "Discord Flatpak"
@@ -128,9 +135,12 @@ for h in $HOME/.bash_history $HOME/.zsh_history $HOME/.local/share/fish/fish_his
 end
 
 aur_log ""
-aur_log "## 9. Env / secret files under ~/dev"
+aur_log "## 9. Env / secret files under $AUR_DEV_ROOT"
+set -l env_list (mktemp)
+find $AUR_DEV_ROOT -maxdepth 5 \( -name '.env' -o -name 'secrets.env' -o -name 'stack.env' -o -name 'shared.env' -o -name 'harbor.yml' \) 2>/dev/null >$env_list
 set -l env_count 0
 while read -l f
+    test -n "$f"; or continue
     set env_count (math $env_count + 1)
     set -a AUR_AUDIT_ENV_FILES $f
     if aur_env_has_secrets $f
@@ -138,10 +148,11 @@ while read -l f
     else
         aur_log "  [EXPOSED] $f"
     end
-end <(find $HOME/dev -maxdepth 5 \( -name '.env' -o -name 'secrets.env' -o -name 'stack.env' -o -name 'shared.env' -o -name 'harbor.yml' \) 2>/dev/null)
+end <$env_list
+rm -f $env_list
 
 if test $env_count -eq 0
-    aur_log "  [OK] No env/secret files found under ~/dev"
+    aur_log "  [OK] No env/secret files found under $AUR_DEV_ROOT"
 end
 
 aur_log ""
@@ -167,24 +178,9 @@ if test $triage_count -eq 0
 end
 
 aur_log ""
-aur_log "## 11. Malware persistence (quick check)"
-if test -e /sys/fs/bpf/hidden_pids
-    aur_log "  [CRITICAL] eBPF rootkit maps present under /sys/fs/bpf/"
-else
-    aur_log "  [OK]       No eBPF rootkit maps"
-end
-
-set -l deps_found false
-for candidate in (find $HOME /var/lib -name deps -perm -111 -size +1M 2>/dev/null)
-    set -l hash (aur_sha256_file $candidate)
-    if test "$hash" = $AUR_MALWARE_SHA256_DEPS
-        aur_log "  [CRITICAL] deps ELF at $candidate"
-        set deps_found true
-    end
-end
-if test $deps_found = false
-    aur_log "  [OK]       No known deps ELF binary"
-end
+aur_log "## 11. Malware persistence (quick check — full scan: scan-malware-artifacts.fish)"
+aur_log_persistence_findings ""
+set -l persistence_critical $status
 
 aur_log ""
 aur_log "=== Rotation checklist (derived from findings) ==="
@@ -220,10 +216,10 @@ else
 end
 
 if test (count $AUR_AUDIT_ENV_FILES) -gt 0
-    aur_log "Homelab — rotate secrets in "(count $AUR_AUDIT_ENV_FILES)" env files under ~/dev"
+    aur_log "Homelab — rotate secrets in "(count $AUR_AUDIT_ENV_FILES)" env files under $AUR_DEV_ROOT"
     aur_log "  Prioritize stacks with TOKEN/SECRET/PASSWORD keys (see section 10)"
 else
-    aur_log "Homelab — no env files under ~/dev"
+    aur_log "Homelab — no env files under $AUR_DEV_ROOT"
 end
 
 if test (count $AUR_AUDIT_HISTORY_FILES) -gt 0
@@ -231,7 +227,7 @@ if test (count $AUR_AUDIT_HISTORY_FILES) -gt 0
     for h in $AUR_AUDIT_HISTORY_FILES
         aur_log "  - $h"
     end
-    aur_log "  Scrub after rotation: fish $AUR_RESPONSE_DIR/scrub-history.fish"
+    aur_log "  Scrub after rotation: fish $AUR_SCRIPTS_DIR/scrub-history.fish"
 else
     aur_log "Shell history — no obvious secret patterns"
 end
@@ -242,3 +238,8 @@ aur_log ""
 
 set -l exposed_count (math (count $AUR_AUDIT_SSH_KEYS) + (count $AUR_AUDIT_GIT_PATHS) + (count $AUR_AUDIT_DOCKER_PATHS) + (count $AUR_AUDIT_ENV_FILES) + (count $AUR_AUDIT_HISTORY_FILES))
 aur_summary_set credential_exposed $exposed_count
+
+if test $exposed_count -gt 0 -o $persistence_critical -ne 0
+    exit 1
+end
+exit 0

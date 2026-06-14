@@ -5,22 +5,23 @@
 set -g AUR_RESPONSE_DIR (dirname (status filename))
 source $AUR_RESPONSE_DIR/lib/common.fish
 
-set -l use_local false
-set -l force_audit false
-set -l write_report false
+aur_parse_common_args $argv
+
 set -l output_json false
 set -l skip_pkg_check false
 set -l exit_code 0
+set -l force_audit $AUR_OPT_audit
 
 for arg in $argv
     switch $arg
-        case --local; set use_local true
-        case --audit; set force_audit true
-        case --report; set write_report true
-        case --json; set output_json true
-        case --skip-pkg-check; set skip_pkg_check true
+        case --json
+            set output_json true
+        case --skip-pkg-check
+            set skip_pkg_check true
+        case --local --audit --report --quiet
+            # handled by aur_parse_common_args
         case --help -h
-            echo "Usage: run.fish [--local] [--audit] [--report] [--json]"
+            echo "Usage: run.fish [--local] [--audit] [--report] [--json] [--quiet] [--skip-pkg-check]"
             echo ""
             echo "Steps:"
             echo "  1. Infected package scan"
@@ -31,29 +32,41 @@ for arg in $argv
             echo "  6. Credential audit (if issues or --audit)"
             echo "  7. Rotation hints (if issues or --audit)"
             echo ""
-            echo "Helpers: remove-infected.fish  rotate-hints.fish  scrub-history.fish"
+            echo "  --quiet   Suppress scan output (still writes report/json)"
+            echo "  --json    Print JSON summary to stdout at end"
+            echo ""
+            echo "Helpers: scripts/remove-infected.fish  scripts/rotate-hints.fish  scripts/scrub-history.fish"
             exit 0
+        case '-*'
+            echo "Unknown option: $arg" >&2
+            exit 2
     end
 end
 
-if test $write_report = true
+test $AUR_OPT_audit = true; and set force_audit true
+
+if test $AUR_OPT_report = true
     aur_begin_report full-scan-
 end
 
 aur_state_init
 
-function run_step --argument-names label script extra_args
+function run_step
+    set -l label $argv[1]
+    set -l script $argv[2]
+    set -l script_args $argv[3..-1]
     aur_log ">>> $label"
     aur_log ""
-    fish $AUR_RESPONSE_DIR/$script $extra_args
+    fish $AUR_SCRIPTS_DIR/$script $script_args
     set -l step_status $status
     aur_log ""
     return $step_status
 end
 
 set -l step_args
-test $use_local = true; and set -a step_args --local
-test $write_report = true; and set -a step_args --report
+test $AUR_OPT_local = true; and set -a step_args --local
+test $AUR_OPT_report = true; and set -a step_args --report
+test $AUR_OPT_quiet = true; and set -a step_args --quiet
 
 aur_log "############################################"
 aur_log "# AUR malware response — full scan"
@@ -94,7 +107,7 @@ if test $force_audit = true
     set -l s $status
     test $s -ne 0; and set exit_code $s
 
-    run_step "Step 7/7: Rotation hints" rotate-hints.fish
+    run_step "Step 7/7: Rotation hints" rotate-hints.fish $step_args
 else
     aur_log ">>> Step 6/7: Credential audit skipped (use --audit to force)"
     aur_log ">>> Step 7/7: Rotation hints skipped"

@@ -1,29 +1,37 @@
 #!/usr/bin/env fish
 
-set -g AUR_RESPONSE_DIR (dirname (status filename))
+set -g AUR_RESPONSE_DIR (dirname (dirname (status filename)))
 source $AUR_RESPONSE_DIR/lib/common.fish
-
-set -l use_local false
-set -l force_audit false
-set -l write_report false
-set -l no_chain false
-set -l exit_code 0
 
 for arg in $argv
     switch $arg
-        case --local; set use_local true
-        case --audit; set force_audit true
-        case --report; set write_report true
-        case --no-chain; set no_chain true
+        case --help -h
+            echo "Usage: check-infected-pkgs.fish [--local] [--audit] [--report] [--quiet] [--no-chain]"
+            echo ""
+            echo "Check installed packages against the merged infected list."
+            aur_common_flags_help
+            echo "  --audit     Chain credential audit on findings"
+            echo "  --no-chain  Skip chained credential audit"
+            exit 0
     end
 end
 
-if test $write_report = true
-    aur_begin_report infected-pkg-scan-
+aur_validate_known_flags $argv
+aur_parse_common_args $argv
+
+set -l no_chain false
+for arg in $argv
+    test "$arg" = --no-chain; and set no_chain true
 end
 
-set -l infected_pkgs (aur_load_infected_list $use_local)
-if test $status -ne 0; exit 1; end
+aur_begin_report_if_requested infected-pkg-scan-
+
+set -l exit_code 0
+
+set -l infected_pkgs (aur_load_infected_list $AUR_OPT_local)
+if test $status -ne 0
+    exit 1
+end
 
 set -l pkg_count (count $infected_pkgs)
 if test $pkg_count -eq 0
@@ -61,23 +69,24 @@ if test (count $found) -gt 0
         else
             set -a AUR_FOUND_OUTSIDE_WINDOW $pkg
             aur_log "  [LOW]    $pkg"
-            aur_log "           installed: $install_date | reason: $install_reason (outside Jun 9–14)"
+            aur_log "           installed: $install_date | reason: $install_reason (outside $AUR_WINDOW_LABEL)"
         end
     end
     aur_summary_set installed_high_risk (count $AUR_FOUND_IN_WINDOW)
 
     aur_log ""
     aur_log "Suggested removal:"
-    aur_log "  fish $AUR_RESPONSE_DIR/remove-infected.fish"
+    aur_log "  fish $AUR_SCRIPTS_DIR/remove-infected.fish"
     aur_log "  # or: sudo pacman -Rns "(string join ' ' $found)
 else
     aur_log "Clean: none of the known infected packages are installed."
 end
 
-if test $no_chain = false; and test (count $found) -gt 0 -o $force_audit = true
+if test $no_chain = false; and test (count $found) -gt 0 -o $AUR_OPT_audit = true
     set -l audit_args
-    test $write_report = true; and set audit_args --report
-    fish $AUR_RESPONSE_DIR/audit-stolen-credentials.fish $audit_args
+    test $AUR_OPT_report = true; and set audit_args --report
+    test $AUR_OPT_quiet = true; and set -a audit_args --quiet
+    fish $AUR_SCRIPTS_DIR/audit-stolen-credentials.fish $audit_args
     set -l audit_status $status
     test $audit_status -ne 0; and set exit_code $audit_status
 end

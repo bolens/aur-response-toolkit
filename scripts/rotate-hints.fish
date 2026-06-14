@@ -2,8 +2,11 @@
 
 # Print concrete rotation commands from discovered credential stores
 
-set -g AUR_RESPONSE_DIR (dirname (status filename))
+set -g AUR_RESPONSE_DIR (dirname (dirname (status filename)))
 source $AUR_RESPONSE_DIR/lib/common.fish
+
+aur_validate_known_flags $argv
+aur_parse_common_args $argv
 
 aur_log "=== Rotation command hints ==="
 aur_log ""
@@ -39,12 +42,15 @@ end
 # Docker registries
 if test -f $HOME/.docker/config.json
     aur_log "## Docker registries"
-    set -l auths (string match -r '"([^"]+)":\s*\{' (cat $HOME/.docker/config.json))
-    for reg in $auths
-        if test "$reg" = auths; continue; end  # skip full match
-        if string match -qir 'https?://|\.[a-z]+' -- $reg
-            aur_log "  docker logout $reg"
-        end
+    set -l registries
+    if command -q jq
+        set registries (jq -r '.auths | keys[]?' $HOME/.docker/config.json 2>/dev/null)
+    else
+        set registries (aur_grep -oE '"[^"]+":\s*\{' $HOME/.docker/config.json 2>/dev/null | sed 's/": {$//; s/^"//')
+    end
+    for reg in $registries
+        test -n "$reg"; or continue
+        aur_log "  docker logout $reg"
     end
     # Also try credsStore registries from fish history
     if string match -qir 'docker login' (cat $HOME/.local/share/fish/fish_history 2>/dev/null)
@@ -75,5 +81,5 @@ if test -d $HOME/.config/discord
     aur_log ""
 end
 
-aur_log "Homelab env files: rotate secrets in ~/dev/docker/stacks/*/stack.env"
-aur_log "After rotation: fish $AUR_RESPONSE_DIR/scrub-history.fish --dry-run"
+aur_log "Homelab env files: rotate secrets in $AUR_DEV_ROOT/docker/stacks/*/stack.env"
+aur_log "After rotation: fish $AUR_SCRIPTS_DIR/scrub-history.fish --all-shells --dry-run"

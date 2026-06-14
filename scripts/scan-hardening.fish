@@ -1,16 +1,22 @@
 #!/usr/bin/env fish
 
-set -g AUR_RESPONSE_DIR (dirname (status filename))
+set -g AUR_RESPONSE_DIR (dirname (dirname (status filename)))
 source $AUR_RESPONSE_DIR/lib/common.fish
 
-set -l write_report false
 for arg in $argv
-    test "$arg" = --report; and set write_report true
+    switch $arg
+        case --help -h
+            echo "Usage: scan-hardening.fish [--report] [--quiet]"
+            echo ""
+            echo "Check npm ignore-scripts, AUR helper review settings, and IOC history refs."
+            aur_common_flags_help
+            exit 0
+    end
 end
 
-if test $write_report = true
-    aur_begin_report hardening-
-end
+aur_validate_known_flags $argv
+aur_parse_common_args $argv
+aur_begin_report_if_requested hardening-
 
 set -l warns 0
 
@@ -46,8 +52,7 @@ end
 
 # bun on PATH (used in js-digest wave)
 if command -q bun
-    aur_log "[INFO] bun found at "(command -v bun)" — used in js-digest attack wave"
-    set warns (math $warns + 1)
+    aur_log "[INFO] bun found at "(command -v bun)" — optional; review if installed during $AUR_WINDOW_LABEL"
 else
     aur_log "[OK] bun not on PATH"
 end
@@ -58,7 +63,9 @@ aur_log "=== Network IOC references in shell history ==="
 set -l ioc_hits 0
 for domain in $AUR_IOC_DOMAINS
     for h in $HOME/.bash_history $HOME/.zsh_history $HOME/.local/share/fish/fish_history
-        if not test -f $h; continue; end
+        if not test -f $h
+            continue
+        end
         if string match -qir $domain (cat $h 2>/dev/null)
             aur_log "  [INFO] $domain referenced in $h"
             set ioc_hits (math $ioc_hits + 1)

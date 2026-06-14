@@ -1,0 +1,4 @@
+bee
+beef
+clean-aur
+archived-pkg
