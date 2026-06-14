@@ -362,6 +362,19 @@ function aur_sha256 --argument-names path
     return 1
 end
 
+# Hostname shim: inetutils hostname optional; uname -n from coreutils is enough on minimal Arch.
+function aur_hostname
+    if command -q hostname
+        hostname
+        return 0
+    end
+    if command -q uname
+        uname -n
+        return 0
+    end
+    echo unknown
+end
+
 # Effective infected-list path for reads. Tests set AUR_TEST_LIST_FILE at any time
 # (same-shell unit tests or exported before a child fish sources common.fish).
 # Remote fetches still write merged output to $AUR_ATOMIC_ARCH_LIST_FILE under data/.
@@ -731,7 +744,7 @@ function aur_begin_report --argument-names label
     aur_log "=== AUR malware response report ==="
     aur_log "Toolkit version: $AUR_VERSION"
     aur_log "Started: "(date '+%Y-%m-%d %H:%M:%S')
-    aur_log "Host: "(hostname)
+    aur_log "Host: "(aur_hostname)
     aur_log ""
 end
 

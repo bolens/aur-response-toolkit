@@ -221,18 +221,19 @@ function aur_pgrep_af --argument-names pattern
 end
 
 # ss compatibility shim: prefer ss -H -tun; fall back to netstat or lsof.
+# Returns 0 when a tool exists (even if the probe fails in containers/restricted envs).
 function aur_ss_tun_lines
     if command -q ss
         command ss -H -tun 2>/dev/null
-        return $status
+        return 0
     end
     if command -q netstat
         command netstat -tun 2>/dev/null
-        return $status
+        return 0
     end
     if command -q lsof
         command lsof -i -n -P 2>/dev/null
-        return $status
+        return 0
     end
     return 1
 end

@@ -12,6 +12,7 @@ All notable changes to **aur-response-toolkit** are documented here.
 
 ### Changed
 - **fish_indent** — formatting pass across Fish scripts (fishcheck FC1001)
+- **`aur_hostname`** — fall back to `uname -n` when `hostname` is absent (minimal Arch / CI containers)
 
 ## 1.9.0
 

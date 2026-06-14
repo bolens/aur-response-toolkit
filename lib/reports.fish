@@ -97,7 +97,7 @@ end
 function aur_write_summary_json --argument-names exit_code
     mkdir -p $AUR_REPORTS_DIR
     set -l ts (date '+%Y-%m-%dT%H:%M:%S%z')
-    set -l host (aur_json_escape (hostname))
+    set -l host (aur_json_escape (aur_hostname))
     set -l report_file ""
     set -q AUR_REPORT_FILE[1]; and set report_file (aur_json_escape $AUR_REPORT_FILE)
     set -l list_sha256 ""
@@ -181,7 +181,7 @@ function aur_write_summary_json --argument-names exit_code
         jq -n \
             --arg timestamp "$ts" \
             --arg version "$AUR_VERSION" \
-            --arg host (hostname) \
+            --arg host (aur_hostname) \
             --argjson exit_code $exit_code \
             --arg severity "$severity" \
             --argjson atomic_arch_installed $AUR_SUMMARY_atomic_arch_installed \
