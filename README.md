@@ -83,19 +83,55 @@ fish run.fish --local
 
 ## Requirements
 
-| Required | Optional (preferred → fallback) |
-|----------|----------------------------------|
-| [Fish shell](https://fishshell.com/) | `fd` → GNU `find` (`aur_find`) |
-| Arch Linux (or derivative) | `rg` → `grep` (`aur_grep`) |
-| `pacman`, `curl`, `find`, `comm`, `sha256sum`, `date` | `curlie` → `curl` (`aur_curl`; `file://` always uses `curl`) |
-| | `realpath` → `readlink -f` (`aur_realpath`) |
-| | `sha256sum` → `openssl dgst` (`aur_sha256`) |
-| | `zstdcat` → `zstd -dc` (`aur_zstdcat`; `.zst` rotated pacman logs) |
-| | `jq` → hand-built JSON summary / `aur_docker_config_registry_keys` |
-| | `pgrep` → `ps` + `aur_grep` (runtime process IOCs) |
-| | `ss` → `netstat` → `lsof` (live network IOCs) |
-| | `paru`, `yay`, `pikaur`, `pamac`, `trizen`, `aura`, or `makepkg` (AUR helper cache scanning) |
-| | `npm`, `bun` (cache scanning when installed) |
+Arch Linux (or a pacman-based derivative). `pacman` itself ships with the base system — there is no separate package to install for it.
+
+Commands like `realpath`, `sha256sum`, and `zstdcat` are **binaries inside other packages**, not standalone package names. Search for the **pacman package** in the table below, not the command name.
+
+| Role | Command(s) | Pacman package | Fallback (no extra package) |
+|------|------------|----------------|-----------------------------|
+| **Required** | [Fish](https://fishshell.com/) | `fish` | — |
+| | `curl` | `curl` | — |
+| | `find` | `findutils` | — |
+| | `comm`, `date`, `sha256sum`, `realpath` | `coreutils` | `readlink -f` (`aur_realpath`); `openssl dgst` (`aur_sha256`; package `openssl`) |
+| | `grep` (used when `rg` is absent) | `grep` | — |
+| **Optional (preferred)** | `fd` | `fd` | GNU `find` (`aur_find`) |
+| | `rg` | `ripgrep` | `grep` (`aur_grep`) |
+| | `curlie` | `curlie` | `curl` (`aur_curl`; `file://` always uses `curl`) |
+| | `zstdcat` | `zstd` | `zstd -dc` (`aur_zstdcat`; `.zst` rotated pacman logs) |
+| | `jq` | `jq` | hand-built JSON summary / `aur_docker_config_registry_keys` |
+| | `pgrep` | `procps-ng` | `ps` + `aur_grep` (runtime process IOCs) |
+| | `ss` | `iproute2` | `netstat` (`net-tools`) → `lsof` |
+| **Optional (AUR / node)** | AUR helper cache scan | `paru`, `yay`, `pikaur`, `trizen`, or `aura` (AUR); `libpamac` (Manjaro GUI) | `makepkg` (in `pacman`; build-dir scan only) |
+| | npm cache scan | `npm` | — |
+| | bun cache scan | `bun` | — |
+
+### Install commands
+
+Copy one block. `--needed` skips packages you already have.
+
+**Required only** (minimum to run scans):
+
+```fish
+sudo pacman -S --needed fish curl findutils coreutils grep
+```
+
+**Optional preferred tools** (faster search, richer JSON, `.zst` pacman logs, runtime IOCs — add only what you want):
+
+```fish
+sudo pacman -S --needed fd ripgrep curlie zstd jq procps-ng iproute2
+```
+
+**Everything** (required + all optional pacman-repo tools + npm + bun):
+
+```fish
+sudo pacman -S --needed fish curl findutils coreutils grep fd ripgrep curlie zstd jq procps-ng iproute2 npm bun
+```
+
+**AUR-only extras** (install with your AUR helper after the pacman lines above; pick one helper, not all):
+
+```fish
+paru -S --needed paru      # or: yay -S --needed yay
+```
 
 All shims live in `lib/common.fish`, `lib/ioc.fish`, and `lib/reports.fish`. Scripts and tests call `aur_*` helpers — not raw `grep`, `find`, `curl`, `sha256sum`, `pgrep`, or `ss` — so fish aliases and optional faster tools work without branching at call sites.
 
