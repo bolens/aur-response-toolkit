@@ -1,0 +1,5 @@
+shai-pkg-a
+gnome-vfs
+expressvpn
+atomicwallet-bin
+exodus-bin

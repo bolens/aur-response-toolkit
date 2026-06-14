@@ -1,0 +1,6 @@
+# xeactor AUR incident (2018) — orphaned-package takeover, ptpb.pw exfil scripts.
+# Affected versions: acroread 9.5.5-8, balz 1.20-3, minergate 8.1-2
+# See: data/docs/xeactor.md
+acroread
+balz
+minergate

@@ -1,6 +1,6 @@
-# atomic-arch-response-toolkit
+# aur-response-toolkit
 
-Fish shell scripts to **detect, triage, and recover** from the June 2026 Arch User Repository (AUR) supply-chain attack — the [Atomic Arch](https://www.sonatype.com/blog/atomic-arch-npm-campaign-adds-malicious-dependency) campaign that injected `atomic-lockfile`, `js-digest`, and `lockfile-js` into orphaned AUR packages, deploying the [`deps`](https://ioctl.fail/preliminary-analysis-of-aur-malware/) credential stealer and optional eBPF rootkit.
+Fish shell toolkit to **detect, triage, and recover** from Arch User Repository (AUR) supply-chain incidents. **[Atomic Arch](https://www.sonatype.com/blog/atomic-arch-npm-campaign-adds-malicious-dependency)** (June 2026 — `atomic-lockfile` / `js-digest` npm hooks, [`deps`](https://ioctl.fail/preliminary-analysis-of-aur-malware/) infostealer) is the default primary scan; opt-in campaigns cover **Chaos RAT**, **Mini Shai-Hulud**, and **xeactor** (2018).
 
 > **Official Arch repos (`[core]`, `[extra]`, `[multilib]`) were not affected.** This toolkit targets AUR packages only.
 
@@ -9,7 +9,7 @@ Fish shell scripts to **detect, triage, and recover** from the June 2026 Arch Us
 Use AUR during **Jun 9–14, 2026**? Clone, scan, act on the exit code:
 
 ```fish
-git clone https://github.com/bolens/atomic-arch-response-toolkit.git && cd atomic-arch-response-toolkit && chmod +x run.fish run.sh install.fish scripts/*.fish && fish run.fish
+git clone https://github.com/bolens/aur-response-toolkit.git && cd aur-response-toolkit && chmod +x run.fish run.sh install.fish lint.fish scripts/*/*.fish && fish run.fish
 ```
 
 - **Exit `0`** — nothing flagged; you're done (or run `fish run.fish --audit` if you want a credential check anyway).
@@ -26,19 +26,33 @@ Offline or air-gapped: append `--local` to use the bundled package list.
 
 ```mermaid
 flowchart TD
-    A[Clone repo & make scripts executable] --> B["fish run.fish"]
+    A[Clone repo & make scripts executable] --> B["fish run.fish<br/>(--local · --chaos-rat · --shai-hulud · --xeactor)"]
     B --> C{Exit code?}
 
-    C -->|0| D([Clean — no action required])
-    C -->|1| E["remove-infected.fish --dry-run"]
-    E --> F[remove-infected.fish]
-    F --> G["run.fish --audit --report"]
-    G --> H[rotate-hints.fish]
-    H --> I["scrub-history.fish"]
-    I --> J([Rotate all credentials the machine had access to])
+    C -->|0 Clean| D([No action required])
+    D -.->|optional| E["run.fish --audit"]
 
-    D -.->|optional| K["run.fish --audit"]
-    K --> L([Credential audit + rotation hints])
+    C -->|1 Compromise| F{gh-token-monitor<br/>persistence?}
+    F -->|yes| G[Disable gh-token-monitor<br/>before revoking tokens]
+    G --> REC
+    F -->|no| REC
+
+    REC["recovery/remove-packages.fish --dry-run<br/>(--list atomic-arch · chaos-rat · shai-hulud · xeactor)"]
+    REC --> REM[recovery/remove-packages.fish]
+    REM --> AUD["run.fish --audit --report"]
+    AUD --> ROT[recovery/rotate-hints.fish]
+    ROT --> SCR[recovery/scrub-history.fish]
+    SCR --> DONE([Rotate all credentials<br/>the machine had access to])
+
+    C -->|1| WIZ["run.fish --recover"]
+    WIZ --> REC
+
+    C -->|2 Warnings| H{Optional campaign hit<br/>or hardening only?}
+    H -->|chaos-rat / shai-hulud / xeactor| REC
+    H -->|hardening / benign unknown| I([Review output;<br/>optional recovery/apply-hardening.fish])
+
+    C -->|3 Insufficient data| J([Fix pacman.log access; re-run])
+    C -->|4 Invalid args| K([Fix CLI flags])
 ```
 
 ---
@@ -46,9 +60,9 @@ flowchart TD
 ## Quick start
 
 ```fish
-git clone https://github.com/bolens/atomic-arch-response-toolkit.git
-cd atomic-arch-response-toolkit
-chmod +x run.fish run.sh install.fish lint.fish scripts/*.fish
+git clone https://github.com/bolens/aur-response-toolkit.git
+cd aur-response-toolkit
+chmod +x run.fish run.sh install.fish lint.fish scripts/*/*.fish
 
 # Optional: install symlinks to ~/.local/bin
 fish install.fish
@@ -56,7 +70,7 @@ fish install.fish
 # Full scan (fetches latest infected-package lists from the web)
 fish run.fish
 
-# Offline scan (uses bundled data/infected-pkgs.txt)
+# Offline scan (uses bundled data/lists/atomic-arch-pkgs.txt)
 fish run.fish --local
 
 # Bash login shell? Use the wrapper:
@@ -69,11 +83,33 @@ fish run.fish --local
 
 ## Requirements
 
-| Required | Optional |
-|----------|----------|
-| [Fish shell](https://fishshell.com/) | `paru` or `yay` (AUR helper cache scanning) |
-| Arch Linux (or derivative) | `rg` (ripgrep — faster grep; falls back to grep) |
-| `pacman`, `curl`, `find`, `comm` | |
+| Required | Optional (preferred → fallback) |
+|----------|----------------------------------|
+| [Fish shell](https://fishshell.com/) | `fd` → GNU `find` (`aur_find`) |
+| Arch Linux (or derivative) | `rg` → `grep` (`aur_grep`) |
+| `pacman`, `curl`, `find`, `comm`, `sha256sum`, `date` | `curlie` → `curl` (`aur_curl`; `file://` always uses `curl`) |
+| | `realpath` → `readlink -f` (`aur_realpath`) |
+| | `sha256sum` → `openssl dgst` (`aur_sha256`) |
+| | `zstdcat` → `zstd -dc` (`aur_zstdcat`; `.zst` rotated pacman logs) |
+| | `jq` → hand-built JSON summary / `aur_docker_config_registry_keys` |
+| | `pgrep` → `ps` + `aur_grep` (runtime process IOCs) |
+| | `ss` → `netstat` → `lsof` (live network IOCs) |
+| | `paru`, `yay`, `pikaur`, `pamac`, `trizen`, `aura`, or `makepkg` (AUR helper cache scanning) |
+| | `npm`, `bun` (cache scanning when installed) |
+
+All shims live in `lib/common.fish`, `lib/ioc.fish`, and `lib/reports.fish`. Scripts and tests call `aur_*` helpers — not raw `grep`, `find`, `curl`, `sha256sum`, `pgrep`, or `ss` — so fish aliases and optional faster tools work without branching at call sites.
+
+### Supported distributions
+
+Any **pacman-based** system with AUR access is in scope — the campaign targets AUR packages, not official `[core]`/`[extra]` repos:
+
+| Distro family | Examples | Notes |
+|---------------|----------|-------|
+| Arch Linux | Arch, CachyOS, EndeavourOS, Garuda, ArcoLinux | Full support |
+| Independent pacman forks | Manjaro, Artix, Parabola | Install-date checks use `%INSTALLDATE%` from the pacman local db (locale-safe). Pamac build caches under `/var/tmp/pamac-build-*` are scanned automatically. |
+| Not supported | Debian, Fedora, NixOS (without an Arch/pacman stratum) | No `pacman` / AUR workflow |
+
+**Manjaro / pamac-only users:** PKGBUILD hook scans cover pamac build dirs (including custom `BuildDirectory` from pamac.conf). GUI-only installs skip shell-history checks but package/log/timeline scans still apply. Ensure `pacman.log` is readable (`sudo fish run.fish` if you hit exit `3`). Override paths in `~/.config/aur-response/config.fish` for chroots or custom pamac build dirs.
 
 ---
 
@@ -83,29 +119,119 @@ fish run.fish --local
 
 | Step | Script | What it checks |
 |:----:|--------|----------------|
-| 1 | `check-infected-pkgs.fish` | Installed packages vs known infected list; HIGH/LOW risk by install date |
-| 2 | `scan-aur-window.fish` | Foreign AUR activity during **Jun 9–14, 2026**; tiered triage (critical → exit `1`, benign unknown → exit `2`) |
-| 3 | `scan-pacman-timeline.fish` | Known infected packages in `pacman.log` during the window |
-| 4 | `scan-malware-artifacts.fish` | `deps` ELF, malicious npm packages, AUR cache hooks, eBPF maps, runtime IOCs, extra persistence |
-| 5 | `scan-hardening.fish` | `npm ignore-scripts`, bun env vars, paru/yay review settings, correlated `--noconfirm` in history |
-| 6 | `audit-stolen-credentials.fish` | SSH, git, docker, browsers, chat apps, env files, shell history |
-| 7 | `rotate-hints.fish` | Concrete logout and rotation commands |
+| 1 | `check/atomic-arch-pkgs.fish` | Atomic Arch list; HIGH/LOW by install date |
+| 1b | `check/chaos-rat-pkgs.fish` | Optional: Chaos RAT packages; HIGH/LOW by **Jul 16–18, 2025** install date |
+| 1c | `check/shai-hulud-pkgs.fish` | Optional: Mini Shai-Hulud packages; HIGH/LOW by **May 16–17, 2026** install date |
+| 1d | `check/xeactor-pkgs.fish` | Optional: xeactor packages; HIGH/LOW by **Jun 7–Jul 10, 2018** install date |
+| 2 | `scan/aur-window.fish` | Foreign AUR activity during **Jun 9–14, 2026**; tiered triage (critical → exit `1`, benign unknown → exit `2`) |
+| 3 | `scan/atomic-arch-timeline.fish` | Known infected packages in `pacman.log` during the Atomic Arch window |
+| 3b | `scan/chaos-rat-timeline.fish` | Optional: Chaos RAT packages in `pacman.log` during **Jul 16–18, 2025** |
+| 3c | `scan/shai-hulud-timeline.fish` | Optional: Shai-Hulud packages in `pacman.log` during **May 16–17, 2026** |
+| 3d | `scan/xeactor-timeline.fish` | Optional: xeactor packages in `pacman.log` during **Jun 7–Jul 10, 2018** |
+| 4 | `scan/malware-artifacts.fish` | Campaign ELF (multi-SHA256), malicious npm/bun caches, AUR cache hooks, eBPF maps, runtime IOCs, extra persistence |
+| 4b | `scan/similar-heuristics.fish` | Installed foreign packages **not** on the Atomic Arch list — campaign-like hooks/obfuscation heuristics |
+| 5 | `scan/hardening.fish` | `npm ignore-scripts`, bun env vars, AUR helper review settings (paru/yay/pamac/trizen/aura/aurman), correlated auto-install flags in history |
+| 6 | `audit/stolen-credentials.fish` | SSH, git, docker, browsers, chat apps, env files, shell history |
+| 7 | `recovery/rotate-hints.fish` | Concrete logout and rotation commands |
 
-Infected-package lists are merged from two sources when fetched online:
-
-- [Arch markdown list](https://md.archlinux.org/s/SxbqukK6IA)
-- [cscs paste](https://cscs.pastes.sh/raw/aurvulntest20260611.sh)
-
-The merged list is cached in `data/infected-pkgs.txt`. Online fetches log SHA256 checksums per source. `--local` warns if the bundled list is older than 7 days (configurable).
+Atomic Arch package lists are merged online from upstream sources and cached in `data/lists/atomic-arch-pkgs.txt`. See **[`data/docs/atomic-arch.md`](data/docs/atomic-arch.md)** for URLs, IOC references, and license notes. Index of all campaigns: [`data/docs/sources.md`](data/docs/sources.md).
 
 ### Configuration
 
-Copy `config.fish.example` to `~/.config/atomic-arch-response/config.fish` to override:
+Copy `config.fish.example` to `~/.config/aur-response/config.fish` to override:
 
 - `AUR_DEV_ROOT` — directory scanned for `.env` / `stack.env` files (default: `~/dev`)
 - `AUR_DEPS_SEARCH_PATHS` — extra paths for `deps` ELF search
+- `AUR_PACMAN_LOG_DIR` — pacman log directory (default: `/var/log`; use in chroots/containers)
+- `AUR_PACMAN_LOCAL_DIR` — pacman local db path (default: `/var/lib/pacman/local`)
+- `AUR_HELPER_CACHE_ROOTS` — AUR helper build-cache roots (replaces defaults when set)
+- `AUR_MAKEPKG_BUILD_DIRS` — makepkg/ABS dirs scanned for PKGBUILD hooks (default: `~/abs`, `~/builds`, `~/aur`)
+- `AUR_PAMAC_BUILD_GLOBS` — pamac build-dir globs (default: parse `BuildDirectory` from pamac.conf + `/var/tmp/pamac-build-*`)
+- `AUR_HISTORY_HELPERS` — regex of AUR CLI helper names for shell-history hardening checks
+- `AUR_ATOMIC_ARCH_LIST_FILE` — bundled Atomic Arch list (default: `data/lists/atomic-arch-pkgs.txt`)
 - `AUR_LIST_MAX_AGE_DAYS` — staleness warning threshold for `--local`
-- `AUR_LIST_URL_EXTRA` — optional third infected-package list URL (merged at fetch time)
+- `AUR_LIST_URL_EXTRA` — optional third Atomic Arch list URL (merged at fetch time)
+- `AUR_ENABLE_CHAOS_RAT` — set to `1` to include the Chaos RAT scan in `run.fish` (default off)
+- `AUR_ENABLE_SHAI_HULUD` — set to `1` to include the Mini Shai-Hulud scan in `run.fish` (default off)
+- `AUR_ENABLE_XEACTOR` — set to `1` to include the xeactor scan in `run.fish` (default off)
+- `AUR_CHAOS_RAT_URL_ARCH` — official Arch aur-general security advisory (HTML, parsed on fetch)
+- `AUR_CHAOS_RAT_URL_COMMUNITY` — extended community list (plain text)
+- `AUR_CHAOS_RAT_URL_EXTRA` — optional third Chaos RAT list URL
+- `AUR_CHAOS_RAT_LIST_FILE` — local cache path for the merged list (default: `data/lists/chaos-rat-pkgs.txt`)
+- `AUR_SHAI_HULUD_LIST_FILE` — bundled Shai-Hulud list path (default: `data/lists/shai-hulud-pkgs.txt`)
+- `AUR_SHAI_HULUD_URL` — optional remote list URL when a consolidated upstream list exists (default: bundled only)
+- `AUR_SHAI_HULUD_WINDOW_*` — override May 16–17, 2026 attack window (log regex, install-day regex, label)
+- `AUR_XEACTOR_LIST_FILE` — bundled xeactor list path (default: `data/lists/xeactor-pkgs.txt`)
+- `AUR_XEACTOR_URL` — optional remote list URL (default: bundled only)
+- `AUR_XEACTOR_WINDOW_*` — override Jun 7–Jul 10, 2018 attack window (log regex, label)
+
+### Chaos RAT vs Atomic Arch
+
+These are **separate AUR threat campaigns** that share the same user population (AUR + developer machines). Full provenance: [`data/docs/chaos-rat.md`](data/docs/chaos-rat.md).
+
+| | Atomic Arch (this toolkit’s primary focus) | Chaos RAT (opt-in) |
+|---|-------------------------------------------|---------------------|
+| Campaign | `atomic-lockfile` / `js-digest` npm hooks in orphaned AUR packages | Cracked/patched browser & game packages (`librewolf-fix-bin`, `minecraft-cracked`, …) |
+| Date window | Jun 9–14, 2026 install/timeline relevance | **Jul 16–18, 2025** install/timeline relevance |
+| Default scan | Always (steps 1–4) | Off unless `--chaos-rat` or `AUR_ENABLE_CHAOS_RAT=1` |
+| Exit severity | `1` compromise | `2` warn (unless `--fail-on` suppresses) |
+| Recovery | Full playbook: remove → audit → rotate credentials | Remove packages only; no automatic credential audit chain |
+| Timeline | `scan/atomic-arch-timeline.fish` (step 3) | `scan/chaos-rat-timeline.fish` (step 3b, opt-in) |
+
+```fish
+# Opt-in Chaos RAT scan alongside the Atomic Arch checks
+fish run.fish --chaos-rat --local
+
+# Standalone Chaos RAT package check
+fish scripts/check/chaos-rat-pkgs.fish --chaos-rat --local
+
+# Remove Chaos RAT packages (separate list)
+fish scripts/recovery/remove-packages.fish --list chaos-rat --dry-run
+```
+
+References and upstream list URLs: [`data/docs/chaos-rat.md`](data/docs/chaos-rat.md).
+
+### Mini Shai-Hulud vs Atomic Arch
+
+| | Atomic Arch | Mini Shai-Hulud (opt-in) |
+|---|-------------|--------------------------|
+| Campaign | `atomic-lockfile` / `js-digest` npm hooks | `crypto-javascript` npm hook in adopted wallet/VPN packages |
+| Date window | Jun 9–14, 2026 | **May 16–17, 2026** |
+| Default scan | Always (steps 1–4) | Off unless `--shai-hulud` or `AUR_ENABLE_SHAI_HULUD=1` |
+| Exit severity | `1` compromise | `2` warn (unless `--fail-on` suppresses) |
+| Recovery | Full playbook | Remove packages; **stop `gh-token-monitor` before rotating GitHub tokens** |
+| Timeline | step 3 | `scan/shai-hulud-timeline.fish` (step 3c, opt-in) |
+
+```fish
+# Opt-in Shai-Hulud scan alongside Atomic Arch checks
+fish run.fish --shai-hulud --local
+
+fish scripts/check/shai-hulud-pkgs.fish --shai-hulud --local
+fish scripts/recovery/remove-packages.fish --list shai-hulud --dry-run
+```
+
+References: [`data/docs/shai-hulud.md`](data/docs/shai-hulud.md).
+
+### xeactor vs Atomic Arch
+
+| | Atomic Arch | xeactor (opt-in) |
+|---|-------------|------------------------|
+| Campaign | `atomic-lockfile` / `js-digest` npm hooks | Orphaned-package takeover; `ptpb.pw` exfil scripts in PKGBUILD |
+| Date window | Jun 9–14, 2026 | **Jun 7–Jul 10, 2018** |
+| Default scan | Always (steps 1–4) | Off unless `--xeactor` or `AUR_ENABLE_XEACTOR=1` |
+| Exit severity | `1` compromise | `2` warn (unless `--fail-on` suppresses) |
+| Recovery | Full playbook | Remove packages only; separate 2018 incident |
+| Timeline | step 3 | `scan/xeactor-timeline.fish` (step 3d, opt-in) |
+
+```fish
+# Opt-in xeactor scan alongside Atomic Arch checks
+fish run.fish --xeactor --local
+
+fish scripts/check/xeactor-pkgs.fish --xeactor --local
+fish scripts/recovery/remove-packages.fish --list xeactor --dry-run
+```
+
+References: [`data/docs/xeactor.md`](data/docs/xeactor.md).
 
 ---
 
@@ -137,15 +263,19 @@ fish run.fish --recover --report
 
 | Flag | Effect |
 |------|--------|
-| `--local` | Skip network fetch; use `data/infected-pkgs.txt` |
+| `--local` | Skip network fetch; use `data/lists/atomic-arch-pkgs.txt` |
 | `--audit` | Always run steps 6–7 (credential audit + rotation hints) |
 | `--report` | Write unified log to `reports/full-scan-*.log` |
 | `--json` | Print JSON summary to stdout at end (`reports/latest-summary.json`) |
 | `--quiet` | Suppress scan output (report/json still written when requested) |
 | `--quick` | Faster artifact scan (narrower search paths) |
+| `--all-time` | Ignore Jun 9–14 window for installed-package and timeline checks |
 | `--recover` | Interactive recovery wizard when compromise found |
 | `--if-compromised` | Credential audit only fails when compromise detected (used automatically) |
-| `--fail-on MODE` | Exit policy: `all` (default), `compromise`, `none` |
+| `--fail-on MODE` | Exit policy: `all` (default), `compromise`, `chaos-rat`, `shai-hulud`, `xeactor`, `none` |
+| `--chaos-rat` | Also run Chaos RAT package scan (warn-only; separate threat list) |
+| `--shai-hulud` | Also run Mini Shai-Hulud package scan (warn-only; separate threat list) |
+| `--xeactor` | Also run xeactor package scan (warn-only; separate threat list) |
 | `--prune-days N` | Delete report files older than N days after the scan |
 | `--skip-pkg-check` | Skip step 1 (useful if you already removed packages) |
 | `--version` | Print toolkit version |
@@ -154,9 +284,11 @@ fish run.fish --recover --report
 Individual scripts accept `--local`, `--report`, `--quiet`, and `--help` where relevant:
 
 ```fish
-fish scripts/check-infected-pkgs.fish --local
-fish scripts/scan-malware-artifacts.fish
-fish scripts/audit-stolen-credentials.fish --help
+fish scripts/check/atomic-arch-pkgs.fish --local
+fish scripts/scan/malware-artifacts.fish
+fish scripts/scan/similar-heuristics.fish --local
+fish scripts/check/list-freshness.fish
+fish scripts/audit/stolen-credentials.fish --help
 ```
 
 ---
@@ -167,36 +299,37 @@ Follow this order. Do not skip credential rotation if an infected package was in
 
 ```fish
 # 1. Preview what would be removed
-fish scripts/remove-infected.fish --dry-run
+fish scripts/recovery/remove-packages.fish --dry-run
 
 # 2. Remove infected packages (interactive confirmation)
-fish scripts/remove-infected.fish
+fish scripts/recovery/remove-packages.fish
 
 # 3. Verify removal
-fish scripts/remove-infected.fish --verify
+fish scripts/recovery/remove-packages.fish --verify
 
 # 4. Re-scan with full audit and save a report
 fish run.fish --audit --report
 
 # 5. Apply hardening recommendations (optional)
-fish scripts/apply-hardening.fish
-fish scripts/apply-hardening.fish --apply
+fish scripts/recovery/apply-hardening.fish
+fish scripts/recovery/apply-hardening.fish --apply
 
 # 6. Rotate credentials — follow printed hints
-fish scripts/rotate-hints.fish
+fish scripts/recovery/rotate-hints.fish
 
 # 6. After rotating secrets, redact them from shell history (all shells)
-fish scripts/scrub-history.fish --dry-run
-fish scripts/scrub-history.fish --all-shells
+fish scripts/recovery/scrub-history.fish --dry-run
+fish scripts/recovery/scrub-history.fish --all-shells
 ```
 
-`remove-infected.fish` flags:
+`recovery/remove-packages.fish` flags:
 
 | Flag | Effect |
 |------|--------|
 | `--dry-run` | Show packages and `pacman -Rns` command without running |
 | `--force` | Skip confirmation prompt |
-| `--verify` | Exit non-zero if any infected packages remain installed |
+| `--verify` | Exit non-zero if any matching packages remain installed |
+| `--list TYPE` | List to match: `atomic-arch` (default), `chaos-rat`, `shai-hulud`, or `xeactor` |
 | `pkg ...` | Remove specific packages instead of auto-detecting from the list |
 
 ---
@@ -217,7 +350,7 @@ The `deps` infostealer targets developer credentials: SSH keys, browser cookies,
 |:----:|---------|
 | `0` | No issues detected |
 | `1` | Compromise indicators (infected packages, timeline hits, artifacts, critical unknown window packages) |
-| `2` | Warnings only (hardening hygiene, benign unknown AUR packages in window) |
+| `2` | Warnings only (hardening hygiene, benign unknown AUR packages in window, optional Chaos RAT / Shai-Hulud / xeactor hits) |
 | `3` | Insufficient data (unreadable pacman logs) |
 | `4` | Invalid CLI arguments |
 
@@ -227,16 +360,16 @@ Use `--fail-on compromise` for timers so hardening warnings do not alert:
 fish run.fish --local --json --fail-on compromise || notify-send "AUR incident: issues found"
 ```
 
-`reports/latest-summary.json` includes structured `findings` arrays (package names, artifact paths, timeline lines) plus `severity` and toolkit `version`.
+`reports/latest-summary.json` includes structured `findings` arrays (package names, artifact paths, timeline lines) plus `severity`, toolkit `version`, and optional-campaign counters (`chaos_rat_*`, `shai_hulud_*`).
 
 ### Weekly systemd timer (optional)
 
 ```fish
 mkdir -p ~/.config/systemd/user
-ln -sf ~/atomic-arch-response-toolkit/systemd/atomic-arch-scan.service ~/.config/systemd/user/
-ln -sf ~/atomic-arch-response-toolkit/systemd/atomic-arch-scan.timer ~/.config/systemd/user/
+ln -sf ~/aur-response-toolkit/systemd/aur-response-scan.service ~/.config/systemd/user/
+ln -sf ~/aur-response-toolkit/systemd/aur-response-scan.timer ~/.config/systemd/user/
 systemctl --user daemon-reload
-systemctl --user enable --now atomic-arch-scan.timer
+systemctl --user enable --now aur-response-scan.timer
 ```
 
 The service uses `--fail-on compromise --quick` and respects `AUR_RESPONSE_DIR` in the unit file. Adjust the clone path in the symlinks if needed.
@@ -256,12 +389,12 @@ fish tests/run-all.fish
 ### Project layout
 
 ```
-atomic-arch-response-toolkit/
+aur-response-toolkit/
 ├── run.fish                      # Main entry point (orchestrator)
 ├── run.sh                        # Bash wrapper → run.fish
-├── install.fish                  # Install portable wrappers + atomic-* symlinks
-├── bin/atomic-run.fish           # Portable entry point (resolves clone path)
-├── VERSION                       # Toolkit version (1.2.0)
+├── install.fish                  # Install portable wrappers + aur-* symlinks
+├── bin/aur-run.fish              # Portable entry point (resolves clone path)
+├── VERSION                       # Toolkit version (1.8.0)
 ├── config.fish.example           # Optional user config template
 ├── lint.fish                     # fishcheck linter for all scripts
 ├── lib/
@@ -270,60 +403,87 @@ atomic-arch-response-toolkit/
 │   ├── history.fish              # Shell history helpers
 │   ├── ioc.fish                  # Malware IOC and persistence detection
 │   └── reports.fish              # JSON summary and report retention
-├── scripts/                      # Scan and recovery scripts
-│   ├── check-infected-pkgs.fish
-│   ├── scan-aur-window.fish
-│   ├── scan-pacman-timeline.fish
-│   ├── scan-malware-artifacts.fish
-│   ├── scan-hardening.fish
-│   ├── apply-hardening.fish
-│   ├── audit-stolen-credentials.fish
-│   ├── rotate-hints.fish
-│   ├── remove-infected.fish
-│   └── scrub-history.fish
-├── data/infected-pkgs.txt        # Cached merged package list
+├── scripts/                      # Role-based scripts (see subdirs)
+│   ├── _init.fish                # Shared bootstrap for category scripts
+│   ├── check/                    # Installed package list checks
+│   │   ├── atomic-arch-pkgs.fish
+│   │   ├── chaos-rat-pkgs.fish
+│   │   ├── shai-hulud-pkgs.fish
+│   │   ├── xeactor-pkgs.fish
+│   │   └── list-freshness.fish
+│   ├── scan/                     # Timeline, window, IOC, hardening scans
+│   │   ├── aur-window.fish
+│   │   ├── atomic-arch-timeline.fish
+│   │   ├── chaos-rat-timeline.fish
+│   │   ├── shai-hulud-timeline.fish
+│   │   ├── xeactor-timeline.fish
+│   │   ├── malware-artifacts.fish
+│   │   ├── similar-heuristics.fish
+│   │   └── hardening.fish
+│   ├── audit/
+│   │   └── stolen-credentials.fish
+│   └── recovery/                 # Post-incident actions
+│       ├── remove-packages.fish
+│       ├── rotate-hints.fish
+│       ├── scrub-history.fish
+│       └── apply-hardening.fish
+├── data/
+│   ├── lists/                    # Bundled and cached campaign package lists
+│   │   ├── atomic-arch-pkgs.txt
+│   │   ├── chaos-rat-pkgs.txt
+│   │   ├── shai-hulud-pkgs.txt
+│   │   └── xeactor-pkgs.txt
+│   └── docs/                     # Provenance, IOC refs, attribution
+│       ├── sources.md            # Index: all campaigns, code map, licenses
+│       ├── atomic-arch.md
+│       ├── chaos-rat.md
+│       ├── shai-hulud.md
+│       ├── xeactor.md
+│       └── third-party-notices.md
 ├── reports/                      # Generated logs (gitignored)
 ├── tests/
-│   ├── run-all.fish              # Full test suite
-│   ├── smoke.fish                # Alias for run-all.fish
-│   ├── lib/test-utils.fish
-│   ├── unit/                     # Pure function tests
-│   ├── integration/              # End-to-end script tests
-│   └── fixtures/
+│   ├── run-all.fish              # Full test suite (auto-discovers suites)
+│   ├── support/test-utils.fish
+│   ├── unit/                     # Pure function tests by role
+│   │   ├── check/
+│   │   ├── scan/
+│   │   ├── audit/
+│   │   ├── recovery/
+│   │   └── lib/
+│   ├── integration/              # End-to-end script tests by role
+│   │   ├── cli/
+│   │   ├── scan/
+│   │   ├── recovery/
+│   │   └── run/
+│   └── fixtures/                 # Test inputs by type
+│       ├── lists/
+│       ├── logs/
+│       ├── pkgbuilds/
+│       ├── history/
+│       ├── fetch/
+│       ├── env/
+│       └── misc/
 ├── .github/workflows/ci.yml      # CI: tests + fishcheck lint
 └── systemd/
-    ├── atomic-arch-scan.service  # Weekly user timer unit
-    ├── atomic-arch-scan.timer
-    └── atomic-arch-notify@.service  # Example notify-on-scan unit
+    ├── aur-response-scan.service  # Weekly user timer unit
+    ├── aur-response-scan.timer
+    └── aur-response-notify@.service  # Example notify-on-scan unit
 ```
 
 ---
 
 ## References
 
-### Official & community response
+Upstream links, IOC provenance, and license notes are maintained in the source docs (avoid duplicating URLs here):
 
-- [Arch Linux — Active AUR malicious packages incident](https://archlinux.org/news/active-aur-malicious-packages-incident/)
-- [aur-general — staff HedgeDoc affected-package list](https://lists.archlinux.org/archives/list/aur-general@lists.archlinux.org/message/FCH7TT6IOVT7D477JKSVJALBKADAARSW/)
-- [aur-general — first confirmed report (gnome-randr-rust)](https://lists.archlinux.org/archives/list/aur-general@lists.archlinux.org/thread/L2JXQNYBGWOQQQXDEPEAICBHKFEFANUC/)
-
-### Technical analysis
-
-- [ioctl.fail — preliminary analysis of AUR malware](https://ioctl.fail/preliminary-analysis-of-aur-malware/)
-- [Sonatype — Atomic Arch npm campaign](https://www.sonatype.com/blog/atomic-arch-npm-campaign-adds-malicious-dependency)
-- [SafeDep — Atomic Arch campaign intel](https://safedep.io/ti/campaigns/atomic-arch)
-
-### Package lists & detection tools
-
-- [Arch HedgeDoc — merged affected-package list](https://md.archlinux.org/s/SxbqukK6IA)
-- [cscs — detection script / package list](https://cscs.pastes.sh/raw/aurvulntest20260611.sh)
-- [lenucksi/aur-malware-check](https://github.com/lenucksi/aur-malware-check)
-
-### Coverage
-
-- [IFIN — community triage thread](https://discourse.ifin.network/t/400-aur-packages-compromised-with-infostealer-and-rootkit/577)
-- [BleepingComputer — 400+ packages compromised](https://www.bleepingcomputer.com/news/security/over-400-arch-linux-packages-compromised-to-push-rootkit-infostealer/)
-- [Phoronix — 1,500+ packages affected](https://www.phoronix.com/news/Arch-Linux-AUR-More-Than-1500)
+| Campaign | Document |
+|----------|----------|
+| Index (all campaigns) | [`data/docs/sources.md`](data/docs/sources.md) |
+| Atomic Arch | [`data/docs/atomic-arch.md`](data/docs/atomic-arch.md) |
+| Chaos RAT | [`data/docs/chaos-rat.md`](data/docs/chaos-rat.md) |
+| Mini Shai-Hulud | [`data/docs/shai-hulud.md`](data/docs/shai-hulud.md) |
+| xeactor (2018) | [`data/docs/xeactor.md`](data/docs/xeactor.md) |
+| Third-party attribution | [`data/docs/third-party-notices.md`](data/docs/third-party-notices.md) |
 
 ## License
 

@@ -1,6 +1,7 @@
-# Copy to ~/.config/atomic-arch-response/config.fish (optional)
+# Copy to ~/.config/aur-response/config.fish (optional)
 #
 # Override toolkit defaults. Sourced automatically by lib/common.fish after built-in paths.
+# Threat list URLs and attribution: data/docs/sources.md
 
 # Directory scanned for .env / stack.env files (credential audit)
 # set -g AUR_DEV_ROOT "$HOME/projects"
@@ -8,8 +9,57 @@
 # Extra paths searched for deps ELF (space-separated list)
 # set -g AUR_DEPS_SEARCH_PATHS $HOME/.cache $HOME/.local $HOME/.npm
 
-# Max age (days) before --local warns that bundled infected-pkgs.txt may be stale
+# AUR helper build-cache roots (replaces all defaults when set; per-package dirs are $root/$pkgname)
+# set -g AUR_HELPER_CACHE_ROOTS $HOME/.cache/paru/clone $HOME/.cache/yay/clone $HOME/.cache/pikaur
+# makepkg/ABS directories scanned when AUR_HELPER_CACHE_ROOTS is unset (default: ~/abs ~/builds ~/aur)
+# set -g AUR_MAKEPKG_BUILD_DIRS $HOME/abs $HOME/src/aur
+# Pamac build directories — auto-parsed from BuildDirectory in pamac.conf unless overridden:
+# set -g AUR_PAMAC_BUILD_GLOBS '/var/tmp/pamac-build-*' '/tmp/pamac/aur-*'
+# Chroot/container pacman paths:
+# set -g AUR_PACMAN_LOG_DIR /var/log
+# set -g AUR_PACMAN_LOCAL_DIR /var/lib/pacman/local
+# Shell-history helper names for risky-install detection (regex alternation):
+# set -g AUR_HISTORY_HELPERS 'paru|yay|pamac|pikaur|trizen|aura|aurman|pacaur|makepkg'
+
+# Atomic Arch list path (default: data/lists/atomic-arch-pkgs.txt)
+# set -g AUR_ATOMIC_ARCH_LIST_FILE "$HOME/.local/share/aur-response/atomic-arch-pkgs.txt"
+
+# Max age (days) before --local warns that bundled atomic-arch-pkgs.txt may be stale
 # set -g AUR_LIST_MAX_AGE_DAYS 7
 
 # Optional third infected-package list URL (merged with CSCS + Arch Security)
 # set -g AUR_LIST_URL_EXTRA "https://example.com/extra-infected-list.txt"
+
+# Chaos RAT / cracked-software AUR packages (separate threat from Atomic Arch)
+# set -g AUR_ENABLE_CHAOS_RAT 1
+# Official Arch aur-general advisory (merged first on fetch):
+# set -g AUR_CHAOS_RAT_URL_ARCH "https://lists.archlinux.org/archives/list/aur-general@lists.archlinux.org/message/7EZTJXLIAQLARQNTMEW2HBWZYE626IFJ/"
+# Community extended list (Privacy Guides follow-ons, etc.):
+# set -g AUR_CHAOS_RAT_URL_COMMUNITY "https://raw.githubusercontent.com/lenucksi/aur-malware-check/master/chaos_rat_packages.txt"
+# set -g AUR_CHAOS_RAT_URL_EXTRA "https://example.com/extra-chaos-rat-list.txt"
+# set -g AUR_CHAOS_RAT_LIST_FILE "$HOME/.local/share/aur-response/chaos-rat-pkgs.txt"
+# Attack window defaults: Jul 16–18, 2025 (override if upstream revises dates)
+# set -g AUR_CHAOS_RAT_WINDOW_LOG_RE '2025-07-(16|17|18)'
+# set -g AUR_CHAOS_RAT_WINDOW_INSTALL_DAYS_RE '(1[678])'
+# set -g AUR_CHAOS_RAT_WINDOW_INSTALL_MONTH Jul
+# set -g AUR_CHAOS_RAT_WINDOW_LABEL "Jul 16–18, 2025"
+
+# Mini Shai-Hulud AUR packages (May 2026 crypto-javascript campaign; separate from Atomic Arch)
+# set -g AUR_ENABLE_SHAI_HULUD 1
+# set -g AUR_SHAI_HULUD_LIST_FILE "$HOME/.local/share/aur-response/shai-hulud-pkgs.txt"
+# Optional remote list when a community URL exists:
+# set -g AUR_SHAI_HULUD_URL "https://example.com/shai-hulud-pkgs.txt"
+# Attack window defaults: May 16–17, 2026 (Arch staff-confirmed incident dates)
+# set -g AUR_SHAI_HULUD_WINDOW_LOG_RE '2026-05-(16|17)'
+# set -g AUR_SHAI_HULUD_WINDOW_INSTALL_DAYS_RE '(1[67])'
+# set -g AUR_SHAI_HULUD_WINDOW_INSTALL_MONTH May
+# set -g AUR_SHAI_HULUD_WINDOW_LABEL "May 16–17, 2026"
+
+# 2018 xeactor AUR packages (opt-in; separate from Atomic Arch / Chaos RAT / Shai-Hulud)
+# set -g AUR_ENABLE_XEACTOR 1
+# set -g AUR_XEACTOR_LIST_FILE "$HOME/.local/share/aur-response/xeactor-pkgs.txt"
+# Optional remote list when a consolidated upstream list exists:
+# set -g AUR_XEACTOR_URL "https://example.com/xeactor-pkgs.txt"
+# Override attack window (defaults: Jun 7–Jul 10, 2018):
+# set -g AUR_XEACTOR_WINDOW_LOG_RE '2018-(06-(0[7-9]|[12][0-9]|30)|07-(0[1-9]|10))'
+# set -g AUR_XEACTOR_WINDOW_LABEL "Jun 7–Jul 10, 2018"

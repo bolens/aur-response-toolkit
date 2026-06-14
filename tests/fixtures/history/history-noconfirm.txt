@@ -1,0 +1,5 @@
+cd /tmp/build
+paru -S some-pkg --noconfirm
+yay --noconfirm -S other-pkg
+paru -S --noconfirm third-pkg
+echo unrelated command

@@ -3,30 +3,21 @@
 # Test runner: each suite is a separate fish process; any failure yields exit 1.
 
 set -l test_dir (dirname (status filename))
+set -g AUR_RESPONSE_DIR (dirname $test_dir)
+source $AUR_RESPONSE_DIR/lib/common.fish
+
 set -l failed_suites 0
 set -l passed_suites 0
+
+function _aur_discover_test_suites --argument-names root
+    aur_find $root/unit $root/integration -name 'test-*.fish' -type f 2>/dev/null | sort
+end
 
 echo "AUR response toolkit — test suite"
 echo "================================="
 
-for suite in \
-    unit/test-pacman-log.fish \
-    unit/test-timeline-matching.fish \
-    unit/test-multiline-handling.fish \
-    unit/test-package-lists.fish \
-    unit/test-hooks-secrets.fish \
-    unit/test-state-json.fish \
-    unit/test-exit-findings.fish \
-    unit/test-findings-tab.fish \
-    unit/test-compromise-detected.fish \
-    unit/test-prune.fish \
-    unit/test-apply-hardening.fish \
-    unit/test-rotate-hints.fish \
-    integration/test-cli.fish \
-    integration/test-scrub-history.fish \
-    integration/test-integration.fish
-
-    fish $test_dir/$suite
+for suite in (_aur_discover_test_suites $test_dir)
+    fish $suite
     if test $status -eq 0
         set passed_suites (math $passed_suites + 1)
     else

@@ -1,12 +1,11 @@
 #!/usr/bin/env fish
 
-# Install atomic-arch-response-toolkit into ~/.local/bin.
+# Install aur-response-toolkit into ~/.local/bin.
 # Wrappers embed AUR_RESPONSE_DIR so scripts work after the clone is moved or removed.
 
 set -l src (cd (dirname (status filename)); and pwd)
 set -l bindir "$HOME/.local/bin"
-set -l configdir "$HOME/.config/atomic-arch-response"
-set -l legacy_configdir "$HOME/.config/aur-response"
+set -l configdir "$HOME/.config/aur-response"
 
 mkdir -p $bindir $configdir
 
@@ -18,26 +17,23 @@ end
 
 aur_install_wrapper $bindir/run.fish run.fish
 aur_install_wrapper $bindir/lint.fish lint.fish
-aur_install_wrapper $bindir/atomic-run.fish bin/atomic-run.fish
+aur_install_wrapper $bindir/aur-run.fish bin/aur-run.fish
 
-for script in $src/scripts/*.fish
-    set -l name (basename $script)
-    ln -sf $script $bindir/atomic-$name
+for script in $src/scripts/*/*.fish
+    set -l relpath (string replace "$src/" "" $script)
+    set -l parts (string split / $relpath)
+    set -l slug "$parts[2]-$parts[3]"
+    ln -sf $script $bindir/aur-$slug
 end
 
 if not test -f $configdir/config.fish
-    if test -f $legacy_configdir/config.fish
-        cp $legacy_configdir/config.fish $configdir/config.fish
-        echo "Migrated $legacy_configdir/config.fish → $configdir/config.fish"
-    else
-        cp $src/config.fish.example $configdir/config.fish
-        echo "Created $configdir/config.fish (edit to customize paths)"
-    end
+    cp $src/config.fish.example $configdir/config.fish
+    echo "Created $configdir/config.fish (edit to customize paths)"
 end
 
 echo "Installed to $bindir"
-echo "  run.fish / atomic-run.fish (portable wrappers)"
-echo "  atomic-*.fish (symlinks to individual scripts)"
+echo "  run.fish / aur-run.fish (portable wrappers)"
+echo "  aur-{category}-{script}.fish (symlinks to individual scripts)"
 echo ""
 echo "Ensure $bindir is in PATH:"
 echo "  fish_add_path $bindir"

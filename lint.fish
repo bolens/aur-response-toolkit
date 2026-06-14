@@ -35,12 +35,13 @@ set -l scripts \
     $AUR_RESPONSE_DIR/lint.fish \
     $AUR_RESPONSE_DIR/install.fish \
     $AUR_RESPONSE_DIR/bin/*.fish \
-    $AUR_RESPONSE_DIR/scripts/*.fish \
+    $AUR_RESPONSE_DIR/scripts/_init.fish \
+    $AUR_RESPONSE_DIR/scripts/*/*.fish \
     $AUR_RESPONSE_DIR/lib/*.fish \
-    $AUR_RESPONSE_DIR/tests/*.fish \
-    $AUR_RESPONSE_DIR/tests/lib/*.fish \
-    $AUR_RESPONSE_DIR/tests/unit/*.fish \
-    $AUR_RESPONSE_DIR/tests/integration/*.fish
+    $AUR_RESPONSE_DIR/tests/run-all.fish \
+    $AUR_RESPONSE_DIR/tests/support/*.fish \
+    $AUR_RESPONSE_DIR/tests/unit/*/*.fish \
+    $AUR_RESPONSE_DIR/tests/integration/*/*.fish
 set -l fishcheck_bin
 if not set fishcheck_bin (_aur_resolve_fishcheck)
     exit 1

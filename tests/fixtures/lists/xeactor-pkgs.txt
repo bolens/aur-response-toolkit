@@ -1,0 +1,4 @@
+legacy-pkg-a
+acroread
+balz
+minergate

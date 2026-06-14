@@ -3,7 +3,7 @@ reports/*
 !reports/.gitkeep
 
 # Runtime state (cached package list fetch)
-data/infected-pkgs.previous.txt
+data/lists/*.previous.txt
 .scan-state
 .scan-findings.json
 

@@ -1,0 +1,7 @@
+# Mini Shai-Hulud AUR packages (May 16–17, 2026) — staff-confirmed on aur-general.
+# Payload: npm install crypto-javascript in PKGBUILD/.install hooks.
+# See: data/docs/shai-hulud.md
+gnome-vfs
+expressvpn
+atomicwallet-bin
+exodus-bin

@@ -1,9 +1,29 @@
 # Shell history helpers — correlate risky AUR helper usage with compromise-window activity.
 
-# Match paru/yay invocations that skipped PKGBUILD review (--noconfirm).
-# Regex allows flag before or after the helper name (history line ordering varies).
+function aur_require_pacman_logs
+    if aur_pacman_logs_accessible
+        return 0
+    end
+    set -l log_dir (aur_pacman_log_dir)
+    aur_insufficient_data "no readable pacman logs under $log_dir/pacman.log*"
+    aur_log_insufficient_help
+    exit $AUR_EXIT_INSUFFICIENT
+end
+
+# Shell history file paths. Default: fish + bash + zsh. --fish-only: fish history only.
+function aur_shell_history_paths
+    if contains -- --fish-only $argv
+        echo $HOME/.local/share/fish/fish_history
+        return
+    end
+    echo $HOME/.bash_history $HOME/.zsh_history $HOME/.local/share/fish/fish_history
+end
+
+# Match AUR helper invocations that skipped PKGBUILD review.
 function aur_history_line_has_noconfirm_aur --argument-names line
-    string match -qir '(^|[\s"'\''-])(paru|yay)(\s|$).*--noconfirm|--noconfirm.*(paru|yay)' -- $line
+    set -l h $AUR_HISTORY_HELPERS
+    set -l pat (string join '' '(^|[\s"'\''-])(' $h ')(\s|$).*(--noconfirm|--no-confirm|--batch|--noedit)|(--noconfirm|--no-confirm|--batch|--noedit).*(\s|^)(' $h ')(\s|$)')
+    string match -qir $pat -- $line
 end
 
 function aur_history_has_noconfirm_aur --argument-names path

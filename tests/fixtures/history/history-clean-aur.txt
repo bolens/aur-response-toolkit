@@ -1,0 +1,4 @@
+cd /tmp/build
+paru -S some-pkg
+yay -S other-pkg
+echo reviewed installs only
