@@ -5,6 +5,7 @@
 
 set -g AUR_RESPONSE_DIR (dirname (status filename))
 
+# Resolve fishcheck: PATH first, then common clone locations (ShellCheck does not support fish).
 function _aur_resolve_fishcheck
     if set -l bin (command -sq fishcheck)
         echo $bin
@@ -32,6 +33,8 @@ end
 set -l scripts \
     $AUR_RESPONSE_DIR/run.fish \
     $AUR_RESPONSE_DIR/lint.fish \
+    $AUR_RESPONSE_DIR/install.fish \
+    $AUR_RESPONSE_DIR/bin/*.fish \
     $AUR_RESPONSE_DIR/scripts/*.fish \
     $AUR_RESPONSE_DIR/lib/*.fish \
     $AUR_RESPONSE_DIR/tests/*.fish \

@@ -5,6 +5,7 @@ reports/*
 # Runtime state (cached package list fetch)
 data/infected-pkgs.previous.txt
 .scan-state
+.scan-findings.json
 
 # History scrub backups
 *.bak.*

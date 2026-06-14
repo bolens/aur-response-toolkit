@@ -1,40 +1,90 @@
-# Shared helpers for AUR malware response scripts
-# Expect callers to set AUR_RESPONSE_DIR before sourcing, or derive from lib path.
+# Shared helpers for AUR malware response scripts.
+# Scripts set AUR_RESPONSE_DIR before sourcing; lib/ can also derive it from its own path.
 
 if not set -q AUR_RESPONSE_DIR
     set -g AUR_RESPONSE_DIR (dirname (dirname (status filename)))
 end
+
+# --- Version ---
+set -g AUR_VERSION_FILE "$AUR_RESPONSE_DIR/VERSION"
+if test -f $AUR_VERSION_FILE
+    set -g AUR_VERSION (string trim (cat $AUR_VERSION_FILE))
+else
+    set -g AUR_VERSION dev
+end
+
+# --- Exit codes (stable contract for CI/automation; see README) ---
+set -g AUR_EXIT_CLEAN 0
+set -g AUR_EXIT_COMPROMISE 1
+set -g AUR_EXIT_WARN 2
+set -g AUR_EXIT_INSUFFICIENT 3
+set -g AUR_EXIT_INVALID 4
+
+# --- Paths (defaults; override in ~/.config/atomic-arch-response/config.fish) ---
 set -g AUR_SCRIPTS_DIR "$AUR_RESPONSE_DIR/scripts"
 set -g AUR_DATA_DIR "$AUR_RESPONSE_DIR/data"
 set -g AUR_LIST_FILE "$AUR_DATA_DIR/infected-pkgs.txt"
+# Tests redirect the infected list without touching data/infected-pkgs.txt.
 if set -q AUR_TEST_LIST_FILE
     set -g AUR_LIST_FILE $AUR_TEST_LIST_FILE
 end
 set -g AUR_LIST_PREVIOUS "$AUR_DATA_DIR/infected-pkgs.previous.txt"
 set -g AUR_REPORTS_DIR "$AUR_RESPONSE_DIR/reports"
 set -g AUR_SUMMARY_FILE "$AUR_RESPONSE_DIR/reports/latest-summary.json"
+set -g AUR_FINDINGS_FILE "$AUR_RESPONSE_DIR/reports/.scan-findings.json"
+set -g AUR_FINDINGS_LIST_FILE "$AUR_REPORTS_DIR/.scan-findings.list"
 
+# Remote infected-list sources merged on each online fetch (see aur_load_infected_list).
 set -g AUR_LIST_URL_ARCH "https://md.archlinux.org/s/SxbqukK6IA"
 set -g AUR_LIST_URL_CSCS "https://cscs.pastes.sh/raw/aurvulntest20260611.sh"
 
+# Arch package naming rules — filters HTML noise and invalid tokens from scraped lists.
 set -g AUR_PKG_PATTERN '^[a-z0-9][a-z0-9_.+\-]*[a-z0-9]$'
 set -g AUR_COMPROMISE_YEAR 2026
+# Compromise window: Jun 9–14 2026 (Atomic Arch campaign active period).
+# WINDOW_LOG_RE matches pacman.log timestamps; INSTALL_* matches pacman -Qi "Install Date".
 set -g AUR_WINDOW_LOG_RE '2026-06-(09|10|11|12|13|14)'
 set -g AUR_WINDOW_INSTALL_DAYS_RE '(0?[9]|1[0-4])'
 set -g AUR_WINDOW_INSTALL_MONTH Jun
 set -g AUR_WINDOW_LABEL "Jun 9–14, $AUR_COMPROMISE_YEAR"
+# Malicious npm/bun hooks injected into PKGBUILDs, .install scripts, and shell rc files.
 set -g AUR_HOOK_PATTERN 'atomic-lockfile|js-digest|lockfile-js|bun install js-digest|npm install atomic-lockfile|npm install lockfile-js'
 
+# Known SHA256 of the deps infostealer binary (ioctl.fail / Sonatype IOC).
 set -g AUR_MALWARE_SHA256_DEPS 6144D433F8A0316869877B5F834C801251BBB936E5F1577C5680878C7443C98B
 set -g AUR_MALICIOUS_NPM atomic-lockfile js-digest lockfile-js
+# Exfil endpoints referenced by the campaign (history scan + live ss checks).
 set -g AUR_IOC_DOMAINS temp.sh olrh4mibs62l6kkuvvjyc5lrercqg5tz543r4lsw3o6mh5qb7g7sneid.onion
 set -g AUR_HISTORY_SECRET_PATTERN 'password|token|ghp_|github_pat|api[_-]?key|secret|BEGIN (RSA|OPENSSH)|CLOUDFLARE|AWS_|docker login|npm login|hash-password|changepassword'
-set -g AUR_DEV_ROOT (set -q AUR_DEV_ROOT; and echo $AUR_DEV_ROOT; or echo "$HOME/dev")
+if not set -q AUR_DEV_ROOT
+    set -g AUR_DEV_ROOT "$HOME/dev"
+end
 set -g AUR_DEPS_SEARCH_PATHS $HOME/.cache $HOME/.local $HOME/.npm $HOME/node_modules /var/lib/pacman /var/tmp /var/lib
+set -g AUR_LIST_MAX_AGE_DAYS 7
+if not set -q AUR_LIST_URL_EXTRA
+    set -g AUR_LIST_URL_EXTRA ""
+end
 
-set -g AUR_STATE_FILE "$AUR_RESPONSE_DIR/reports/.scan-state"
+if not set -q AUR_STATE_FILE
+    set -g AUR_STATE_FILE "$AUR_RESPONSE_DIR/reports/.scan-state"
+end
 
-# Prefer ripgrep when available; fall back to grep for the flags we use.
+# User config (optional overrides; legacy ~/.config/aur-response/ still honored)
+set -l _aur_user_config "$HOME/.config/atomic-arch-response/config.fish"
+if set -q XDG_CONFIG_HOME
+    set _aur_user_config "$XDG_CONFIG_HOME/atomic-arch-response/config.fish"
+end
+if not test -f $_aur_user_config
+    set -l _aur_legacy_config "$HOME/.config/aur-response/config.fish"
+    if set -q XDG_CONFIG_HOME
+        set _aur_legacy_config "$XDG_CONFIG_HOME/aur-response/config.fish"
+    end
+    test -f $_aur_legacy_config; and set _aur_user_config $_aur_legacy_config
+end
+test -f $_aur_user_config; and source $_aur_user_config
+
+# Grep compatibility shim: scripts use common grep flags; translate to rg when available.
+# Unknown flags fall through to grep so callers never need to branch on which tool exists.
 function aur_grep
     if not command -q rg
         command grep $argv
@@ -82,6 +132,7 @@ function aur_grep
                 set skip_next true
                 set args $args[2..-1]
             case '-*'
+                # Flag we do not translate — delegate to grep unchanged.
                 command grep $argv
                 return $status
             case '*'
@@ -92,7 +143,11 @@ function aur_grep
     command rg $rg_flags -- $args
 end
 
-# Summary counters — persisted to $AUR_STATE_FILE for cross-process use
+function aur_version
+    echo $AUR_VERSION
+end
+
+# Summary counters — also persisted to $AUR_STATE_FILE so child scripts can update totals.
 set -g AUR_SUMMARY_installed_infected 0
 set -g AUR_SUMMARY_installed_high_risk 0
 set -g AUR_SUMMARY_timeline_hits 0
@@ -102,17 +157,29 @@ set -g AUR_SUMMARY_credential_exposed 0
 set -g AUR_SUMMARY_hardening_warn 0
 set -g AUR_SUMMARY_list_added 0
 set -g AUR_SUMMARY_list_removed 0
+set -g AUR_SUMMARY_insufficient_data 0
+set -g AUR_SUMMARY_runtime_iocs 0
 
 set -g AUR_OPT_local false
 set -g AUR_OPT_report false
 set -g AUR_OPT_audit false
 set -g AUR_OPT_quiet false
+set -g AUR_OPT_quick false
+set -g AUR_OPT_if_compromised false
+set -g AUR_OPT_fail_on all
+set -g AUR_OPT_prune_days 0
 
+# Parse shared CLI flags into globals. Resets all AUR_OPT_* on each call so scripts
+# can invoke this after their own argv parsing without inheriting stale values.
 function aur_parse_common_args
     set -g AUR_OPT_local false
     set -g AUR_OPT_report false
     set -g AUR_OPT_audit false
     set -g AUR_OPT_quiet false
+    set -g AUR_OPT_quick false
+    set -g AUR_OPT_if_compromised false
+    set -g AUR_OPT_fail_on all
+    set -g AUR_OPT_prune_days 0
     for arg in $argv
         switch $arg
             case --local
@@ -123,30 +190,65 @@ function aur_parse_common_args
                 set -g AUR_OPT_audit true
             case --quiet
                 set -g AUR_OPT_quiet true
+            case --quick
+                set -g AUR_OPT_quick true
+            case --if-compromised
+                set -g AUR_OPT_if_compromised true
+            case --fail-on=*
+                set -g AUR_OPT_fail_on (string sub -s 10 -- $arg)
+            case --fail-on
+                # value must follow; handled below
+            case --fail-on:compromise --fail-on:all --fail-on:none
+                set -g AUR_OPT_fail_on (string sub -s 10 -- $arg)
+            case --prune-days=*
+                set -g AUR_OPT_prune_days (string sub -s 13 -- $arg)
         end
+    end
+    # --fail-on VALUE and --prune-days N as two argv tokens
+    set -l i 1
+    while test $i -le (count $argv)
+        if test "$argv[$i]" = --fail-on; and test $i -lt (count $argv)
+            set -g AUR_OPT_fail_on $argv[(math $i + 1)]
+        end
+        if test "$argv[$i]" = --prune-days; and test $i -lt (count $argv)
+            set -g AUR_OPT_prune_days $argv[(math $i + 1)]
+        end
+        set i (math $i + 1)
     end
 end
 
 function aur_common_flags_help
     echo "Common flags:"
-    echo "  --local   Use bundled infected-pkgs.txt (no network fetch)"
-    echo "  --report  Append output to reports/"
-    echo "  --quiet   Suppress stdout (reports/json still written)"
+    echo "  --local            Use bundled infected-pkgs.txt (no network fetch)"
+    echo "  --report           Append output to reports/"
+    echo "  --quiet            Suppress stdout (reports/json still written)"
+    echo "  --quick            Faster scans (narrower artifact search)"
+    echo "  --if-compromised   Only fail credential audit when compromise detected"
+    echo "  --fail-on MODE     Exit policy: all (default), compromise, none"
 end
 
+# Reject unknown dashed flags early (exit 4). Positional package names are ignored.
 function aur_validate_known_flags
     set -l allowed \
-        --help -h \
+        --help -h --version \
         --local --report --quiet --audit \
         --no-chain --json --skip-pkg-check \
-        --dry-run --force --all-shells
+        --dry-run --force --all-shells --verify \
+        --quick --if-compromised --recover \
+        --fail-on all compromise none --prune-days
     for arg in $argv
         if contains -- $arg $allowed
             continue
         end
+        if string match -qr '^--fail-on=' -- $arg
+            continue
+        end
+        if string match -qr '^--prune-days=' -- $arg
+            continue
+        end
         if string match -qr '^-' -- $arg
             echo "Unknown option: $arg (see --help)" >&2
-            exit 2
+            exit $AUR_EXIT_INVALID
         end
     end
 end
@@ -157,17 +259,20 @@ function aur_begin_report_if_requested --argument-names label
     end
 end
 
+# Reset ephemeral scan state at the start of a full run (each step writes fresh findings).
 function aur_state_init
     mkdir -p $AUR_REPORTS_DIR
-    rm -f $AUR_STATE_FILE
+    rm -f $AUR_STATE_FILE $AUR_FINDINGS_FILE $AUR_FINDINGS_LIST_FILE
 end
 
+# Simple key=value file shared across subprocesses (each scan step is a separate fish).
 function aur_state_set --argument-names key value
     mkdir -p $AUR_REPORTS_DIR
     set -l tmp (mktemp)
     if test -f $AUR_STATE_FILE
         while read -l line
-            if not string match -qr "^$key=" -- $line
+            set -l k (string split -m1 '=' -- $line)[1]
+            if test "$k" != "$key"
                 echo $line >>$tmp
             end
         end <$AUR_STATE_FILE
@@ -178,29 +283,76 @@ end
 
 function aur_state_get --argument-names key
     if not test -f $AUR_STATE_FILE
-        echo 0
+        echo ""
         return
     end
     while read -l line
-        if string match -qr "^$key=" -- $line
-            echo (string split -m1 '=' $line)[2]
+        set -l k (string split -m1 '=' -- $line)[1]
+        if test "$k" = "$key"
+            echo (string split -m1 '=' -- $line)[2]
             return
         end
     end <$AUR_STATE_FILE
-    echo 0
+    echo ""
 end
 
+# Mirror a counter in memory and on disk so run.fish can reload after child scripts exit.
 function aur_summary_set --argument-names key value
     set -g AUR_SUMMARY_$key $value
     aur_state_set $key $value
 end
 
 function aur_state_load_summary
-    for key in installed_infected installed_high_risk timeline_hits window_aur_pkgs artifact_critical credential_exposed hardening_warn list_added list_removed
-        set -g AUR_SUMMARY_$key (aur_state_get $key)
+    for key in installed_infected installed_high_risk timeline_hits window_aur_pkgs artifact_critical credential_exposed hardening_warn list_added list_removed insufficient_data runtime_iocs compromised
+        set -l val (aur_state_get $key)
+        test -z "$val"; and set val 0
+        set -g AUR_SUMMARY_$key $val
     end
 end
 
+# Sticky flag: any step that sees compromise indicators sets this for audit/exit logic.
+function aur_mark_compromised
+    aur_state_set compromised 1
+    set -g AUR_SUMMARY_compromised 1
+end
+
+function aur_compromise_detected
+    test (aur_state_get compromised) = 1
+end
+
+function aur_insufficient_data --argument-names reason
+    aur_summary_inc insufficient_data 1
+    aur_finding_add insufficient_data "$reason"
+    aur_log "[INSUFFICIENT] $reason"
+end
+
+# Echoes the exit code on stdout (for `tail -1` capture) and returns it as $status.
+function aur_finalize_exit --argument-names compromise warn insufficient
+    set -l c 0
+    set -l w 0
+    set -l i 0
+    test "$compromise" = true; and set c 1
+    test "$warn" = true; and set w 1
+    test "$insufficient" = true; and set i 1
+
+    # Priority: insufficient > compromise > warn > clean. --fail-on can suppress lower severities.
+    if test $i -eq 1; and contains -- $AUR_OPT_fail_on all compromise
+        echo $AUR_EXIT_INSUFFICIENT
+        return $AUR_EXIT_INSUFFICIENT
+    end
+    if test $c -eq 1; and contains -- $AUR_OPT_fail_on all compromise
+        echo $AUR_EXIT_COMPROMISE
+        return $AUR_EXIT_COMPROMISE
+    end
+    if test $w -eq 1; and test "$AUR_OPT_fail_on" = all
+        echo $AUR_EXIT_WARN
+        return $AUR_EXIT_WARN
+    end
+    echo $AUR_EXIT_CLEAN
+    return $AUR_EXIT_CLEAN
+end
+
+# Writes to stdout unless --quiet; mirrors the same lines into the active report file.
 function aur_log
     for line in $argv
         if test $AUR_OPT_quiet != true
@@ -212,6 +364,7 @@ function aur_log
     end
 end
 
+# One report per run; AUR_REPORT_FILE is global so aur_log appends throughout.
 function aur_begin_report --argument-names label
     mkdir -p $AUR_REPORTS_DIR
     if set -q AUR_REPORT_FILE[1]
@@ -219,6 +372,7 @@ function aur_begin_report --argument-names label
     end
     set -gx AUR_REPORT_FILE "$AUR_REPORTS_DIR/$label"(date +%Y%m%d-%H%M%S)".log"
     aur_log "=== AUR malware response report ==="
+    aur_log "Toolkit version: $AUR_VERSION"
     aur_log "Started: "(date '+%Y-%m-%d %H:%M:%S')
     aur_log "Host: "(hostname)
     aur_log ""
@@ -226,9 +380,13 @@ end
 
 function aur_summary_inc --argument-names key amount
     set -l current (aur_state_get $key)
+    if test -z "$current"
+        set current 0
+    end
     aur_summary_set $key (math $current + $amount)
 end
 
+# pacman -Qi uses "DD Mon YYYY" — different format from pacman.log ISO timestamps.
 function aur_install_date_in_window --argument-names date_line
     if test -z "$date_line"
         return 1
@@ -255,6 +413,7 @@ function aur_log_line_in_compromise_window --argument-names line
     string match -qr $AUR_WINDOW_LOG_RE -- $line
 end
 
+# Only installed|upgraded|reinstalled count; "removed" during the window is not a new install.
 function aur_is_alpm_install_line --argument-names line
     string match -qr '\[ALPM\] (installed|upgraded|reinstalled)' -- $line
 end
@@ -264,6 +423,8 @@ function aur_extract_alpm_pkg_from_line --argument-names line
     echo $parts[2]
 end
 
+# Collect install/upgrade/reinstall events in the compromise window.
+# Output format: "pkgname|full pacman log line" (pipe delimiter survives commas in log lines).
 function aur_collect_window_alpm_events --argument-names log_path out_file
     while read -l line
         aur_is_alpm_install_line $line; or continue
@@ -280,6 +441,18 @@ function aur_collect_window_alpm_events_all --argument-names out_file
     end
 end
 
+function aur_pacman_logs_accessible
+    set -l found false
+    for log_path in (aur_pacman_log_paths)
+        if test -r $log_path
+            set found true
+            break
+        end
+    end
+    test $found = true
+end
+
+# pacman -Qmq = foreign (AUR) packages only; official repos are out of scope for this campaign.
 function aur_foreign_package_names
     if set -q AUR_TEST_FOREIGN_LIST
         cat $AUR_TEST_FOREIGN_LIST
@@ -288,6 +461,7 @@ function aur_foreign_package_names
     pacman -Qmq 2>/dev/null
 end
 
+# Includes rotated logs (pacman.log.*). Tests override via AUR_TEST_PACMAN_LOG_DIR.
 function aur_pacman_log_paths
     if set -q AUR_TEST_PACMAN_LOG_DIR
         for log_path in $AUR_TEST_PACMAN_LOG_DIR/pacman.log $AUR_TEST_PACMAN_LOG_DIR/pacman.log.*
@@ -304,6 +478,7 @@ function aur_event_line_from_hit --argument-names hit
     echo (string split -m1 '|' -- "$hit")[2]
 end
 
+# Intersect window events with the known infected list; return matching log lines only.
 function aur_timeline_hits_from_events --argument-names events_file infected_list_file
     set -l infected_sorted (mktemp)
     set -l window_pkgs (mktemp)
@@ -327,6 +502,7 @@ function aur_timeline_hits_from_events --argument-names events_file infected_lis
     rm -f $infected_sorted $window_pkgs $matching $hits_raw
 end
 
+# Foreign (AUR) packages touched during the window — includes packages later removed.
 function aur_foreign_packages_in_window --argument-names events_file foreign_list_file
     set -l foreign_sorted (mktemp)
     set -l window_pkgs (mktemp)
@@ -340,6 +516,7 @@ function aur_foreign_packages_in_window --argument-names events_file foreign_lis
     rm -f $foreign_sorted $window_pkgs $foreign_in_window
 end
 
+# Count lines in a multiline string safely (fish empty-string pitfalls).
 function aur_safe_count --argument-names multiline
     if test -z "$multiline"
         echo 0
@@ -352,44 +529,9 @@ function aur_safe_count --argument-names multiline
     echo $n
 end
 
-function aur_find_deps_elf
-    for base in $AUR_DEPS_SEARCH_PATHS
-        test -e $base; or continue
-        for candidate in (find $base -name deps -perm -111 -size +1M 2>/dev/null)
-            if test (aur_sha256_file $candidate) = $AUR_MALWARE_SHA256_DEPS
-                echo $candidate
-            end
-        end
-    end
-end
-
-function aur_ebpf_rootkit_maps
-    for map in hidden_pids hidden_names hidden_inodes
-        test -e /sys/fs/bpf/$map; and echo /sys/fs/bpf/$map
-    end
-end
-
-function aur_log_persistence_findings --argument-names heading
-    set -l heading_text "$heading"
-    test -n "$heading_text"; and aur_log $heading_text
-    set -l deps (aur_find_deps_elf)
-    set -l maps (aur_ebpf_rootkit_maps)
-    set -l critical false
-    for path in $maps
-        aur_log "  [CRITICAL] $path"
-        set critical true
-    end
-    for path in $deps
-        aur_log "  [CRITICAL] deps ELF at $path"
-        set critical true
-    end
-    if test $critical = false
-        aur_log "  [OK]       No eBPF rootkit maps or known deps ELF binary"
-    end
-    if test $critical = true
-        return 1
-    end
-    return 0
+function aur_file_in_compromise_window --argument-names path
+    set -l mtime (aur_file_mtime $path)
+    string match -qr $AUR_WINDOW_LOG_RE -- $mtime
 end
 
 function aur_file_has_hook_pattern --argument-names file
@@ -428,6 +570,7 @@ function aur_filter_pkg_lines
     end
 end
 
+# Strip HTML tags from Arch Security paste before validating package names.
 function aur_parse_pkg_names
     string join \n -- $argv \
         | sed 's/<[^>]*>//g' \
@@ -435,6 +578,7 @@ function aur_parse_pkg_names
         | sort -u
 end
 
+# CSCS advisory ships a bash array; extract package names between INFECTED_PKGS=( and ).
 function aur_parse_cscs_script --argument-names file
     sed -n '/^INFECTED_PKGS=(/,/^)/p' $file \
         | while read -l line
@@ -459,6 +603,37 @@ function aur_fetch_source --argument-names url
     echo $tmp
 end
 
+# Returns "tmpfile|sha256" so callers can log source integrity without re-reading.
+function aur_fetch_source_with_sha --argument-names url
+    set -l tmp (aur_fetch_source $url)
+    if test $status -ne 0
+        return 1
+    end
+    set -l sha (sha256sum $tmp | string split ' ' | head -1)
+    echo "$tmp|$sha"
+end
+
+function aur_list_staleness_days --argument-names path
+    if not test -f $path
+        echo -1
+        return
+    end
+    set -l mtime (stat -c %Y $path 2>/dev/null)
+    set -l now (date +%s)
+    math "($now - $mtime) / 86400"
+end
+
+function aur_warn_local_list_stale
+    set -l age (aur_list_staleness_days $AUR_LIST_FILE)
+    if test $age -lt 0
+        return
+    end
+    if test $age -gt $AUR_LIST_MAX_AGE_DAYS
+        aur_log "WARN: bundled list is $age days old (>$AUR_LIST_MAX_AGE_DAYS) — run without --local for fresh data"
+    end
+end
+
+# Compare freshly fetched list to the previous copy (comm -13 = only in new, -23 = only in old).
 function aur_list_delta --argument-names old_file
     if not test -f $old_file
         return 0
@@ -490,12 +665,15 @@ function aur_list_delta --argument-names old_file
     end
 end
 
+# Load merged infected list: local file, or fetch Arch + CSCS (+ optional extra URL) and union.
+# On fetch failure, falls back to the bundled data/infected-pkgs.txt if present.
 function aur_load_infected_list --argument-names use_local
     if test "$use_local" = true
         if not test -f $AUR_LIST_FILE
             aur_log "ERROR: --local requires $AUR_LIST_FILE"
             return 1
         end
+        aur_warn_local_list_stale
         aur_log "Using local list at $AUR_LIST_FILE"
         sort -u $AUR_LIST_FILE
         return 0
@@ -503,6 +681,7 @@ function aur_load_infected_list --argument-names use_local
 
     set -l all_pkgs
     set -l sources_used
+    set -l source_shas
 
     aur_log "Fetching infected package lists..."
 
@@ -510,24 +689,48 @@ function aur_load_infected_list --argument-names use_local
         cp $AUR_LIST_FILE $AUR_LIST_PREVIOUS
     end
 
-    set -l arch_tmp (aur_fetch_source $AUR_LIST_URL_ARCH)
+    set -l arch_fetch (aur_fetch_source_with_sha $AUR_LIST_URL_ARCH)
     if test $status -eq 0
+        set -l arch_parts (string split '|' -- $arch_fetch)
+        set -l arch_tmp $arch_parts[1]
+        set -l arch_sha $arch_parts[2]
         set -l arch_pkgs (aur_parse_pkg_names (cat $arch_tmp))
         set all_pkgs $all_pkgs $arch_pkgs
         set -a sources_used "Arch ($AUR_LIST_URL_ARCH)"
+        set -a source_shas "arch=$arch_sha"
         rm -f $arch_tmp
     else
         aur_log "WARN: failed to fetch $AUR_LIST_URL_ARCH"
     end
 
-    set -l cscs_tmp (aur_fetch_source $AUR_LIST_URL_CSCS)
+    set -l cscs_fetch (aur_fetch_source_with_sha $AUR_LIST_URL_CSCS)
     if test $status -eq 0
+        set -l cscs_parts (string split '|' -- $cscs_fetch)
+        set -l cscs_tmp $cscs_parts[1]
+        set -l cscs_sha $cscs_parts[2]
         set -l cscs_pkgs (aur_parse_cscs_script $cscs_tmp)
         set all_pkgs $all_pkgs $cscs_pkgs
         set -a sources_used "cscs ($AUR_LIST_URL_CSCS)"
+        set -a source_shas "cscs=$cscs_sha"
         rm -f $cscs_tmp
     else
         aur_log "WARN: failed to fetch $AUR_LIST_URL_CSCS"
+    end
+
+    if test -n "$AUR_LIST_URL_EXTRA"
+        set -l extra_fetch (aur_fetch_source_with_sha $AUR_LIST_URL_EXTRA)
+        if test $status -eq 0
+            set -l extra_parts (string split '|' -- $extra_fetch)
+            set -l extra_tmp $extra_parts[1]
+            set -l extra_sha $extra_parts[2]
+            set -l extra_pkgs (aur_parse_pkg_names (cat $extra_tmp))
+            set all_pkgs $all_pkgs $extra_pkgs
+            set -a sources_used "extra ($AUR_LIST_URL_EXTRA)"
+            set -a source_shas "extra=$extra_sha"
+            rm -f $extra_tmp
+        else
+            aur_log "WARN: failed to fetch $AUR_LIST_URL_EXTRA"
+        end
     end
 
     if test (count $all_pkgs) -eq 0
@@ -547,6 +750,10 @@ function aur_load_infected_list --argument-names use_local
     for src in $sources_used
         aur_log "  - $src"
     end
+    for sha_line in $source_shas
+        aur_log "  - source SHA256 $sha_line"
+        aur_finding_add list_source_sha256 $sha_line
+    end
     echo $all_pkgs
 end
 
@@ -558,20 +765,7 @@ function aur_sha256_file --argument-names path
     sha256sum $path 2>/dev/null | string split ' ' | head -1 | string upper
 end
 
-function aur_history_secret_hits --argument-names path
-    if not test -f $path
-        echo 0
-        return
-    end
-    set -l count 0
-    while read -l line
-        if string match -qir $AUR_HISTORY_SECRET_PATTERN -- $line
-            set count (math $count + 1)
-        end
-    end <$path
-    echo $count
-end
-
+# Key-name heuristic only — never reads or logs secret values from env files.
 function aur_env_has_secrets --argument-names path
     if not test -f $path
         return 1
@@ -584,96 +778,28 @@ function aur_env_has_secrets --argument-names path
     return 1
 end
 
-function aur_json_escape --argument-names value
-    printf '%s' $value \
-        | string replace -a '\\' '\\\\' \
-        | string replace -a '"' '\\"' \
-        | string replace -a \n '\\n' \
-        | string replace -a \r '\\r' \
-        | string replace -a \t '\\t'
-end
-
-function aur_write_summary_json --argument-names exit_code
-    mkdir -p $AUR_REPORTS_DIR
-    set -l ts (date '+%Y-%m-%dT%H:%M:%S%z')
-    set -l host (aur_json_escape (hostname))
-    set -l report_file ""
-    set -q AUR_REPORT_FILE[1]; and set report_file (aur_json_escape $AUR_REPORT_FILE)
-    set -l list_sha256 ""
-    if test -f $AUR_LIST_FILE
-        set list_sha256 (sha256sum $AUR_LIST_FILE | string split ' ' | head -1)
-    end
-
-    if command -q jq
-        jq -n \
-            --arg timestamp $ts \
-            --arg host (hostname) \
-            --argjson exit_code $exit_code \
-            --argjson installed_infected $AUR_SUMMARY_installed_infected \
-            --argjson installed_high_risk $AUR_SUMMARY_installed_high_risk \
-            --argjson timeline_hits $AUR_SUMMARY_timeline_hits \
-            --argjson window_aur_pkgs $AUR_SUMMARY_window_aur_pkgs \
-            --argjson artifact_critical $AUR_SUMMARY_artifact_critical \
-            --argjson credential_exposed $AUR_SUMMARY_credential_exposed \
-            --argjson hardening_warn $AUR_SUMMARY_hardening_warn \
-            --argjson list_added $AUR_SUMMARY_list_added \
-            --argjson list_removed $AUR_SUMMARY_list_removed \
-            --arg report_file (set -q AUR_REPORT_FILE[1]; and echo $AUR_REPORT_FILE; or echo "") \
-            --arg list_sha256 $list_sha256 \
-            '{
-              timestamp: $timestamp,
-              host: $host,
-              exit_code: $exit_code,
-              installed_infected: $installed_infected,
-              installed_high_risk: $installed_high_risk,
-              timeline_hits: $timeline_hits,
-              window_aur_pkgs: $window_aur_pkgs,
-              artifact_critical: $artifact_critical,
-              credential_exposed: $credential_exposed,
-              hardening_warn: $hardening_warn,
-              list_added: $list_added,
-              list_removed: $list_removed,
-              report_file: $report_file,
-              list_sha256: $list_sha256
-            }' >$AUR_SUMMARY_FILE
-        return
-    end
-
-    printf '{
-  "timestamp": "%s",
-  "host": "%s",
-  "exit_code": %s,
-  "installed_infected": %s,
-  "installed_high_risk": %s,
-  "timeline_hits": %s,
-  "window_aur_pkgs": %s,
-  "artifact_critical": %s,
-  "credential_exposed": %s,
-  "hardening_warn": %s,
-  "list_added": %s,
-  "list_removed": %s,
-  "report_file": "%s",
-  "list_sha256": "%s"
-}\n' \
-        $ts $host $exit_code \
-        $AUR_SUMMARY_installed_infected $AUR_SUMMARY_installed_high_risk \
-        $AUR_SUMMARY_timeline_hits $AUR_SUMMARY_window_aur_pkgs \
-        $AUR_SUMMARY_artifact_critical $AUR_SUMMARY_credential_exposed \
-        $AUR_SUMMARY_hardening_warn $AUR_SUMMARY_list_added $AUR_SUMMARY_list_removed \
-        $report_file $list_sha256 >$AUR_SUMMARY_FILE
-end
+# Pull in findings, history, IOC, and report helpers after all base paths/constants exist.
+set -g _aur_lib (dirname (status filename))
+source $_aur_lib/findings.fish
+source $_aur_lib/history.fish
+source $_aur_lib/ioc.fish
+source $_aur_lib/reports.fish
 
 function aur_print_summary_dashboard --argument-names exit_code
     aur_log ""
     aur_log "=== Scan summary ==="
+    aur_log "  Toolkit version:          $AUR_VERSION"
     aur_log "  Installed infected pkgs:  $AUR_SUMMARY_installed_infected ($AUR_SUMMARY_installed_high_risk high-risk)"
     aur_log "  Timeline hits:            $AUR_SUMMARY_timeline_hits"
-    aur_log "  AUR pkgs in window:     $AUR_SUMMARY_window_aur_pkgs"
+    aur_log "  AUR pkgs in window:       $AUR_SUMMARY_window_aur_pkgs"
     aur_log "  Malware artifacts:        $AUR_SUMMARY_artifact_critical critical"
+    aur_log "  Runtime IOCs:             $AUR_SUMMARY_runtime_iocs"
     aur_log "  Credential exposures:     $AUR_SUMMARY_credential_exposed"
-    aur_log "  Hardening warnings:     $AUR_SUMMARY_hardening_warn"
+    aur_log "  Hardening warnings:       $AUR_SUMMARY_hardening_warn"
+    aur_log "  Insufficient data:        $AUR_SUMMARY_insufficient_data"
     if test $AUR_SUMMARY_list_added -gt 0 -o $AUR_SUMMARY_list_removed -gt 0
         aur_log "  List changes:             +$AUR_SUMMARY_list_added / -$AUR_SUMMARY_list_removed"
     end
+    aur_log "  Severity:                 "(aur_compute_severity $exit_code)
     aur_log "  JSON summary:             $AUR_SUMMARY_FILE"
 end

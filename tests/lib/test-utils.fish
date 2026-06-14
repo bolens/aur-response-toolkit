@@ -1,4 +1,4 @@
-# Shared test helpers — sources common.fish and sets AUR_RESPONSE_DIR
+# Shared test helpers — sources common.fish and sets AUR_RESPONSE_DIR from tests/lib/ depth.
 
 if not set -q AUR_RESPONSE_DIR
     set -g AUR_RESPONSE_DIR (dirname (dirname (dirname (status filename))))
@@ -74,6 +74,7 @@ function assert_count --argument-names label expected multiline
     end
 end
 
+# Uses aur_grep -Fxq for exact line match (avoids bee/beef substring false positives in tests).
 function assert_contains --argument-names label needle haystack
     if string split \n -- "$haystack" | aur_grep -Fxq -- $needle
         echo "  ok  $label"

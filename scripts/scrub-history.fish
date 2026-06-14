@@ -1,5 +1,7 @@
 #!/usr/bin/env fish
 
+# Back up and redact shell history lines matching secret patterns (post-rotation cleanup).
+
 set -g AUR_RESPONSE_DIR (dirname (dirname (status filename)))
 source $AUR_RESPONSE_DIR/lib/common.fish
 
@@ -20,7 +22,7 @@ for arg in $argv
             exit 0
         case '-*'
             echo "Unknown option: $arg" >&2
-            exit 2
+            exit $AUR_EXIT_INVALID
     end
 end
 
@@ -36,6 +38,7 @@ function scrub_one_file --argument-names history_file
     set -l redacted 0
     rm -f $scrubbed
 
+    # Line-at-a-time: fish history is plain text; matched lines are dropped, not edited in place.
     while read -l line
         set total (math $total + 1)
         if string match -qir $AUR_HISTORY_SECRET_PATTERN -- $line

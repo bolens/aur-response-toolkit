@@ -21,6 +21,13 @@ set -g AUR_SUMMARY_credential_exposed 3
 set -g AUR_SUMMARY_hardening_warn 1
 set -g AUR_SUMMARY_list_added 0
 set -g AUR_SUMMARY_list_removed 0
+set -g AUR_SUMMARY_insufficient_data 0
+set -g AUR_SUMMARY_runtime_iocs 0
+
+set -gx AUR_STATE_FILE "$AUR_REPORTS_DIR/.scan-state"
+aur_state_init
+aur_finding_add timeline_hits "sample hit line"
+aur_finding_add installed_infected beef
 
 aur_write_summary_json 1
 test -f $AUR_SUMMARY_FILE
@@ -29,7 +36,10 @@ assert_status "json file written" 0
 if command -q jq
     assert_eq "json exit_code" 1 (jq -r .exit_code $AUR_SUMMARY_FILE)
     assert_eq "json timeline_hits" 2 (jq -r .timeline_hits $AUR_SUMMARY_FILE)
+    assert_eq "json version" "1.2.0" (jq -r .version $AUR_SUMMARY_FILE)
+    assert_eq "json severity" "critical" (jq -r .severity $AUR_SUMMARY_FILE)
     assert_match "json list_sha256 present" '.+' (jq -r .list_sha256 $AUR_SUMMARY_FILE)
+    assert_eq "json findings beef" "beef" (jq -r '.findings.installed_infected[0]' $AUR_SUMMARY_FILE)
     set -l parsed (jq . $AUR_SUMMARY_FILE 2>/dev/null)
     assert_status "json parses cleanly" 0
 else

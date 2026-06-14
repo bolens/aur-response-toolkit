@@ -1,5 +1,7 @@
 #!/usr/bin/env fish
 
+# Non-compromise warnings: npm ignore-scripts, AUR helper auto-install settings, IOC history refs.
+
 set -g AUR_RESPONSE_DIR (dirname (dirname (status filename)))
 source $AUR_RESPONSE_DIR/lib/common.fish
 
@@ -23,17 +25,39 @@ set -l warns 0
 aur_log "=== Build environment hardening ==="
 aur_log ""
 
-# npm ignore-scripts
+# npm ignore-scripts (.npmrc + npm config)
+set -l ignore_scripts_ok false
 if test -f $HOME/.npmrc
     if string match -qir 'ignore-scripts\s*=\s*true' (cat $HOME/.npmrc)
+        set ignore_scripts_ok true
         aur_log "[OK] npm ignore-scripts=true in ~/.npmrc"
-    else
-        aur_log "[WARN] npm ignore-scripts not enabled — add to ~/.npmrc:"
-        aur_log "       ignore-scripts=true"
-        set warns (math $warns + 1)
     end
+end
+if command -q npm
+    set -l npm_cfg (npm config get ignore-scripts 2>/dev/null | string trim)
+    if test "$npm_cfg" = true
+        set ignore_scripts_ok true
+        aur_log "[OK] npm config ignore-scripts=true"
+    end
+end
+if test $ignore_scripts_ok = false
+    aur_log "[WARN] npm ignore-scripts not enabled — add to ~/.npmrc:"
+    aur_log "       ignore-scripts=true"
+    set warns (math $warns + 1)
+end
+
+# bun on PATH and env hooks
+if command -q bun
+    aur_log "[INFO] bun found at "(command -v bun)" — optional; review if installed during $AUR_WINDOW_LABEL"
 else
-    aur_log "[WARN] No ~/.npmrc — create one with ignore-scripts=true"
+    aur_log "[OK] bun not on PATH"
+end
+if set -q BUN_INSTALL
+    aur_log "[WARN] BUN_INSTALL is set ($BUN_INSTALL) — bun hook env present"
+    set warns (math $warns + 1)
+end
+if set -q BUN_INSTALL_BIN
+    aur_log "[WARN] BUN_INSTALL_BIN is set ($BUN_INSTALL_BIN) — bun hook env present"
     set warns (math $warns + 1)
 end
 
@@ -50,11 +74,22 @@ for cfg in $HOME/.config/paru/paru.conf $HOME/.config/yay/config.json
     end
 end
 
-# bun on PATH (used in js-digest wave)
-if command -q bun
-    aur_log "[INFO] bun found at "(command -v bun)" — optional; review if installed during $AUR_WINDOW_LABEL"
-else
-    aur_log "[OK] bun not on PATH"
+# paru/yay --noconfirm in shell history during compromise window
+aur_log ""
+aur_log "=== AUR helper usage during compromise window ==="
+set -l noconfirm_hits 0
+# Only [WARN] when --noconfirm correlates with foreign pkg activity in the window.
+for h in $HOME/.bash_history $HOME/.zsh_history $HOME/.local/share/fish/fish_history
+    if aur_history_noconfirm_during_window $h
+        aur_log "  [WARN] paru/yay --noconfirm in $h and foreign AUR activity during $AUR_WINDOW_LABEL"
+        set noconfirm_hits (math $noconfirm_hits + 1)
+        set warns (math $warns + 1)
+    else if aur_history_has_noconfirm_aur $h
+        aur_log "  [INFO] paru/yay --noconfirm found in $h (no correlated window activity)"
+    end
+end
+if test $noconfirm_hits -eq 0
+    aur_log "  [OK] No --noconfirm AUR installs logged during window"
 end
 
 # IOC references in shell history
@@ -80,7 +115,7 @@ aur_summary_set hardening_warn $warns
 aur_log ""
 if test $warns -gt 0
     aur_log "$warns hardening warning(s) — see above"
-    exit 1
+    exit $AUR_EXIT_WARN
 end
 aur_log "Hardening checks passed"
-exit 0
+exit $AUR_EXIT_CLEAN

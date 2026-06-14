@@ -1,5 +1,8 @@
 #!/usr/bin/env fish
 
+# Cross-reference pacman logs with the infected list during the compromise window.
+# Unlike check-infected-pkgs, this finds packages that were installed then removed.
+
 set -g AUR_RESPONSE_DIR (dirname (dirname (status filename)))
 source $AUR_RESPONSE_DIR/lib/common.fish
 
@@ -22,19 +25,15 @@ aur_log "=== Pacman install timeline (compromise window) ==="
 aur_log "Scanning pacman logs for infected packages, $AUR_WINDOW_LABEL"
 aur_log ""
 
-set -l has_log false
-for log_path in (aur_pacman_log_paths)
-    set has_log true
-    break
-end
-if test $has_log = false
-    aur_log "WARN: no pacman logs found under /var/log/pacman.log*"
-    exit 0
+if not aur_pacman_logs_accessible
+    aur_insufficient_data "no readable pacman logs under /var/log/pacman.log*"
+    aur_log_insufficient_help
+    exit $AUR_EXIT_INSUFFICIENT
 end
 
 if not test -f $AUR_LIST_FILE
-    aur_log "WARN: $AUR_LIST_FILE missing"
-    exit 0
+    aur_insufficient_data "$AUR_LIST_FILE missing"
+    exit $AUR_EXIT_INSUFFICIENT
 end
 
 set -l events (mktemp)
@@ -46,15 +45,20 @@ rm -f $events
 if test $hit_count -eq 0
     aur_log "[OK] No infected packages in pacman logs during compromise window"
 else
+    aur_mark_compromised
     aur_summary_set timeline_hits $hit_count
     aur_log "[FOUND] $hit_count timeline hit(s):"
-    string split \n -- "$raw" | while read -l hit
-        test -n "$hit"; and aur_log "  $hit"
+    for hit in (string split \n -- "$raw")
+        test -n "$hit"; or continue
+        aur_finding_add timeline_hits $hit
+        aur_log "  $hit"
     end
     aur_log ""
+    # Removed packages still appear in logs — not automatically malicious; user must triage.
     aur_log "Removed packages still appear. Review each — upgrades during window may be benign"
     aur_log "if you intentionally updated that day (e.g. beef gaming pkg)."
-    exit 1
+    exit $AUR_EXIT_COMPROMISE
 end
 
 aur_log ""
+exit $AUR_EXIT_CLEAN

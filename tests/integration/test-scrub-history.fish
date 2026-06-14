@@ -22,7 +22,7 @@ assert_eq "dry-run leaves history untouched" 4 $lines
 test_section "scrub-history unknown flag"
 set -l bad_file (mktemp)
 env HOME=$tmp_home fish $AUR_SCRIPTS_DIR/scrub-history.fish --nope >$bad_file 2>&1
-assert_eq "scrub unknown flag exits 2" 2 $status
+assert_eq "scrub unknown flag exits 4" $AUR_EXIT_INVALID $status
 rm -f $bad_file
 
 rm -rf $tmp_home $out_file

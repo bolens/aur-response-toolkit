@@ -26,7 +26,8 @@ set -l window_code $status
 set -l window_text (cat $window_out)
 rm -f $window_out
 
-assert_eq "aur-window exits 1 on unknown foreign pkgs" 1 $window_code
+assert_eq "aur-window exits 2 on benign unknown foreign pkgs" $AUR_EXIT_WARN $window_code
+assert_match "benign severity in output" 'severity: review \(benign triage\)' "$window_text"
 assert_match "known beef flagged" '\[KNOWN\].*beef' "$window_text"
 assert_match "unknown bee flagged" '\[NEW\?\].*bee' "$window_text"
 assert_match "bracket log line printed" 'upgraded beef' "$window_text"
@@ -36,7 +37,7 @@ set -e AUR_TEST_FOREIGN_LIST
 test_section "integration: remove-infected rejects unknown flags"
 begin
     fish $AUR_SCRIPTS_DIR/remove-infected.fish --nope 2>/dev/null
-    assert_status "unknown flag exits 2" 2
+    assert_status "unknown flag exits 4" $AUR_EXIT_INVALID
 end
 
 test_section "integration: rotate-hints docker registry parsing"

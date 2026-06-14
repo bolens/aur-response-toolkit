@@ -1,0 +1,15 @@
+# Copy to ~/.config/atomic-arch-response/config.fish (optional)
+#
+# Override toolkit defaults. Sourced automatically by lib/common.fish after built-in paths.
+
+# Directory scanned for .env / stack.env files (credential audit)
+# set -g AUR_DEV_ROOT "$HOME/projects"
+
+# Extra paths searched for deps ELF (space-separated list)
+# set -g AUR_DEPS_SEARCH_PATHS $HOME/.cache $HOME/.local $HOME/.npm
+
+# Max age (days) before --local warns that bundled infected-pkgs.txt may be stale
+# set -g AUR_LIST_MAX_AGE_DAYS 7
+
+# Optional third infected-package list URL (merged with CSCS + Arch Security)
+# set -g AUR_LIST_URL_EXTRA "https://example.com/extra-infected-list.txt"

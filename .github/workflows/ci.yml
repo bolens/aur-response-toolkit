@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install fish
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fish curl jq
+
+      - name: Run test suite
+        run: fish tests/run-all.fish
+
+      - name: Install fishcheck
+        run: |
+          git clone --depth 1 https://github.com/mattmc3/fishcheck ~/.local/bin/fishcheck
+          echo "$HOME/.local/bin/fishcheck" >> $GITHUB_PATH
+
+      - name: Lint Fish scripts
+        run: fish lint.fish

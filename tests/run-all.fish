@@ -1,5 +1,7 @@
 #!/usr/bin/env fish
 
+# Test runner: each suite is a separate fish process; any failure yields exit 1.
+
 set -l test_dir (dirname (status filename))
 set -l failed_suites 0
 set -l passed_suites 0
@@ -14,6 +16,12 @@ for suite in \
     unit/test-package-lists.fish \
     unit/test-hooks-secrets.fish \
     unit/test-state-json.fish \
+    unit/test-exit-findings.fish \
+    unit/test-findings-tab.fish \
+    unit/test-compromise-detected.fish \
+    unit/test-prune.fish \
+    unit/test-apply-hardening.fish \
+    unit/test-rotate-hints.fish \
     integration/test-cli.fish \
     integration/test-scrub-history.fish \
     integration/test-integration.fish

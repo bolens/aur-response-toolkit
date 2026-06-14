@@ -1,0 +1,16 @@
+[Unit]
+Description=Weekly Atomic Arch AUR scan (local list)
+After=network-online.target
+
+[Service]
+Type=oneshot
+# Point AUR_RESPONSE_DIR at your clone; %h expands to the installing user's home.
+Environment=AUR_RESPONSE_DIR=%h/atomic-arch-response-toolkit
+WorkingDirectory=%h/atomic-arch-response-toolkit
+# --fail-on compromise: hardening/unknown-AUR warns (exit 2) do not fail the timer unit.
+ExecStart=/usr/bin/fish run.fish --local --report --quiet --json --fail-on compromise --quick
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
