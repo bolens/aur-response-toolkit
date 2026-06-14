@@ -1,0 +1,77 @@
+_aur_install_msg() {
+    cat <<'EOF'
+aur-response-toolkit installed.
+
+Quick start
+  aur-response                 Full scan (fetches latest threat lists online)
+  aur-response --local         Offline / air-gapped (bundled lists only)
+  aur-response --audit         Always run credential audit + rotation hints
+  aur-response --report --json Save report + print JSON summary
+  aur-response --recover       Interactive recovery wizard
+  aur-response-bash            Same entry point from bash login shells
+  aur-run                      Alternate wrapper (same as aur-response)
+
+Exit codes
+  0  clean
+  1  compromise indicators (infected packages, timeline hits, artifacts)
+  2  warnings only (hardening, benign unknown AUR packages, optional campaigns)
+  3  insufficient data (unreadable pacman.log — try: sudo aur-response)
+  4  invalid CLI arguments
+
+Individual scripts (symlinks in PATH)
+  aur-check-atomic-arch-pkgs.fish, aur-check-chaos-rat-pkgs.fish,
+  aur-check-shai-hulud-pkgs.fish, aur-check-xeactor-pkgs.fish,
+  aur-scan-malware-artifacts.fish, aur-scan-hardening.fish,
+  aur-recovery-remove-packages.fish, aur-audit-stolen-credentials.fish, …
+
+Configuration (optional)
+  mkdir -p ~/.config/aur-response
+  cp /usr/share/aur-response-toolkit/config.fish.example \
+     ~/.config/aur-response/config.fish
+  Override AUR helper cache paths, pamac build dirs, pacman.log location
+  (chroots/containers), dev-root for .env scans, optional campaign toggles
+  (AUR_ENABLE_CHAOS_RAT, AUR_ENABLE_SHAI_HULUD, AUR_ENABLE_XEACTOR), etc.
+
+Scan output (reports, JSON summary, scan state)
+  ~/.local/share/aur-response/reports/
+  Bundled threat lists remain under /usr/share/aur-response-toolkit/data/lists/
+
+Optional pacman packages (faster scans, richer checks)
+  pacman -S --needed fd ripgrep curlie zstd jq procps-ng iproute2 npm bun
+  AUR helper (paru or yay) improves PKGBUILD hook cache scanning.
+
+Optional threat campaigns (off by default; separate from Atomic Arch)
+  aur-response --chaos-rat --local
+  aur-response --shai-hulud --local
+  aur-response --xeactor --local
+  Or enable permanently in ~/.config/aur-response/config.fish.
+
+Recovery flow (if compromise found)
+  aur-recovery-remove-packages.fish --dry-run
+  aur-recovery-remove-packages.fish
+  aur-response --audit --report
+  aur-recovery-rotate-hints.fish
+  aur-recovery-scrub-history.fish --all-shells
+
+Weekly systemd timer (optional; user unit)
+  systemctl --user daemon-reload
+  systemctl --user enable --now aur-response-scan.timer
+  Runs aur-response --local --report --quiet --json --fail-on compromise --quick
+  For scans while logged out: loginctl enable-linger $USER
+
+Documentation
+  /usr/share/aur-response-toolkit/README.md
+  /usr/share/aur-response-toolkit/data/docs/
+  https://github.com/bolens/aur-response-toolkit
+EOF
+}
+
+post_install() {
+    _aur_install_msg
+}
+
+post_upgrade() {
+    echo "aur-response-toolkit upgraded."
+    echo ""
+    _aur_install_msg
+}

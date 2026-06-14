@@ -1,0 +1,30 @@
+--- a/lib/common.fish
++++ b/lib/common.fish
+@@ -64,6 +64,18 @@
+ set -g AUR_FINDINGS_FILE "$AUR_RESPONSE_DIR/reports/.scan-findings.json"
+ set -g AUR_FINDINGS_LIST_FILE "$AUR_REPORTS_DIR/.scan-findings.list"
+ 
++# FHS installs under /usr are read-only; keep scan output in XDG data home.
++if not test -w "$AUR_REPORTS_DIR" 2>/dev/null
++    set -l _aur_xdg_state "$HOME/.local/share/aur-response"
++    if set -q XDG_DATA_HOME
++        set _aur_xdg_state "$XDG_DATA_HOME/aur-response"
++    end
++    set -g AUR_REPORTS_DIR "$_aur_xdg_state/reports"
++    set -g AUR_SUMMARY_FILE "$AUR_REPORTS_DIR/latest-summary.json"
++    set -g AUR_FINDINGS_FILE "$AUR_REPORTS_DIR/.scan-findings.json"
++    set -g AUR_FINDINGS_LIST_FILE "$AUR_REPORTS_DIR/.scan-findings.list"
++end
++
+ # Remote infected-list sources merged on each online fetch (see data/docs/atomic-arch.md).
+ set -g AUR_LIST_URL_ARCH "https://md.archlinux.org/s/SxbqukK6IA"
+ set -g AUR_LIST_URL_CSCS "https://cscs.pastes.sh/raw/aurvulntest20260611.sh"
+@@ -133,7 +145,7 @@
+ end
+ 
+ if not set -q AUR_STATE_FILE
+-    set -g AUR_STATE_FILE "$AUR_RESPONSE_DIR/reports/.scan-state"
++    set -g AUR_STATE_FILE "$AUR_REPORTS_DIR/.scan-state"
+ end
+ 
+ # User config (optional overrides in ~/.config/aur-response/config.fish)

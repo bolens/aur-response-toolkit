@@ -70,6 +70,13 @@ chmod +x run.fish run.sh install.fish lint.fish scripts/*/*.fish
 # Optional: install symlinks to ~/.local/bin
 fish install.fish
 
+# System-wide FHS install (/usr/share + /usr/bin; needs root)
+sudo fish install.fish --system
+# Or: sudo fish install.fish --prefix /usr/local
+# Packagers: fish install.fish --prefix /usr --destdir /tmp/stage
+
+# AUR (Arch): paru -S aur-response-toolkit
+
 # Full scan (fetches latest infected-package lists from the web)
 fish run.fish
 
@@ -433,7 +440,7 @@ fish tests/run-all.fish
 aur-response-toolkit/
 ├── run.fish                      # Main entry point (orchestrator)
 ├── run.sh                        # Bash wrapper → run.fish
-├── install.fish                  # Install portable wrappers + aur-* symlinks
+├── install.fish                  # User (~/.local/bin) or FHS (--system / --prefix) install
 ├── bin/aur-run.fish              # Portable entry point (resolves clone path)
 ├── VERSION                       # Toolkit version (see file)
 ├── config.fish.example           # Optional user config template
