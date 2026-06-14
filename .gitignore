@@ -1,0 +1,15 @@
+# Generated scan output
+reports/*
+!reports/.gitkeep
+
+# Runtime state
+infected-pkgs.previous.txt
+.scan-state
+
+# History scrub backups
+*.bak.*
+
+# Editor / OS
+*.swp
+*~
+.DS_Store
