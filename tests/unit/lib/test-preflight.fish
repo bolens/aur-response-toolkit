@@ -37,7 +37,7 @@ test_section "pamac config assignment parser"
 
 set -l cfg (mktemp)
 printf '%s\n' 'BuildDirectory = /opt/pamac-builds' '# comment' >$cfg
-assert_eq "reads BuildDirectory" '/opt/pamac-builds' (aur_read_config_assignment $cfg BuildDirectory)
+assert_eq "reads BuildDirectory" /opt/pamac-builds (aur_read_config_assignment $cfg BuildDirectory)
 
 test_finish "test-preflight.fish"
 exit $status

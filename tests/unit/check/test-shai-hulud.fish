@@ -81,11 +81,11 @@ set -l alltime_code $status
 set -l alltime_text (cat $alltime_out | string collect)
 
 assert_eq "window mode finds May install only" $AUR_EXIT_WARN $window_code
-assert_match "gnome-vfs in window timeline" 'gnome-vfs' "$window_text"
-assert_not_match "Feb shai pkg excluded from window timeline" 'shai-pkg-a' "$window_text"
+assert_match "gnome-vfs in window timeline" gnome-vfs "$window_text"
+assert_not_match "Feb shai pkg excluded from window timeline" shai-pkg-a "$window_text"
 assert_eq "all-time timeline finds both" $AUR_EXIT_WARN $alltime_code
-assert_match "all-time gnome-vfs hit" 'gnome-vfs' "$alltime_text"
-assert_match "all-time shai-pkg-a hit" 'shai-pkg-a' "$alltime_text"
+assert_match "all-time gnome-vfs hit" gnome-vfs "$alltime_text"
+assert_match "all-time shai-pkg-a hit" shai-pkg-a "$alltime_text"
 
 rm -f $window_out $alltime_out
 set -e AUR_TEST_PACMAN_LOG_DIR
@@ -105,7 +105,7 @@ printf '%s\n' shai-pkg-a >$AUR_TEST_INSTALLED_LIST
 set -l remove_out (mktemp)
 fish (aur_script_path recovery/remove-packages.fish) --list shai-hulud --dry-run >$remove_out 2>&1
 assert_eq "shai hulud dry-run clean" $AUR_EXIT_CLEAN $status
-assert_match "shai pkg in removal list" 'shai-pkg-a' (cat $remove_out | string collect)
+assert_match "shai pkg in removal list" shai-pkg-a (cat $remove_out | string collect)
 rm -f $remove_out $AUR_TEST_INSTALLED_LIST
 set -e AUR_TEST_INSTALLED_LIST
 
@@ -149,8 +149,8 @@ test_set_shai_hulud_fetch_fixture $fetch_fixture
 set -g AUR_OPT_quiet true
 set -l fetched (aur_load_shai_hulud_list false | string collect)
 assert_status "remote fetch succeeds via test fixture" 0
-assert_match "fetched extra package" 'crypto-pkg-extra' "$fetched"
-assert_match "fetched gnome-vfs" 'gnome-vfs' "$fetched"
+assert_match "fetched extra package" crypto-pkg-extra "$fetched"
+assert_match "fetched gnome-vfs" gnome-vfs "$fetched"
 test -f $out_list
 assert_status "fetched list written to cache" 0
 set -l sha_findings (aur_finding_list shai_hulud_list_sha256 | string collect)

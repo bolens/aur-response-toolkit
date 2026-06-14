@@ -13,8 +13,8 @@ set -l raw (aur_timeline_hits_from_events $events (test_fixture_path lists/atomi
 assert_count "two beef hits" 2 "$raw"
 assert_match "beef upgrade included" 'upgraded beef' "$raw"
 assert_not_match "bee not infected" '(^|\n)installed bee' "$raw"
-assert_not_match "clean-aur not infected" 'clean-aur' "$raw"
-assert_not_match "removed action not counted" 'evil-pkg' "$raw"
+assert_not_match "clean-aur not infected" clean-aur "$raw"
+assert_not_match "removed action not counted" evil-pkg "$raw"
 
 test_section "repeat updates during attack window"
 set -l repeat_raw (aur_timeline_repeat_updates_from_events $events (test_fixture_path lists/atomic-arch-pkgs.txt) | string collect)
@@ -28,7 +28,7 @@ assert_eq "bee event count" 1 (aur_pkg_event_count_in_events $events bee)
 
 test_section "event line extraction from pkg|line hits"
 set -l hit 'beef|[2026-06-10T11:00:00-0600] [ALPM] upgraded beef (1-1 -> 2-1)'
-assert_match "aur_event_line_from_hit" 'upgraded beef' (aur_event_line_from_hit "$hit")
+assert_match aur_event_line_from_hit 'upgraded beef' (aur_event_line_from_hit "$hit")
 
 test_section "aur_grep -F avoids bee/beef substring trap"
 assert_count "aur_grep -F beef| does not match bee" 0 (echo 'bee|[2026-06-09T10:00:00-0600] [ALPM] installed bee (1-1)' | aur_grep -F 'beef|' | string split \n)

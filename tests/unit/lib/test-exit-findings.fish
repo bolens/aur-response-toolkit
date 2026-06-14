@@ -12,7 +12,7 @@ set -gx AUR_STATE_FILE "$AUR_REPORTS_DIR/.scan-state"
 aur_state_init
 aur_finding_add atomic_arch_installed beef
 aur_finding_add atomic_arch_installed foo
-aur_finding_add atomic_arch_timeline_hits "line-one"
+aur_finding_add atomic_arch_timeline_hits line-one
 set -l list (aur_finding_list atomic_arch_installed)
 assert_eq "two infected findings" 2 (count $list)
 assert_contains "beef in findings" beef (string join \n -- $list)

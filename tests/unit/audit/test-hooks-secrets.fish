@@ -57,7 +57,7 @@ set -l quiet_out (aur_log "should-not-print")
 set -g AUR_OPT_quiet false
 set -l loud_out (aur_log "should-print")
 assert_eq "quiet suppresses stdout" "" $quiet_out
-assert_eq "normal logs print" "should-print" $loud_out
+assert_eq "normal logs print" should-print $loud_out
 set -g AUR_OPT_quiet $_quiet
 
 test_finish "test-hooks-secrets.fish"

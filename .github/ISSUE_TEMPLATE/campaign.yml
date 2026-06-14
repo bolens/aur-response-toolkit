@@ -1,0 +1,63 @@
+name: Campaign / IOC update
+description: Propose a new AUR campaign or package-list / IOC change
+title: "[Campaign]: "
+labels:
+  - campaign
+body:
+  - type: markdown
+    value: |
+      Cite upstream sources (advisory URL, blog, SHA256). See [`data/docs/sources.md`](https://github.com/bolens/aur-response-toolkit/blob/main/data/docs/sources.md).
+
+  - type: input
+    id: campaign_name
+    attributes:
+      label: Campaign name or slug
+      placeholder: "atomic-arch, chaos-rat, shai-hulud, xeactor, or new slug"
+    validations:
+      required: true
+
+  - type: textarea
+    id: packages
+    attributes:
+      label: Package names
+      description: One per line; include exact AUR package names
+      placeholder: |
+        example-pkg-bin
+        another-pkg
+    validations:
+      required: true
+
+  - type: input
+    id: date_window
+    attributes:
+      label: Relevant date window
+      placeholder: "Jun 9–14, 2026 install/timeline relevance"
+    validations:
+      required: true
+
+  - type: textarea
+    id: sources
+    attributes:
+      label: Upstream sources
+      description: URLs to advisories, IOC write-ups, list mirrors
+    validations:
+      required: true
+
+  - type: textarea
+    id: iocs
+    attributes:
+      label: IOCs (optional)
+      description: File paths, SHA256, npm package names, persistence artifacts
+    validations:
+      required: false
+
+  - type: dropdown
+    id: default_scan
+    attributes:
+      label: Should this run in the default `run.fish` scan?
+      options:
+        - "Opt-in only (like chaos-rat / shai-hulud)"
+        - "Default scan (like atomic-arch)"
+        - "Not sure"
+    validations:
+      required: true

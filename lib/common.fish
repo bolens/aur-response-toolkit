@@ -1457,7 +1457,7 @@ function aur_helper_hardening_config_paths
 end
 
 function aur_gnu_date_available
-    date -d '2026-01-01' +%s >/dev/null 2>&1
+    date -d 2026-01-01 +%s >/dev/null 2>&1
 end
 
 function aur_aur_helper_cache_roots

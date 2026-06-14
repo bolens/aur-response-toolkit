@@ -104,8 +104,7 @@ set -gx AUR_TEST_PKG_INFO (mktemp)
 printf '%s\n' \
     'chaos-pkg-a|Mon 17 Jul 2025 20:00:00|Explicitly installed' \
     'shai-pkg-a|Sat 17 May 2026 20:00:00|Explicitly installed' \
-    'legacy-pkg-a|Thu 07 Jun 2018 20:00:00|Explicitly installed' \
-    >$AUR_TEST_PKG_INFO
+    'legacy-pkg-a|Thu 07 Jun 2018 20:00:00|Explicitly installed' >$AUR_TEST_PKG_INFO
 set -gx AUR_TEST_LIST_FILE (test_fixture_path lists/atomic-arch-pkgs.txt)
 set -gx AUR_TEST_CHAOS_RAT_LIST_FILE (test_fixture_path lists/chaos-rat-pkgs.txt)
 set -gx AUR_TEST_SHAI_HULUD_LIST_FILE (test_fixture_path lists/shai-hulud-pkgs.txt)

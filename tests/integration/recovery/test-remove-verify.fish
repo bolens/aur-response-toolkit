@@ -49,13 +49,13 @@ end
 
 test_section "remove-packages --verify atomic-arch"
 
-test_remove_verify_case "atomic-arch" atomic-arch beef $AUR_EXIT_COMPROMISE "atomic-arch"
+test_remove_verify_case atomic-arch atomic-arch beef $AUR_EXIT_COMPROMISE atomic-arch
 
 test_section "remove-packages --verify optional campaigns"
 
-test_remove_verify_case "chaos-rat" chaos-rat chaos-pkg-a $AUR_EXIT_WARN "chaos-rat"
-test_remove_verify_case "shai-hulud" shai-hulud shai-pkg-a $AUR_EXIT_WARN "shai-hulud"
-test_remove_verify_case "xeactor" xeactor legacy-pkg-a $AUR_EXIT_WARN "xeactor"
+test_remove_verify_case chaos-rat chaos-rat chaos-pkg-a $AUR_EXIT_WARN chaos-rat
+test_remove_verify_case shai-hulud shai-hulud shai-pkg-a $AUR_EXIT_WARN shai-hulud
+test_remove_verify_case xeactor xeactor legacy-pkg-a $AUR_EXIT_WARN xeactor
 
 test_finish "test-remove-verify.fish"
 exit $status

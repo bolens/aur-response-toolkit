@@ -10,7 +10,7 @@ assert_eq "maintainer base64 is noise" true \
 assert_eq "npm hook is not noise" false \
     (aur_similar_heuristics_line_is_noise "  npm install atomic-lockfile"; and echo true; or echo false)
 
-test_section "aur_file_has_similar_heuristics"
+test_section aur_file_has_similar_heuristics
 set -l malicious (test_fixture_path pkgbuilds/pkgbuild.malicious)
 set -l clean (test_fixture_path pkgbuilds/pkgbuild.clean)
 begin
@@ -22,7 +22,7 @@ begin
     assert_status "clean PKGBUILD no heuristic match" 1
 end
 
-test_section "aur_foreign_installed_not_on_list"
+test_section aur_foreign_installed_not_on_list
 set -l list (test_fixture_path lists/atomic-arch-pkgs.txt)
 set -gx AUR_TEST_INSTALLED_LIST (test_fixture_path lists/foreign-pkgs.txt)
 set -l not_listed (aur_foreign_installed_not_on_list $list | string collect)
@@ -30,7 +30,7 @@ assert_contains "bee not on list" bee "$not_listed"
 assert_not_match "beef on list excluded" '^beef$' "$not_listed"
 set -e AUR_TEST_INSTALLED_LIST
 
-test_section "aur_pkg_similar_heuristics_files"
+test_section aur_pkg_similar_heuristics_files
 set -l _home $HOME
 set -l tmp_home (mktemp -d)
 set -gx HOME $tmp_home
@@ -71,8 +71,7 @@ set -gx HOME $tmp_home
 mkdir -p $HOME/.cache/paru/clone/nessus-like
 printf '%s\n' \
     '# Maintainer: noraj <printf %s '"'"'YWxleEBleGFtcGxlLmNvbQ=='"'"'|base64 -d>' \
-    'pkgver=1' \
-    >$HOME/.cache/paru/clone/nessus-like/PKGBUILD
+    'pkgver=1' >$HOME/.cache/paru/clone/nessus-like/PKGBUILD
 set -gx AUR_TEST_INSTALLED_LIST (mktemp)
 echo nessus-like >$AUR_TEST_INSTALLED_LIST
 set -l test_list2 (mktemp)

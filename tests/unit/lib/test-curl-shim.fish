@@ -12,7 +12,7 @@ begin
     assert_status "file url fetch succeeds" 0
 end
 set -l body (cat $out | string collect)
-assert_match "community fixture content" 'minecraft-cracked' "$body"
+assert_match "community fixture content" minecraft-cracked "$body"
 rm -f $out
 
 test_section "aur_fetch_source_with_sha uses aur_curl"

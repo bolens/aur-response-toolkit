@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security advisory (toolkit vulnerabilities)
+    url: https://github.com/bolens/aur-response-toolkit/security/advisories/new
+    about: Private disclosure for security bugs in this toolkit — not for new AUR IOCs
+  - name: Security policy
+    url: https://github.com/bolens/aur-response-toolkit/blob/main/SECURITY.md
+    about: How to report toolkit bugs vs public campaign/IOC updates

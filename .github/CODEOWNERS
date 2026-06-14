@@ -1,0 +1,11 @@
+# Security-sensitive paths — default reviewers for PRs affecting detection or recovery.
+* @bolens
+
+/lib/ioc.fish @bolens
+/lib/findings.fish @bolens
+/lib/reports.fish @bolens
+/data/lists/ @bolens
+/data/docs/ @bolens
+/scripts/recovery/ @bolens
+/scripts/audit/ @bolens
+/run.fish @bolens

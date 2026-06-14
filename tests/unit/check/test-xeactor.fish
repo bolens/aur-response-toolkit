@@ -81,11 +81,11 @@ set -l alltime_code $status
 set -l alltime_text (cat $alltime_out | string collect)
 
 assert_eq "window mode finds Jun install only" $AUR_EXIT_WARN $window_code
-assert_match "acroread in window timeline" 'acroread' "$window_text"
-assert_not_match "Feb legacy pkg excluded from window timeline" 'legacy-pkg-a' "$window_text"
+assert_match "acroread in window timeline" acroread "$window_text"
+assert_not_match "Feb legacy pkg excluded from window timeline" legacy-pkg-a "$window_text"
 assert_eq "all-time timeline finds both" $AUR_EXIT_WARN $alltime_code
-assert_match "all-time acroread hit" 'acroread' "$alltime_text"
-assert_match "all-time legacy-pkg-a hit" 'legacy-pkg-a' "$alltime_text"
+assert_match "all-time acroread hit" acroread "$alltime_text"
+assert_match "all-time legacy-pkg-a hit" legacy-pkg-a "$alltime_text"
 
 rm -f $window_out $alltime_out
 set -e AUR_TEST_PACMAN_LOG_DIR
@@ -105,7 +105,7 @@ printf '%s\n' legacy-pkg-a >$AUR_TEST_INSTALLED_LIST
 set -l remove_out (mktemp)
 fish (aur_script_path recovery/remove-packages.fish) --list xeactor --dry-run >$remove_out 2>&1
 assert_eq "xeactor dry-run clean" $AUR_EXIT_CLEAN $status
-assert_match "legacy pkg in removal list" 'legacy-pkg-a' (cat $remove_out | string collect)
+assert_match "legacy pkg in removal list" legacy-pkg-a (cat $remove_out | string collect)
 rm -f $remove_out $AUR_TEST_INSTALLED_LIST
 set -e AUR_TEST_INSTALLED_LIST
 
@@ -137,8 +137,8 @@ test_set_xeactor_fetch_fixture $fetch_fixture
 set -g AUR_OPT_quiet true
 set -l fetched (aur_load_xeactor_list false | string collect)
 assert_status "remote fetch succeeds via test fixture" 0
-assert_match "fetched xeactor-extra" 'xeactor-extra' "$fetched"
-assert_match "fetched acroread" 'acroread' "$fetched"
+assert_match "fetched xeactor-extra" xeactor-extra "$fetched"
+assert_match "fetched acroread" acroread "$fetched"
 test -f $out_list
 assert_status "fetched xeactor list written" 0
 set -l sha_findings (aur_finding_list xeactor_list_sha256 | string collect)

@@ -1,0 +1,51 @@
+name: False positive
+description: A benign package or artifact was flagged incorrectly
+title: "[False positive]: "
+labels:
+  - false-positive
+body:
+  - type: input
+    id: package_or_path
+    attributes:
+      label: Package name or artifact path
+      placeholder: "my-legit-pkg or /path/to/file"
+    validations:
+      required: true
+
+  - type: textarea
+    id: why_benign
+    attributes:
+      label: Why is this benign?
+      description: PKGBUILD behavior, upstream project, install date outside window, etc.
+    validations:
+      required: true
+
+  - type: input
+    id: command
+    attributes:
+      label: Command that flagged it
+      placeholder: "fish run.fish --local"
+    validations:
+      required: true
+
+  - type: input
+    id: exit_code
+    attributes:
+      label: Exit code
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Relevant output (sanitized)
+    validations:
+      required: false
+
+  - type: input
+    id: upstream
+    attributes:
+      label: Upstream / AUR link (if applicable)
+      placeholder: "https://aur.archlinux.org/packages/..."
+    validations:
+      required: false

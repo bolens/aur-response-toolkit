@@ -14,3 +14,6 @@ data/lists/*.previous.txt
 *.swp
 *~
 .DS_Store
+
+# CI dev tools (cloned in GitHub Actions)
+tools/fishcheck/

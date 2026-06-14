@@ -6,7 +6,7 @@ test_reset_counters
 test_section "aur_pgrep_af finds current fish process"
 
 set -l hits (aur_pgrep_af fish | string collect)
-assert_match "aur_pgrep_af matches fish" 'fish' "$hits"
+assert_match "aur_pgrep_af matches fish" fish "$hits"
 
 test_section "aur_ss_tun_lines returns connection data when available"
 

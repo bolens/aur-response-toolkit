@@ -23,8 +23,8 @@ set -l text_all (cat $out_all)
 
 assert_eq "window mode clean for Feb install" $AUR_EXIT_CLEAN $code_window
 assert_eq "all-time mode compromise for Feb install" $AUR_EXIT_COMPROMISE $code_all
-assert_match "all-time output mentions known-bad" 'known-bad' "$text_all"
-assert_not_match "window mode omits known-bad" 'known-bad' "$text_window"
+assert_match "all-time output mentions known-bad" known-bad "$text_all"
+assert_not_match "window mode omits known-bad" known-bad "$text_window"
 
 rm -f $out_window $out_all
 set -e AUR_TEST_PACMAN_LOG_DIR
@@ -51,7 +51,7 @@ set -l text_high (cat $out_high)
 assert_match "outside window marked LOW without --all-time" '\[LOW\].*known-bad' "$text_low"
 assert_not_match "no HIGH without --all-time" '\[HIGH\].*known-bad' "$text_low"
 assert_match "all-time marks HIGH" '\[HIGH\].*known-bad' "$text_high"
-assert_match "all-time labels flag" 'all-time' "$text_high"
+assert_match "all-time labels flag" all-time "$text_high"
 
 rm -f $out_low $out_high
 set -e AUR_TEST_INSTALLED_LIST
@@ -59,7 +59,7 @@ set -e AUR_TEST_PKG_INFO
 set -e AUR_TEST_LIST_FILE
 rm -rf $log_dir
 
-test_section "aur_install_in_window_or_all_time"
+test_section aur_install_in_window_or_all_time
 set -g AUR_OPT_all_time false
 begin
     aur_install_in_window_or_all_time definitely-not-installed-pkg-xyz

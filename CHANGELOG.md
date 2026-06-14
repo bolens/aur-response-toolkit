@@ -2,6 +2,17 @@
 
 All notable changes to **aur-response-toolkit** are documented here.
 
+## Unreleased
+
+### Added
+- **GitHub repo hygiene** — `SECURITY.md`, `CONTRIBUTING.md`, issue/PR templates, `CODEOWNERS`, Dependabot for Actions
+- **CI** — Arch Linux container job, lint-before-test, concurrency, weekly schedule, `workflow_dispatch`; bump `actions/checkout@v6`, `softprops/action-gh-release@v3`
+- **Release automation** — GitHub Release workflow on `v*` tags (changelog excerpt from this file)
+- **`reports/.gitkeep`** — preserve empty reports directory in clones
+
+### Changed
+- **fish_indent** — formatting pass across Fish scripts (fishcheck FC1001)
+
 ## 1.9.0
 
 ### Changed

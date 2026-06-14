@@ -21,8 +21,8 @@ test_section "parse common args variants"
 aur_parse_common_args --fail-on=none --prune-days=14 --if-compromised --quick
 assert_eq "fail-on equals form" none $AUR_OPT_fail_on
 assert_eq "prune-days equals form" 14 $AUR_OPT_prune_days
-assert_eq "if-compromised" true $AUR_OPT_if_compromised
-assert_eq "quick" true $AUR_OPT_quick
+assert_eq if-compromised true $AUR_OPT_if_compromised
+assert_eq quick true $AUR_OPT_quick
 
 aur_parse_common_args --fail-on compromise --prune-days 30
 assert_eq "fail-on two-token form" compromise $AUR_OPT_fail_on

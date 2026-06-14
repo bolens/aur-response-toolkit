@@ -16,7 +16,7 @@ set -l sha $parts[2]
 test -f $tmp
 assert_status "fetch writes temp copy" 0
 set -l body (cat $tmp | string collect)
-assert_match "community list includes minecraft-cracked" 'minecraft-cracked' "$body"
+assert_match "community list includes minecraft-cracked" minecraft-cracked "$body"
 assert_match "sha256 present" '.+' "$sha"
 rm -f $tmp
 
@@ -44,8 +44,8 @@ set -g AUR_OPT_quiet true
 
 set -l merged (aur_load_chaos_rat_list false | string collect)
 assert_status "file merge load succeeds" 0
-assert_match "official pkg from advisory html" 'librewolf-fix-bin' "$merged"
-assert_match "community pkg from txt" 'minecraft-cracked' "$merged"
+assert_match "official pkg from advisory html" librewolf-fix-bin "$merged"
+assert_match "community pkg from txt" minecraft-cracked "$merged"
 set -l sha_findings (aur_finding_list list_source_sha256 | string collect)
 assert_match "file arch sha recorded" 'chaos-arch-ml=[a-f0-9]{64}' "$sha_findings"
 assert_match "file community sha recorded" 'chaos-community=[a-f0-9]{64}' "$sha_findings"

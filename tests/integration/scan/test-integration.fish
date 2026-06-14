@@ -16,7 +16,7 @@ rm -f $out_file
 assert_eq "timeline exits 1 on hits" 1 $code
 assert_match "beef hit in output" 'upgraded beef' "$out"
 assert_match "beef repeat flagged" '\[REPEAT\].*beef' "$out"
-assert_match "repeat explains takedown" 'post-takedown' "$out"
+assert_match "repeat explains takedown" post-takedown "$out"
 assert_not_match "bee not in timeline output" 'installed bee' "$out"
 
 test_section "integration: scan/atomic-arch-timeline --all-time"
@@ -28,7 +28,7 @@ fish (aur_script_path scan/atomic-arch-timeline.fish) --local --all-time >$allti
 set -l alltime_code $status
 set -l alltime_text (cat $alltime_out)
 assert_eq "all-time timeline compromise" $AUR_EXIT_COMPROMISE $alltime_code
-assert_match "all-time finds pre-window known-bad" 'known-bad' "$alltime_text"
+assert_match "all-time finds pre-window known-bad" known-bad "$alltime_text"
 rm -f $alltime_out
 rm -rf $alltime_dir
 set -gx AUR_TEST_PACMAN_LOG_DIR (dirname (test_fixture_path logs/pacman.log))

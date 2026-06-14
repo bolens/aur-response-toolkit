@@ -59,9 +59,9 @@ function aur_list_label_for_type --argument-names list_type
         case chaos-rat
             echo "Chaos RAT"
         case shai-hulud
-            echo "Shai-Hulud"
+            echo Shai-Hulud
         case xeactor
-            echo "xeactor"
+            echo xeactor
         case atomic-arch
             echo "Atomic Arch"
     end

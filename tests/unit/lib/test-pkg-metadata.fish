@@ -18,7 +18,7 @@ test_section "package name filter rejects invalid tokens"
 set -l filtered (printf '%s\n' beef 'NOT-VALID' 'a' 'valid_pkg' 'bad pkg' | aur_filter_pkg_lines | string collect)
 assert_contains "valid lowercase kept" beef "$filtered"
 assert_contains "underscore name kept" valid_pkg "$filtered"
-assert_not_match "uppercase rejected" 'NOT-VALID' "$filtered"
+assert_not_match "uppercase rejected" NOT-VALID "$filtered"
 assert_not_match "single char rejected" '(^|\n)a(\n|$)' "$filtered"
 assert_not_match "internal space rejected" 'bad pkg' "$filtered"
 

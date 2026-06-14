@@ -1,5 +1,8 @@
 # aur-response-toolkit
 
+[![CI](https://github.com/bolens/aur-response-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/bolens/aur-response-toolkit/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/bolens/aur-response-toolkit)](LICENSE)
+
 Fish shell toolkit to **detect, triage, and recover** from Arch User Repository (AUR) supply-chain incidents. **[Atomic Arch](https://www.sonatype.com/blog/atomic-arch-npm-campaign-adds-malicious-dependency)** (June 2026 — `atomic-lockfile` / `js-digest` npm hooks, [`deps`](https://ioctl.fail/preliminary-analysis-of-aur-malware/) infostealer) is the default primary scan; opt-in campaigns cover **Chaos RAT**, **Mini Shai-Hulud**, and **xeactor** (2018).
 
 > **Official Arch repos (`[core]`, `[extra]`, `[multilib]`) were not affected.** This toolkit targets AUR packages only.
@@ -414,6 +417,8 @@ The service uses `--fail-on compromise --quick` and respects `AUR_RESPONSE_DIR` 
 
 ## Development
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+
 ```fish
 # Lint all Fish scripts
 fish lint.fish
@@ -430,7 +435,7 @@ aur-response-toolkit/
 ├── run.sh                        # Bash wrapper → run.fish
 ├── install.fish                  # Install portable wrappers + aur-* symlinks
 ├── bin/aur-run.fish              # Portable entry point (resolves clone path)
-├── VERSION                       # Toolkit version (1.8.0)
+├── VERSION                       # Toolkit version (see file)
 ├── config.fish.example           # Optional user config template
 ├── lint.fish                     # fishcheck linter for all scripts
 ├── lib/
@@ -499,7 +504,8 @@ aur-response-toolkit/
 │       ├── fetch/
 │       ├── env/
 │       └── misc/
-├── .github/workflows/ci.yml      # CI: tests + fishcheck lint
+├── .github/workflows/ci.yml      # CI: Ubuntu + Arch, lint + tests
+├── .github/workflows/release.yml # GitHub Release on v* tags
 └── systemd/
     ├── aur-response-scan.service  # Weekly user timer unit
     ├── aur-response-scan.timer

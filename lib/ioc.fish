@@ -327,9 +327,9 @@ function aur_check_shai_hulud_persistence
     set -l hits
 
     for path in \
-            "$HOME/.config/systemd/user/gh-token-monitor.service" \
-            "$HOME/.local/bin/gh-token-monitor.sh" \
-            "$HOME/.config/gh-token-monitor"
+        "$HOME/.config/systemd/user/gh-token-monitor.service" \
+        "$HOME/.local/bin/gh-token-monitor.sh" \
+        "$HOME/.config/gh-token-monitor"
         test -e $path; and set -a hits "shai_hulud:$path"
     end
 

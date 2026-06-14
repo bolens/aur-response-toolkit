@@ -12,17 +12,17 @@ function assert_unknown_flag --argument-names label script
     rm -f $out_file
 end
 
-assert_unknown_flag "scan/atomic-arch-timeline" scan/atomic-arch-timeline.fish
-assert_unknown_flag "scan-aur-window" scan/aur-window.fish
-assert_unknown_flag "scan-malware-artifacts" scan/malware-artifacts.fish
-assert_unknown_flag "scan-similar-heuristics" scan/similar-heuristics.fish
-assert_unknown_flag "check-list-freshness" check/list-freshness.fish
-assert_unknown_flag "scan-hardening" scan/hardening.fish
-assert_unknown_flag "apply-hardening" recovery/apply-hardening.fish
-assert_unknown_flag "check/atomic-arch-pkgs" check/atomic-arch-pkgs.fish
-assert_unknown_flag "audit-stolen-credentials" audit/stolen-credentials.fish
-assert_unknown_flag "rotate-hints" recovery/rotate-hints.fish
-assert_unknown_flag "scrub-history" recovery/scrub-history.fish
+assert_unknown_flag scan/atomic-arch-timeline scan/atomic-arch-timeline.fish
+assert_unknown_flag scan-aur-window scan/aur-window.fish
+assert_unknown_flag scan-malware-artifacts scan/malware-artifacts.fish
+assert_unknown_flag scan-similar-heuristics scan/similar-heuristics.fish
+assert_unknown_flag check-list-freshness check/list-freshness.fish
+assert_unknown_flag scan-hardening scan/hardening.fish
+assert_unknown_flag apply-hardening recovery/apply-hardening.fish
+assert_unknown_flag check/atomic-arch-pkgs check/atomic-arch-pkgs.fish
+assert_unknown_flag audit-stolen-credentials audit/stolen-credentials.fish
+assert_unknown_flag rotate-hints recovery/rotate-hints.fish
+assert_unknown_flag scrub-history recovery/scrub-history.fish
 
 test_section "known flags accepted"
 

@@ -14,7 +14,7 @@ assert_not_match "invalid html rejected" '(^|\n)not valid' "$raw"
 set -l cscs_raw (aur_parse_cscs_script (test_fixture_path fetch/cscs-list.sh) | string collect)
 assert_contains "cscs beef" beef "$cscs_raw"
 assert_contains "cscs known-bad" known-bad "$cscs_raw"
-assert_not_match "cscs script tag rejected" 'alert' "$cscs_raw"
+assert_not_match "cscs script tag rejected" alert "$cscs_raw"
 assert_not_match "cscs invalid name rejected" 'invalid pkg name' "$cscs_raw"
 
 test_section "list delta via comm temp files"

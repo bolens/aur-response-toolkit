@@ -108,7 +108,7 @@ set -l alltime_out (mktemp)
 fish (aur_script_path check/chaos-rat-pkgs.fish) --chaos-rat --local --all-time >$alltime_out 2>&1
 set -l alltime_text (cat $alltime_out | string collect)
 assert_match "all-time marks HIGH" '\[HIGH\].*librewolf-fix-bin' "$alltime_text"
-assert_match "all-time flag in output" 'all-time' "$alltime_text"
+assert_match "all-time flag in output" all-time "$alltime_text"
 rm -f $alltime_out $AUR_TEST_INSTALLED_LIST
 set -e AUR_TEST_INSTALLED_LIST
 set -e AUR_TEST_PKG_INFO
@@ -142,11 +142,11 @@ set -l alltime_code $status
 set -l alltime_text (cat $alltime_out | string collect)
 
 assert_eq "window mode finds Jul install only" $AUR_EXIT_WARN $window_code
-assert_match "librewolf in window timeline" 'librewolf-fix-bin' "$window_text"
-assert_not_match "Feb chaos pkg excluded from window timeline" 'chaos-pkg-a' "$window_text"
+assert_match "librewolf in window timeline" librewolf-fix-bin "$window_text"
+assert_not_match "Feb chaos pkg excluded from window timeline" chaos-pkg-a "$window_text"
 assert_eq "all-time timeline finds both" $AUR_EXIT_WARN $alltime_code
-assert_match "all-time librewolf hit" 'librewolf-fix-bin' "$alltime_text"
-assert_match "all-time chaos-pkg-a hit" 'chaos-pkg-a' "$alltime_text"
+assert_match "all-time librewolf hit" librewolf-fix-bin "$alltime_text"
+assert_match "all-time chaos-pkg-a hit" chaos-pkg-a "$alltime_text"
 
 rm -f $window_out $alltime_out
 set -e AUR_TEST_PACMAN_LOG_DIR
@@ -186,7 +186,7 @@ printf '%s\n' chaos-pkg-a >$AUR_TEST_INSTALLED_LIST
 set -l remove_out (mktemp)
 fish (aur_script_path recovery/remove-packages.fish) --list chaos-rat --dry-run >$remove_out 2>&1
 assert_eq "chaos rat dry-run clean" $AUR_EXIT_CLEAN $status
-assert_match "chaos pkg in removal list" 'chaos-pkg-a' (cat $remove_out | string collect)
+assert_match "chaos pkg in removal list" chaos-pkg-a (cat $remove_out | string collect)
 rm -f $remove_out $AUR_TEST_INSTALLED_LIST
 set -e AUR_TEST_INSTALLED_LIST
 

@@ -1,0 +1,72 @@
+name: Bug report
+description: Something broke, wrong exit code, or crash in the toolkit
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    value: |
+      Do **not** paste live secrets, tokens, or full shell histories. Redact paths if needed.
+
+  - type: input
+    id: version
+    attributes:
+      label: Toolkit version
+      description: Output of `fish run.fish --version` or contents of `VERSION`
+      placeholder: "1.9.0"
+    validations:
+      required: true
+
+  - type: input
+    id: distro
+    attributes:
+      label: Distribution
+      placeholder: "Arch Linux, CachyOS, Manjaro, …"
+    validations:
+      required: true
+
+  - type: input
+    id: fish_version
+    attributes:
+      label: Fish version
+      placeholder: "fish --version"
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command and flags
+      placeholder: "fish run.fish --local --report"
+    validations:
+      required: true
+
+  - type: input
+    id: exit_code
+    attributes:
+      label: Exit code
+      placeholder: "0, 1, 2, 3, or 4"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output (sanitized)
+      description: Terminal output or excerpt from `reports/latest-summary.json` — no secrets
+    validations:
+      required: false

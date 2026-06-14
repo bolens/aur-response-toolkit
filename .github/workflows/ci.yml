@@ -3,25 +3,55 @@ name: CI
 on:
   push:
   pull_request:
+  schedule:
+    # Weekly Arch smoke (Sunday 06:00 UTC)
+    - cron: "0 6 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
+  ubuntu:
+    name: ubuntu
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install fish
         run: |
           sudo apt-get update
-          sudo apt-get install -y fish curl jq
+          sudo apt-get install -y fish curl jq findutils coreutils grep
+
+      - name: Install fishcheck
+        run: git clone --depth 1 https://github.com/mattmc3/fishcheck tools/fishcheck
+
+      - name: Lint Fish scripts
+        run: fish lint.fish
 
       - name: Run test suite
         run: fish tests/run-all.fish
 
+  arch:
+    name: arch
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: pacman -Sy --noconfirm fish curl jq findutils coreutils grep git iproute2 procps-ng zstd
+
       - name: Install fishcheck
-        run: |
-          git clone --depth 1 https://github.com/mattmc3/fishcheck ~/.local/bin/fishcheck
-          echo "$HOME/.local/bin/fishcheck" >> $GITHUB_PATH
+        run: git clone --depth 1 https://github.com/mattmc3/fishcheck tools/fishcheck
 
       - name: Lint Fish scripts
         run: fish lint.fish
+
+      - name: Run test suite
+        run: fish tests/run-all.fish

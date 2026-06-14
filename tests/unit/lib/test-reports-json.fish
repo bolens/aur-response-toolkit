@@ -25,9 +25,9 @@ set -l _reports $AUR_REPORTS_DIR
 set -g AUR_REPORTS_DIR (mktemp -d)
 set -gx AUR_STATE_FILE "$AUR_REPORTS_DIR/.scan-state"
 aur_state_init
-aur_finding_add atomic_arch_timeline_hits "hit-one"
+aur_finding_add atomic_arch_timeline_hits hit-one
 aur_finding_add atomic_arch_installed beef
-aur_finding_add atomic_arch_timeline_hits "hit-two"
+aur_finding_add atomic_arch_timeline_hits hit-two
 set -l cats (aur_finding_categories | string collect)
 assert_count "two categories" 2 "$cats"
 assert_contains "timeline category" atomic_arch_timeline_hits "$cats"
@@ -41,14 +41,14 @@ test_section "file compromise window mtime"
 
 set -l in_window (mktemp)
 echo test >$in_window
-touch -d '2026-06-10' $in_window 2>/dev/null; or true
+touch -d 2026-06-10 $in_window 2>/dev/null; or true
 begin
     aur_file_in_compromise_window $in_window
     assert_status "Jun 10 mtime in window" 0
 end
 set -l out_window (mktemp)
 echo test >$out_window
-touch -d '2026-06-01' $out_window 2>/dev/null; or true
+touch -d 2026-06-01 $out_window 2>/dev/null; or true
 begin
     aur_file_in_compromise_window $out_window
     assert_status "Jun 1 mtime outside window" 1
