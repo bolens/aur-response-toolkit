@@ -35,7 +35,9 @@ set -l scripts \
     $AUR_RESPONSE_DIR/lint.fish \
     $AUR_RESPONSE_DIR/install.fish \
     $AUR_RESPONSE_DIR/bin/*.fish \
+    $AUR_RESPONSE_DIR/completions/*.fish \
     $AUR_RESPONSE_DIR/scripts/_init.fish \
+    $AUR_RESPONSE_DIR/scripts/*.fish \
     $AUR_RESPONSE_DIR/scripts/*/*.fish \
     $AUR_RESPONSE_DIR/lib/*.fish \
     $AUR_RESPONSE_DIR/tests/run-all.fish \

@@ -21,15 +21,15 @@ assert_status "run.fish --help exits 0" 0
 
 set -l text (cat $help_out | string collect)
 
-assert_text_has "documents --local" '--local' $text
-assert_text_has "documents --audit" '--audit' $text
-assert_text_has "documents --skip-pkg-check" '--skip-pkg-check' $text
-assert_text_has "documents --recover" '--recover' $text
-assert_text_has "documents --json" '--json' $text
-assert_text_has "documents --prune-days" '--prune-days' $text
-assert_text_has "documents --fail-on" '--fail-on' $text
+assert_text_has "documents --local" --local $text
+assert_text_has "documents --audit" --audit $text
+assert_text_has "documents --skip-pkg-check" --skip-pkg-check $text
+assert_text_has "documents --recover" --recover $text
+assert_text_has "documents --json" --json $text
+assert_text_has "documents --prune-days" --prune-days $text
+assert_text_has "documents --fail-on" --fail-on $text
 assert_text_has "documents step 4b" '4b.' $text
-assert_text_has "mentions packaged name" 'aur-response' $text
+assert_text_has "mentions packaged name" aur-response $text
 
 # Shared helper lines must appear verbatim in orchestrator help
 set -l common_out (mktemp)

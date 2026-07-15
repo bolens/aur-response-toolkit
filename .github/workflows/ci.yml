@@ -38,6 +38,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Keep globs in sync with scripts/hooks/classify-paths.fish (aur_hook_path_is_code).
       - uses: dorny/paths-filter@v3
         id: filter
         if: github.event_name == 'pull_request' || github.event_name == 'push'

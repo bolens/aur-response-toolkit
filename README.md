@@ -437,6 +437,9 @@ systemctl --user enable --now aur-response-scan.timer
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
 ```fish
+# Once per clone: path-filtered pre-commit + Conventional Commits commit-msg
+fish scripts/install-git-hooks.fish
+
 # Lint all Fish scripts
 fish lint.fish
 
@@ -477,7 +480,9 @@ aur-response-toolkit/
 │   └── reports.fish              # JSON summary, dashboard, report retention
 ├── scripts/                      # Role-based scripts (see subdirs)
 │   ├── _init.fish                # Shared bootstrap for category scripts
-│   ├── check-conventional-commit.fish  # Conventional Commits subject checker (CI)
+│   ├── check-conventional-commit.fish  # Conventional Commits subject checker (CI + commit-msg)
+│   ├── install-git-hooks.fish    # Enable .githooks/ for this clone
+│   ├── hooks/classify-paths.fish # Shared path filters for pre-commit (CI-aligned)
 │   ├── check/                    # Installed package list checks
 │   │   ├── atomic-arch-pkgs.fish
 │   │   ├── chaos-rat-pkgs.fish

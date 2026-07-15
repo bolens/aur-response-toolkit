@@ -5,7 +5,23 @@ Thanks for helping improve incident response for AUR supply-chain threats.
 ## Before you start
 
 1. Read [`data/docs/sources.md`](data/docs/sources.md) for how campaigns, lists, and docs are organized.
-2. Run the test suite and linter locally:
+2. Install local Git hooks (once per clone):
+
+```fish
+fish scripts/install-git-hooks.fish
+```
+
+Hooks live in [`.githooks/`](.githooks/) (`core.hooksPath`). Path filters mirror CI ([`scripts/hooks/classify-paths.fish`](scripts/hooks/classify-paths.fish) ↔ `.github/workflows/ci.yml`):
+
+| Staged changes | pre-commit runs |
+|----------------|-----------------|
+| Docs / non-code only | nothing (CI gate jobs still green) |
+| Packaging / workflows only | skip local lint/tests (CI still runs) |
+| Fish / `lib` / `scripts` / `tests` / lists | `fish_indent` + `lint.fish` + `tests/run-all.fish` |
+
+Env: `AUR_HOOK_FULL=1` (always lint+tests), `AUR_HOOK_LINT_ONLY=1` (no tests), `AUR_SKIP_HOOKS=1` (skip hooks).
+
+3. Run the test suite and linter locally:
 
 ```fish
 fish tests/run-all.fish
