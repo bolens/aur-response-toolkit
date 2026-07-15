@@ -59,6 +59,15 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 
 Examples: `fix(alpm): finish log collect before cache write`, `docs: document Conventional Commits`, `chore(deps): bump actions/checkout`.
 
+Validate locally (also enforced on PRs by [`.github/workflows/commitlint.yml`](.github/workflows/commitlint.yml)):
+
+```fish
+fish scripts/check-conventional-commit.fish --message 'feat: add list freshness tip'
+git log origin/main..HEAD --format=%s | fish scripts/check-conventional-commit.fish
+```
+
+Dependabot PRs use `chore(deps):` via [`.github/dependabot.yml`](.github/dependabot.yml).
+
 ## Adding a new campaign (outline)
 
 1. Bundled list: `data/lists/{slug}-pkgs.txt`

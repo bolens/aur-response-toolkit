@@ -5,6 +5,8 @@ All notable changes to **aur-response-toolkit** are documented here.
 ## Unreleased
 
 ### Added
+- **Conventional Commits gate** — `scripts/check-conventional-commit.fish` + PR workflow; Dependabot `chore(deps)` prefix
+- **`aur_orchestrator_help` / `aur_common_flags_help_lines`** — shared CLI help so `run.fish --help` and script commons stay aligned
 - **Fish completions** — `completions/aur-response.fish` (user + FHS/AUR installs); user install also wraps `aur-response`
 - **GitHub repo hygiene** — `SECURITY.md`, `CONTRIBUTING.md`, issue/PR templates, `CODEOWNERS`, Dependabot for Actions
 - **CI** — Arch Linux container job, lint-before-test, concurrency, weekly schedule, `workflow_dispatch`; bump `actions/checkout@v6`, `softprops/action-gh-release@v3`

@@ -108,18 +108,62 @@ function aur_parse_common_args
     end
 end
 
+# Shared option lines for script --help and the full-scan orchestrator.
+# Keep wording in sync with README "All run.fish flags" via tests/unit/lib/test-orchestrator-help.fish.
+function aur_common_flags_help_lines
+    echo "  --local            Use bundled Atomic Arch list (no network fetch)"
+    echo "  --report           Append output to reports/ (or XDG data on FHS)"
+    echo "  --quiet            Suppress scan output (still writes report/json)"
+    echo "  --quick            Faster scans (narrower artifact search)"
+    echo "  --all-time         Ignore compromise date window for pkg/timeline checks"
+    echo "  --if-compromised   Only fail credential audit when compromise detected"
+    echo "  --chaos-rat        Also scan Chaos RAT packages (warn-only)"
+    echo "  --shai-hulud       Also scan Mini Shai-Hulud packages (warn-only)"
+    echo "  --xeactor          Also scan 2018 xeactor packages (warn-only)"
+    echo "  --fail-on MODE     Exit policy: all (default), compromise, chaos-rat,"
+    echo "                     shai-hulud, xeactor, none"
+end
+
 function aur_common_flags_help
     echo "Common flags:"
-    echo "  --local            Use bundled atomic-arch-pkgs.txt (no network fetch)"
-    echo "  --report           Append output to reports/"
-    echo "  --quiet            Suppress stdout (reports/json still written)"
-    echo "  --quick            Faster scans (narrower artifact search)"
-    echo "  --all-time         Ignore compromise date window (any install / log hit)"
-    echo "  --if-compromised   Only fail credential audit when compromise detected"
-    echo "  --chaos-rat        Scan for Chaos RAT / cracked-software AUR packages (opt-in threat)"
-    echo "  --shai-hulud       Scan for Mini Shai-Hulud AUR packages (opt-in threat)"
-    echo "  --xeactor          Scan for 2018 xeactor AUR packages (opt-in threat)"
-    echo "  --fail-on MODE     Exit policy: all (default), compromise, chaos-rat, shai-hulud, xeactor, none"
+    aur_common_flags_help_lines
+end
+
+function aur_orchestrator_help
+    echo "Usage: run.fish [options]   (packaged: aur-response)"
+    echo ""
+    echo "Exit codes:"
+    echo "  0  clean"
+    echo "  1  compromise indicators"
+    echo "  2  warnings only (hardening, benign unknown AUR packages, optional campaigns)"
+    echo "  3  insufficient data (unreadable logs or missing/empty lists)"
+    echo "  4  invalid arguments"
+    echo ""
+    echo "Steps:"
+    echo "  1. Infected package scan (Atomic Arch)"
+    echo "  1b. Chaos RAT package scan (optional, --chaos-rat or config)"
+    echo "  1c. Shai-Hulud package scan (optional, --shai-hulud or config)"
+    echo "  1d. xeactor package scan (optional, --xeactor or config)"
+    echo "  2. AUR activity window scan"
+    echo "  3. Pacman timeline (known infected list)"
+    echo "  3b–3d. Optional campaign timelines (with matching enable flags)"
+    echo "  4. Malware artifact scan"
+    echo "  4b. Similar-heuristics scan (unknown foreign packages)"
+    echo "  5. Build hardening check"
+    echo "  6. Credential audit (if issues or --audit)"
+    echo "  7. Rotation hints (if issues or --audit)"
+    echo ""
+    echo "Options:"
+    aur_common_flags_help_lines
+    echo "  --audit            Always run credential audit + rotation hints"
+    echo "  --skip-pkg-check   Skip step 1 package list checks"
+    echo "  --recover          Interactive recovery wizard (remove → audit → rotate → scrub)"
+    echo "  --json             Print JSON summary to stdout at end"
+    echo "  --prune-days N     Delete report files older than N days"
+    echo "  --version          Print toolkit version"
+    echo "  -h, --help         Show this help"
+    echo ""
+    echo "Helpers: scripts/recovery/remove-packages.fish  scripts/recovery/apply-hardening.fish  scripts/recovery/rotate-hints.fish"
 end
 
 # Build argv list from parsed AUR_OPT_* globals plus optional extra flags (e.g. --no-chain).

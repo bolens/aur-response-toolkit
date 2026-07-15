@@ -161,7 +161,7 @@ Any **pacman-based** system with AUR access is in scope — the campaign targets
 
 ## How the full scan works
 
-`run.fish` runs seven steps in order. Steps 6–7 run automatically when earlier steps find issues, or when you pass `--audit`.
+`run.fish` runs detection steps in order (optional campaigns when enabled). Steps 6–7 run automatically when earlier steps find issues, or when you pass `--audit`.
 
 | Step | Script | What it checks |
 |:----:|--------|----------------|
@@ -307,6 +307,8 @@ fish run.fish --recover --report
 ```
 
 ### All `run.fish` flags
+
+Canonical wording: `fish run.fish --help` / `aur-response --help` (from `aur_orchestrator_help` in `lib/cli.fish`).
 
 | Flag | Effect |
 |------|--------|
@@ -464,7 +466,7 @@ aur-response-toolkit/
 │   ├── bootstrap.fish            # Entry: paths/constants/FHS, then sources siblings
 │   ├── shims.fish                # grep/find/curl/sha256/hostname shims
 │   ├── lists.fish                # Campaign list path/enable helpers
-│   ├── cli.fish                  # Flags, logging, state, exit policy
+│   ├── cli.fish                  # Flags, logging, state, exit policy (+ orchestrator help)
 │   ├── windows.fish              # Date-window predicates + classifiers
 │   ├── alpm.fish                 # Pacman log event collect + timeline helpers
 │   ├── packages.fish             # List loaders, preflight, file/hook utils
@@ -475,6 +477,7 @@ aur-response-toolkit/
 │   └── reports.fish              # JSON summary, dashboard, report retention
 ├── scripts/                      # Role-based scripts (see subdirs)
 │   ├── _init.fish                # Shared bootstrap for category scripts
+│   ├── check-conventional-commit.fish  # Conventional Commits subject checker (CI)
 │   ├── check/                    # Installed package list checks
 │   │   ├── atomic-arch-pkgs.fish
 │   │   ├── chaos-rat-pkgs.fish
