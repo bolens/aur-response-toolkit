@@ -1,9 +1,9 @@
-# Shared test helpers — sources common.fish and sets AUR_RESPONSE_DIR from tests/support/ depth.
+# Shared test helpers — sources lib/bootstrap.fish and sets AUR_RESPONSE_DIR from tests/support/ depth.
 
 if not set -q AUR_RESPONSE_DIR
     set -g AUR_RESPONSE_DIR (dirname (dirname (dirname (status filename))))
 end
-source $AUR_RESPONSE_DIR/lib/common.fish
+source $AUR_RESPONSE_DIR/lib/bootstrap.fish
 
 set -g TEST_FAILED 0
 set -g TEST_PASSED 0
@@ -114,7 +114,7 @@ function test_fixture_path --argument-names relative
     echo (dirname (dirname (status filename)))/fixtures/$relative
 end
 
-# Runtime infected-list test hook (see aur_atomic_arch_list_file_path in lib/common.fish).
+# Runtime infected-list test hook (see aur_atomic_arch_list_file_path in lib/lists.fish).
 # Same-shell unit tests: call test_set_fixture_list / test_set_list_file.
 # Subprocess integration tests: export AUR_TEST_LIST_FILE before spawning fish.
 function test_set_fixture_list --argument-names relative
@@ -193,4 +193,4 @@ function test_clear_xeactor_fetch
     set -e AUR_TEST_XEACTOR_FETCH_FAIL
 end
 
-# Use aur_find from lib/common.fish for filesystem walks (fd → find shim).
+# Use aur_find from lib/shims.fish for filesystem walks (fd → find shim).

@@ -42,14 +42,7 @@ aur_collect_window_alpm_events_all $events
 set -l list_file (aur_atomic_arch_list_file_path)
 set -l raw (aur_timeline_hits_from_events $events $list_file | string collect)
 set -l hit_count (aur_safe_count "$raw")
-
-set -l repeat_events (mktemp)
-aur_collect_attack_window_alpm_events_all $repeat_events
-set -l repeat_found false
-if aur_report_timeline_repeat_updates $repeat_events $list_file atomic_arch_timeline_repeat_updates atomic_arch_timeline_repeat_updates "during $AUR_WINDOW_LABEL"
-    set repeat_found true
-end
-rm -f $repeat_events $events
+rm -f $events
 
 if test $hit_count -eq 0
     aur_log "[OK] No infected packages in pacman logs during compromise window"
@@ -62,6 +55,13 @@ else
         aur_finding_add atomic_arch_timeline_hits $hit
         aur_log "  $hit"
     end
+    set -l repeat_events (mktemp)
+    aur_collect_attack_window_alpm_events_all $repeat_events
+    set -l repeat_found false
+    if aur_report_timeline_repeat_updates $repeat_events $list_file atomic_arch_timeline_repeat_updates atomic_arch_timeline_repeat_updates "during $AUR_WINDOW_LABEL"
+        set repeat_found true
+    end
+    rm -f $repeat_events
     if test $repeat_found = true
         aur_log ""
         aur_log "[REPEAT] Known infected package(s) updated more than once during the window."

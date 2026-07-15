@@ -10,6 +10,15 @@ echo 'evil-pkg|Mon 09 Jun 2026 10:00:00|Explicitly installed' >$info_file
 set -gx AUR_TEST_PKG_INFO $info_file
 assert_eq "mock install date" "Mon 09 Jun 2026 10:00:00" (aur_pkg_install_date evil-pkg)
 assert_eq "mock install reason" "Explicitly installed" (aur_pkg_install_reason evil-pkg)
+begin
+    aur_pkg_is_installed evil-pkg
+    assert_status "mock pkg is installed" 0
+end
+begin
+    aur_pkg_is_installed definitely-not-listed-pkg-xyz
+    # Without pacman / mock row: not installed (no Fish "Unknown command" either).
+    assert_status "unlisted mock pkg not installed" 1
+end
 set -e AUR_TEST_PKG_INFO
 rm -f $info_file
 

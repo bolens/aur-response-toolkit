@@ -73,7 +73,7 @@ These sources describe the **npm/PyPI Mini Shai-Hulud worm**, not the four-packa
 
 ## Malware IOCs (code)
 
-Defined in `lib/common.fish`; scanned in `lib/ioc.fish` / npm cache walks in `scripts/scan/malware-artifacts.fish`.
+Defined in `lib/bootstrap.fish`; scanned in `lib/ioc.fish` / npm cache walks in `scripts/scan/malware-artifacts.fish`.
 
 | Indicator | Constant / function | Origin |
 |-----------|---------------------|--------|

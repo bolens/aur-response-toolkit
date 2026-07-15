@@ -101,7 +101,7 @@ Recon-focused dropper; no dedicated hash constants in this toolkit (unlike Atomi
 | JSON | `xeactor_*` in `lib/reports.fish` |
 | Exit policy | `--fail-on xeactor` |
 
-Legacy config aliases: `AUR_ENABLE_LEGACY_2018`, `AUR_LEGACY_2018_*` → xeactor names in `lib/common.fish`.
+Legacy config aliases: `AUR_ENABLE_LEGACY_2018`, `AUR_LEGACY_2018_*` → xeactor names in `lib/bootstrap.fish`.
 
 ## Integrity
 

@@ -39,6 +39,8 @@ for arg in $argv
             echo "  --list chaos-rat     Chaos RAT / cracked-software list"
             echo "  --list shai-hulud    Mini Shai-Hulud AUR list"
             echo "  --list xeactor       xeactor AUR list (2018)"
+            echo "  --dry-run         Print planned removal only"
+            echo "  --force           Skip confirmation (required when stdin is not a TTY)"
             echo "  --verify          Re-check that no matching packages remain"
             exit 0
         case '--list=*' --list
@@ -116,11 +118,8 @@ if test (count $pkgs) -eq 0
             exit $AUR_EXIT_INVALID
     end
     if not test -f $list_file
-        echo "ERROR: no packages specified and $list_file missing"
-        if test $list_type = chaos-rat -o $list_type = shai-hulud -o $list_type = xeactor
-            exit $AUR_EXIT_INSUFFICIENT
-        end
-        exit $AUR_EXIT_COMPROMISE
+        echo "ERROR: no packages specified and $list_file missing" >&2
+        exit $AUR_EXIT_INSUFFICIENT
     end
     set pkgs (aur_installed_list_pkgs $list_type)
 end
@@ -143,7 +142,16 @@ if test $dry_run = true
     exit $AUR_EXIT_CLEAN
 end
 
+if not command -q pacman
+    echo "ERROR: pacman not found — removal requires an Arch/pacman host." >&2
+    exit $AUR_EXIT_INSUFFICIENT
+end
+
 if test $force = false
+    if not isatty stdin
+        echo "ERROR: non-interactive terminal requires --force (or use --dry-run)." >&2
+        exit $AUR_EXIT_INVALID
+    end
     read -l -P "Proceed? [y/N] " confirm
     if not string match -qi 'y*' -- $confirm
         echo "Aborted."

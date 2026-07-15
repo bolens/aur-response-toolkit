@@ -4,7 +4,7 @@ Primary campaign: **atomic-lockfile**, **lockfile-js**, and **js-digest** npm/bu
 
 ## Package list sources
 
-Merged online by `aur_load_atomic_arch_list` (`lib/common.fish`). Cached at `data/lists/atomic-arch-pkgs.txt`.
+Merged online by `aur_load_atomic_arch_list` (`lib/bootstrap.fish`). Cached at `data/lists/atomic-arch-pkgs.txt`.
 
 | Tier | URL | Config override |
 |------|-----|-----------------|
@@ -68,7 +68,7 @@ Community script lineage (Kidev, BrianCArnold, commonsourcecs, Kacper-Kondracki,
 
 ## Malware IOCs (code)
 
-Defined in `lib/common.fish`; scanned in `lib/ioc.fish` / `scripts/scan/malware-artifacts.fish`.
+Defined in `lib/bootstrap.fish`; scanned in `lib/ioc.fish` / `scripts/scan/malware-artifacts.fish`.
 
 | Indicator | Constant / pattern | Origin |
 |-----------|-------------------|--------|

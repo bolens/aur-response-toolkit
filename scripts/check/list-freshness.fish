@@ -2,7 +2,8 @@
 
 # Compare bundled atomic-arch-pkgs.txt against a fresh online merge and report whether
 # installed foreign packages would be missed by a stale --local list.
-# Exit 1 = installed package only on fresh list; exit 0 = no staleness impact.
+# Exit 1 = installed package only on fresh list; exit 3 = fetch/data failure; exit 0 = no impact.
+# Never overwrites the bundled list file (writes the merge to a temp path).
 
 source (dirname (dirname (status filename)))/_init.fish
 
@@ -13,6 +14,7 @@ for arg in $argv
             echo ""
             echo "Compare bundled data/lists/atomic-arch-pkgs.txt to online sources and check"
             echo "whether installed foreign packages appear only on the fresh merged list."
+            echo "Does not modify the bundled list on disk."
             aur_common_flags_help
             exit 0
     end
@@ -22,36 +24,55 @@ aur_validate_known_flags $argv
 aur_parse_common_args $argv
 aur_begin_report_if_requested list-freshness-
 
-set -l bundled_file (aur_atomic_arch_list_file_path)
+# Always compare against the shipped bundle (or test override), not an XDG online cache.
+set -l bundled_file (aur_atomic_arch_list_bundled_path)
+if set -q AUR_TEST_LIST_FILE
+    set bundled_file $AUR_TEST_LIST_FILE
+end
 if not test -f $bundled_file
-    aur_log "ERROR: bundled list missing at $bundled_file"
-    exit $AUR_EXIT_COMPROMISE
+    aur_insufficient_data "bundled list missing at $bundled_file"
+    exit $AUR_EXIT_INSUFFICIENT
 end
 
 set -l bundled_sorted (mktemp)
+set -l fresh_sorted (mktemp)
+set -l fresh_file (mktemp)
+set -l added (mktemp)
+set -l removed (mktemp)
+set -l installed_sorted (mktemp)
+set -l temps $bundled_sorted $fresh_sorted $fresh_file $added $removed $installed_sorted
+
 sort -u $bundled_file | aur_filter_pkg_lines >$bundled_sorted
 set -l bundled_count (wc -l < $bundled_sorted | string trim)
 set -l bundled_age (aur_list_staleness_days $bundled_file)
 
 aur_log "=== Atomic Arch list freshness check ==="
 aur_log "Bundled list: $bundled_count packages ($bundled_file, age $bundled_age days)"
-aur_warn_local_list_stale
+aur_warn_local_list_stale $bundled_file
 aur_log ""
 
-set -l fresh_sorted (mktemp)
+set -gx AUR_ATOMIC_ARCH_LIST_WRITE_FILE $fresh_file
 aur_load_atomic_arch_list false >/dev/null
-if test $status -ne 0
-    rm -f $bundled_sorted $fresh_sorted
-    aur_log "ERROR: failed to fetch fresh list"
-    exit $AUR_EXIT_COMPROMISE
+set -l fetch_status $status
+set -e AUR_ATOMIC_ARCH_LIST_WRITE_FILE
+
+if test $fetch_status -ne 0
+    aur_insufficient_data "failed to fetch fresh Atomic Arch list"
+    rm -f $temps
+    exit $AUR_EXIT_INSUFFICIENT
 end
-sort -u $bundled_file | aur_filter_pkg_lines >$fresh_sorted
+
+if not test -s $fresh_file
+    aur_insufficient_data "fresh Atomic Arch list empty after fetch"
+    rm -f $temps
+    exit $AUR_EXIT_INSUFFICIENT
+end
+
+sort -u $fresh_file | aur_filter_pkg_lines >$fresh_sorted
 set -l fresh_count (wc -l < $fresh_sorted | string trim)
-aur_log "Fresh online list: $fresh_count packages (saved to $bundled_file)"
+aur_log "Fresh online list: $fresh_count packages (temp merge; bundled list unchanged)"
 aur_log ""
 
-set -l added (mktemp)
-set -l removed (mktemp)
 comm -13 $bundled_sorted $fresh_sorted >$added
 comm -23 $bundled_sorted $fresh_sorted >$removed
 set -l add_n (wc -l < $added | string trim)
@@ -59,7 +80,7 @@ set -l rem_n (wc -l < $removed | string trim)
 
 aur_summary_set list_freshness_added $add_n
 aur_summary_set list_freshness_removed $rem_n
-aur_log "Delta vs pre-fetch bundled snapshot: +$add_n added, -$rem_n removed"
+aur_log "Delta vs bundled snapshot: +$add_n added, -$rem_n removed"
 if test $add_n -gt 0
     aur_log "  New on fresh list (first 20):"
     head -n 20 $added | while read -l pkg
@@ -75,7 +96,6 @@ if test $rem_n -gt 0
 end
 aur_log ""
 
-set -l installed_sorted (mktemp)
 aur_installed_foreign_packages | sort >$installed_sorted
 
 set -l fresh_hits (comm -12 $installed_sorted $fresh_sorted)
@@ -112,5 +132,5 @@ else
     end
 end
 
-rm -f $bundled_sorted $fresh_sorted $added $removed $installed_sorted
+rm -f $temps
 exit $exit_code

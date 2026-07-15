@@ -143,7 +143,7 @@ sudo pacman -S --needed fish curl findutils coreutils grep fd ripgrep curlie zst
 paru -S --needed paru      # or: yay -S --needed yay
 ```
 
-All shims live in `lib/common.fish`, `lib/ioc.fish`, and `lib/reports.fish`. Scripts and tests call `aur_*` helpers — not raw `grep`, `find`, `curl`, `sha256sum`, `pgrep`, or `ss` — so fish aliases and optional faster tools work without branching at call sites.
+All shims live in `lib/shims.fish` / `lib/ioc.fish` / `lib/reports.fish` (loaded via `lib/bootstrap.fish`). Scripts and tests call `aur_*` helpers — not raw `grep`, `find`, `curl`, `sha256sum`, `pgrep`, or `ss` — so fish aliases and optional faster tools work without branching at call sites.
 
 ### Supported distributions
 
@@ -180,7 +180,7 @@ Any **pacman-based** system with AUR access is in scope — the campaign targets
 | 6 | `audit/stolen-credentials.fish` | SSH, git, docker, browsers, chat apps, env files, shell history |
 | 7 | `recovery/rotate-hints.fish` | Concrete logout and rotation commands |
 
-Atomic Arch package lists are merged online from upstream sources and cached in `data/lists/atomic-arch-pkgs.txt`. See **[`data/docs/atomic-arch.md`](data/docs/atomic-arch.md)** for URLs, IOC references, and license notes. Index of all campaigns: [`data/docs/sources.md`](data/docs/sources.md).
+Atomic Arch package lists are merged online from upstream sources and cached in `data/lists/atomic-arch-pkgs.txt` (or `~/.local/share/aur-response/lists/` when the toolkit tree is read-only / FHS-installed). See **[`data/docs/atomic-arch.md`](data/docs/atomic-arch.md)** for URLs, IOC references, and license notes. Index of all campaigns: [`data/docs/sources.md`](data/docs/sources.md).
 
 ### Configuration
 
@@ -296,6 +296,7 @@ fish run.fish --local
 fish run.fish --audit
 
 # Save a timestamped report under reports/ plus JSON summary
+# (FHS/read-only installs: ~/.local/share/aur-response/reports/)
 fish run.fish --report --json
 
 # Quiet mode for timers/CI — minimal stdout, still writes report/json
@@ -311,8 +312,8 @@ fish run.fish --recover --report
 |------|--------|
 | `--local` | Skip network fetch; use `data/lists/atomic-arch-pkgs.txt` |
 | `--audit` | Always run steps 6–7 (credential audit + rotation hints) |
-| `--report` | Write unified log to `reports/full-scan-*.log` |
-| `--json` | Print JSON summary to stdout at end (`reports/latest-summary.json`) |
+| `--report` | Write unified log to `reports/full-scan-*.log` (or `~/.local/share/aur-response/reports/` when the toolkit tree is read-only / FHS) |
+| `--json` | Print JSON summary to stdout at end (`reports/latest-summary.json`, same FHS fallback) |
 | `--quiet` | Suppress scan output (report/json still written when requested) |
 | `--quick` | Faster artifact scan (narrower search paths) |
 | `--all-time` | Ignore Jun 9–14 window for installed-package and timeline checks |
@@ -333,7 +334,7 @@ Individual scripts accept `--local`, `--report`, `--quiet`, and `--help` where r
 fish scripts/check/atomic-arch-pkgs.fish --local
 fish scripts/scan/malware-artifacts.fish
 fish scripts/scan/similar-heuristics.fish --local
-fish scripts/check/list-freshness.fish
+fish scripts/check/list-freshness.fish   # compares online merge to bundled list (does not rewrite data/lists/)
 fish scripts/audit/stolen-credentials.fish --help
 ```
 
@@ -397,7 +398,7 @@ The `deps` infostealer targets developer credentials: SSH keys, browser cookies,
 | `0` | No issues detected |
 | `1` | Compromise indicators (infected packages, timeline hits, artifacts, critical unknown window packages) |
 | `2` | Warnings only (hardening hygiene, benign unknown AUR packages in window, optional Chaos RAT / Shai-Hulud / xeactor hits) |
-| `3` | Insufficient data (unreadable pacman logs) |
+| `3` | Insufficient data (unreadable pacman logs, or campaign list missing/empty/unfetchable) |
 | `4` | Invalid CLI arguments |
 
 Use `--fail-on compromise` for timers so hardening warnings do not alert:
@@ -446,11 +447,18 @@ aur-response-toolkit/
 ├── config.fish.example           # Optional user config template
 ├── lint.fish                     # fishcheck linter for all scripts
 ├── lib/
-│   ├── common.fish               # Shared helpers (paths, pacman, lists)
+│   ├── bootstrap.fish            # Entry: paths/constants/FHS, then sources siblings
+│   ├── shims.fish                # grep/find/curl/sha256/hostname shims
+│   ├── lists.fish                # Campaign list path/enable helpers
+│   ├── cli.fish                  # Flags, logging, state, exit policy
+│   ├── windows.fish              # Date-window predicates + classifiers
+│   ├── alpm.fish                 # Pacman log event collect + timeline helpers
+│   ├── packages.fish             # List loaders, preflight, file/hook utils
+│   ├── campaign_runners.fish     # Optional campaign check/timeline runners
 │   ├── findings.fish             # Tab-delimited findings store
 │   ├── history.fish              # Shell history helpers
 │   ├── ioc.fish                  # Malware IOC and persistence detection
-│   └── reports.fish              # JSON summary and report retention
+│   └── reports.fish              # JSON summary, dashboard, report retention
 ├── scripts/                      # Role-based scripts (see subdirs)
 │   ├── _init.fish                # Shared bootstrap for category scripts
 │   ├── check/                    # Installed package list checks

@@ -39,7 +39,11 @@ Always cite upstream sources (advisory URL, SHA256, date window). Do not paste l
 
 ## Safe handling on potentially compromised hosts
 
-Run scans from a known-clean environment when possible. Reports under `reports/` may contain paths and credential-adjacent findings — treat them as sensitive. Review `recovery/remove-packages.fish` output before `--force`.
+Run scans from a known-clean environment when possible. Reports under `reports/` (or `~/.local/share/aur-response/reports/` on FHS installs) may contain paths and credential-adjacent findings — treat them as sensitive. Review `recovery/remove-packages.fish` output before `--force`.
+
+### User config is trusted code
+
+If `~/.config/aur-response/config.fish` (or `$XDG_CONFIG_HOME/aur-response/config.fish`) exists, every scan **sources it as Fish** before running. Treat that file like shell rc: only edit it yourself, and on a compromised host assume an attacker could have changed overrides (paths, enable flags, search roots). Prefer reviewing or removing the config when triaging a live incident from a clean environment.
 
 ## Supported versions
 

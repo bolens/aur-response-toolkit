@@ -2,9 +2,41 @@ name: CI
 
 on:
   push:
+    paths:
+      - "**.fish"
+      - "lib/**"
+      - "scripts/**"
+      - "tests/**"
+      - "data/lists/**"
+      - "bin/**"
+      - "systemd/**"
+      - "packaging/**"
+      - "VERSION"
+      - "run.fish"
+      - "run.sh"
+      - "lint.fish"
+      - "install.fish"
+      - "config.fish.example"
+      - ".github/workflows/ci.yml"
   pull_request:
+    paths:
+      - "**.fish"
+      - "lib/**"
+      - "scripts/**"
+      - "tests/**"
+      - "data/lists/**"
+      - "bin/**"
+      - "systemd/**"
+      - "packaging/**"
+      - "VERSION"
+      - "run.fish"
+      - "run.sh"
+      - "lint.fish"
+      - "install.fish"
+      - "config.fish.example"
+      - ".github/workflows/ci.yml"
   schedule:
-    # Weekly Arch smoke (Sunday 06:00 UTC)
+    # Weekly Arch smoke (Sunday 06:00 UTC) — full tree, no path filter
     - cron: "0 6 * * 0"
   workflow_dispatch:
 
@@ -15,9 +47,14 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # mattmc3/fishcheck@main (pin for reproducible lint)
+  FISHCHECK_SHA: a2b10b5d46a9c55b312b60eda83e1e686ec8136f
+  AUR_TEST_JOBS: "4"
+
 jobs:
-  ubuntu:
-    name: ubuntu
+  lint:
+    name: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -28,16 +65,33 @@ jobs:
           sudo apt-get install -y fish curl jq findutils coreutils grep
 
       - name: Install fishcheck
-        run: git clone --depth 1 https://github.com/mattmc3/fishcheck tools/fishcheck
+        run: |
+          git init tools/fishcheck
+          git -C tools/fishcheck remote add origin https://github.com/mattmc3/fishcheck
+          git -C tools/fishcheck fetch --depth 1 origin "$FISHCHECK_SHA"
+          git -C tools/fishcheck checkout --force FETCH_HEAD
 
       - name: Lint Fish scripts
         run: fish lint.fish
 
+  test-ubuntu:
+    name: test (ubuntu)
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install fish
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fish curl jq findutils coreutils grep zstd iproute2 procps
+
       - name: Run test suite
         run: fish tests/run-all.fish
 
-  arch:
-    name: arch
+  test-arch:
+    name: test (arch)
+    needs: lint
     runs-on: ubuntu-latest
     container:
       image: archlinux:latest
@@ -45,13 +99,12 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install dependencies
-        run: pacman -Sy --noconfirm fish curl jq findutils coreutils grep git iproute2 procps-ng zstd
-
-      - name: Install fishcheck
-        run: git clone --depth 1 https://github.com/mattmc3/fishcheck tools/fishcheck
-
-      - name: Lint Fish scripts
-        run: fish lint.fish
+        run: |
+          # Fresh archlinux images often need a keyring refresh before -Sy packages.
+          pacman -Sy --noconfirm archlinux-keyring
+          pacman-key --init
+          pacman-key --populate archlinux
+          pacman -Sy --noconfirm fish curl jq findutils coreutils grep git iproute2 procps-ng zstd
 
       - name: Run test suite
         run: fish tests/run-all.fish

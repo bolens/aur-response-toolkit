@@ -33,19 +33,11 @@ optdepends=(
 )
 source=(
   "$pkgname-$pkgver.tar.gz::https://github.com/bolens/aur-response-toolkit/archive/refs/tags/v$pkgver.tar.gz"
-  "fhs-writable-state.patch"
 )
 sha256sums=(
   'adbae9f88e9cefe35763fbd1423201666b152ca60f547e0a988e5f5b4f73fc51'
-  'e79bf4a1ae54485b7e1f95bf98a0c746d0e1dfbf0a7b237046d6c0eae5b4af34'
 )
 install=aur-response-toolkit.install
-
-prepare() {
-  cd "$pkgname-$pkgver"
-  # Drop this patch once pkgver tracks a release that includes lib/common.fish FHS state paths.
-  patch -p1 -i "$srcdir/fhs-writable-state.patch"
-}
 
 package() {
   local root="$pkgdir/usr/share/aur-response-toolkit"

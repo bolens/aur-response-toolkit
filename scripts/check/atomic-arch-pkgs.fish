@@ -33,13 +33,14 @@ set -l exit_code $AUR_EXIT_CLEAN
 
 set -l infected_pkgs (aur_load_and_read_atomic_arch_list $AUR_OPT_local)
 if test $status -ne 0
-    exit $AUR_EXIT_COMPROMISE
+    aur_insufficient_data "Atomic Arch list unavailable"
+    exit $AUR_EXIT_INSUFFICIENT
 end
 
 set -l pkg_count (count $infected_pkgs)
 if test $pkg_count -eq 0
-    aur_log "ERROR: parsed 0 packages, something went wrong."
-    exit $AUR_EXIT_COMPROMISE
+    aur_insufficient_data "Atomic Arch list empty (parsed 0 packages)"
+    exit $AUR_EXIT_INSUFFICIENT
 end
 
 aur_log "Checking $pkg_count known infected packages..."

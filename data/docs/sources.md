@@ -13,7 +13,7 @@ Per-campaign provenance, upstream URLs, toolkit code mapping, and license notes.
 
 | Concern | Location |
 |---------|----------|
-| Default URLs, windows, IOC constants | `lib/common.fish` |
+| Default URLs, windows, IOC constants | `lib/bootstrap.fish` |
 | ELF/npm/bun cache scans, persistence IOCs | `lib/ioc.fish` |
 | JSON summary / list SHA256 fields | `lib/reports.fish` |
 | User overrides | `config.fish.example` → `~/.config/aur-response/config.fish` |

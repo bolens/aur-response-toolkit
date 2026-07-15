@@ -15,7 +15,7 @@ We **do not** ship third-party shell scripts (e.g. `aur_check-v2.sh`, CSCS paste
 
 ## What we reference at runtime
 
-Online scans may fetch current lists from URLs configured in `lib/common.fish` / user `config.fish`. SHA256 checksums of fetched content are logged for verification.
+Online scans may fetch current lists from URLs configured in `lib/bootstrap.fish` / user `config.fish`. SHA256 checksums of fetched content are logged for verification.
 
 ## Per-source license status
 

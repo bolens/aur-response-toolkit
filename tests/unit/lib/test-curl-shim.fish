@@ -27,9 +27,11 @@ rm -f $tmp
 
 if command -q curlie
     test_section "aur_curl curlie uses empty stdin (non-TTY workaround)"
+    set -l html (test_fixture_path fetch/example-domain.html)
     set -l curlie_out (mktemp)
     begin
-        aur_curl -fsSL --max-time 10 -o $curlie_out https://example.com
+        # Offline: file:// exercises the same </dev/null curlie path (no live network).
+        aur_curl -fsSL --max-time 5 -o $curlie_out "file://$html"
         assert_status "curlie -o fetch completes without stdin hang" 0
     end
     assert_match "curlie fetch body" 'Example Domain' (cat $curlie_out | string collect)

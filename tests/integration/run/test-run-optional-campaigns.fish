@@ -5,6 +5,11 @@ source (dirname (dirname (dirname (status filename))))/support/test-utils.fish
 test_reset_counters
 
 function test_setup_clean_run_env
+    # Isolate from host HOME / systemd / deps paths so malware-artifacts can't trip on live IOCs.
+    set -gx AUR_TEST_SAVED_HOME $HOME
+    set -gx HOME (mktemp -d)
+    mkdir -p $HOME/.config $HOME/.cache $HOME/.local
+
     set -l log_dir (mktemp -d)
     echo '[2026-02-01T08:00:00-0600] [ALPM] upgraded clean-aur (1-1 -> 2-1)' >$log_dir/pacman.log
     set -gx AUR_TEST_PACMAN_LOG_DIR $log_dir
@@ -29,6 +34,9 @@ function test_setup_clean_run_env
     # Isolate AUR helper cache scans from the host system (malware-artifacts / similar-heuristics).
     set -gx AUR_HELPER_CACHE_ROOTS (mktemp -d)
     set -gx AUR_PAMAC_BUILD_GLOBS '/nonexistent-pamac-*'
+    set -gx AUR_TEST_SYSTEMD_SYSTEM_DIR (mktemp -d)
+    set -gx AUR_TEST_SKIP_LD_PRELOAD 1
+    set -gx AUR_DEPS_SEARCH_PATHS $HOME/.cache
 
     # Fresh scan state so prior suites cannot leave compromised=1 on disk.
     set -gx AUR_TEST_SAVED_STATE_FILE $AUR_STATE_FILE
@@ -62,6 +70,12 @@ function test_teardown_run_env
         set -e AUR_HELPER_CACHE_ROOTS
     end
     set -e AUR_PAMAC_BUILD_GLOBS
+    if set -q AUR_TEST_SYSTEMD_SYSTEM_DIR
+        rm -rf $AUR_TEST_SYSTEMD_SYSTEM_DIR
+        set -e AUR_TEST_SYSTEMD_SYSTEM_DIR
+    end
+    set -e AUR_TEST_SKIP_LD_PRELOAD
+    set -e AUR_DEPS_SEARCH_PATHS
     if set -q AUR_STATE_FILE
         rm -f $AUR_STATE_FILE
     end
@@ -70,6 +84,12 @@ function test_teardown_run_env
         set -e AUR_TEST_SAVED_STATE_FILE
     else
         set -e AUR_STATE_FILE
+    end
+    if set -q AUR_TEST_SAVED_HOME
+        set -l tmp_home $HOME
+        set -gx HOME $AUR_TEST_SAVED_HOME
+        set -e AUR_TEST_SAVED_HOME
+        rm -rf $tmp_home
     end
 end
 
@@ -93,27 +113,14 @@ test_teardown_run_env
 
 test_section "run.fish exits warn when optional campaigns hit installed pkgs"
 
-set -l log_dir (mktemp -d)
-echo '[2026-02-01T08:00:00-0600] [ALPM] upgraded clean-aur (1-1 -> 2-1)' >$log_dir/pacman.log
-set -gx AUR_TEST_PACMAN_LOG_DIR $log_dir
-set -gx AUR_TEST_FOREIGN_LIST (mktemp)
-echo clean-aur >$AUR_TEST_FOREIGN_LIST
-set -gx AUR_TEST_INSTALLED_LIST (mktemp)
+test_setup_clean_run_env
+# Override installed set with optional-campaign fixtures (still isolated HOME/systemd).
 printf '%s\n' chaos-pkg-a shai-pkg-a legacy-pkg-a >$AUR_TEST_INSTALLED_LIST
-set -gx AUR_TEST_PKG_INFO (mktemp)
 printf '%s\n' \
     'chaos-pkg-a|Mon 17 Jul 2025 20:00:00|Explicitly installed' \
     'shai-pkg-a|Sat 17 May 2026 20:00:00|Explicitly installed' \
     'legacy-pkg-a|Thu 07 Jun 2018 20:00:00|Explicitly installed' >$AUR_TEST_PKG_INFO
-set -gx AUR_TEST_LIST_FILE (test_fixture_path lists/atomic-arch-pkgs.txt)
-set -gx AUR_TEST_CHAOS_RAT_LIST_FILE (test_fixture_path lists/chaos-rat-pkgs.txt)
-set -gx AUR_TEST_SHAI_HULUD_LIST_FILE (test_fixture_path lists/shai-hulud-pkgs.txt)
-set -gx AUR_TEST_XEACTOR_LIST_FILE (test_fixture_path lists/xeactor-pkgs.txt)
-set -gx AUR_HELPER_CACHE_ROOTS (mktemp -d)
-set -gx AUR_PAMAC_BUILD_GLOBS '/nonexistent-pamac-*'
-set -gx AUR_TEST_SAVED_STATE_FILE $AUR_STATE_FILE
-set -gx AUR_STATE_FILE (mktemp)
-aur_state_init
+echo clean-aur >$AUR_TEST_FOREIGN_LIST
 
 set -l hit_out (mktemp)
 set -l hit_json (mktemp)

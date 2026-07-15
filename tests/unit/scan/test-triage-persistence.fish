@@ -28,6 +28,8 @@ begin
     aur_triage_unknown_pkg window-pkg >/dev/null 2>&1
     assert_status "malicious cache triage critical" 0
 end
+assert_contains "mock row treated as installed" "still installed" "$triage_cache"
+assert_contains "window install flagged" "installed during window" "$triage_cache"
 assert_match "malicious hook flagged" 'malicious hook in cache:' "$triage_cache"
 
 set -gx HOME $_home

@@ -11,7 +11,7 @@ begin
 end
 
 set -l invalid_out (mktemp)
-fish -c "source $AUR_RESPONSE_DIR/lib/common.fish; aur_validate_known_flags --bogus-flag" >$invalid_out 2>&1
+fish -c "source $AUR_RESPONSE_DIR/lib/bootstrap.fish; aur_validate_known_flags --bogus-flag" >$invalid_out 2>&1
 assert_eq "unknown flag exits 4" $AUR_EXIT_INVALID $status
 assert_match "unknown flag message" 'Unknown option: --bogus-flag' (cat $invalid_out)
 rm -f $invalid_out

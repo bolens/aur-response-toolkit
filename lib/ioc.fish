@@ -83,11 +83,14 @@ function aur_find_deps_elf
     end
 
     set -l seen
+    # Bound depth so full-home walks stay tractable; --quick uses a shallower ceiling.
+    set -l maxdepth 10
+    test $quick = true; and set maxdepth 6
 
     for base in $search_paths
         test -e $base; or continue
         if test $quick = false
-            for candidate in (aur_find $base -mtime -30 -name deps -perm -111 -size +1M 2>/dev/null)
+            for candidate in (aur_find $base -maxdepth $maxdepth -mtime -30 -name deps -perm -111 -size +1M 2>/dev/null)
                 contains -- $candidate $seen; and continue
                 if aur_malware_sha256_matches $candidate
                     echo $candidate
@@ -95,7 +98,7 @@ function aur_find_deps_elf
                 end
             end
         else
-            for candidate in (aur_find $base -name deps -perm -111 -size +1M 2>/dev/null)
+            for candidate in (aur_find $base -maxdepth $maxdepth -name deps -perm -111 -size +1M 2>/dev/null)
                 contains -- $candidate $seen; and continue
                 if aur_malware_sha256_matches $candidate
                     echo $candidate
@@ -281,16 +284,25 @@ function aur_check_runtime_iocs
 end
 
 # Dormant persistence: ld.so.preload hijack, systemd units, shell rc hooks, autostart entries.
+# Tests: set AUR_TEST_SYSTEMD_SYSTEM_DIR to a fake unit dir (or empty) to avoid host /etc/systemd.
 function aur_check_extra_persistence
     set -l hits
 
     if test -f /etc/ld.so.preload; and test -s /etc/ld.so.preload
-        if aur_grep -qir $AUR_PERSISTENCE_PATTERN /etc/ld.so.preload 2>/dev/null
-            set -a hits "ld_preload:/etc/ld.so.preload"
+        if not set -q AUR_TEST_SKIP_LD_PRELOAD
+            if aur_grep -qir $AUR_PERSISTENCE_PATTERN /etc/ld.so.preload 2>/dev/null
+                set -a hits "ld_preload:/etc/ld.so.preload"
+            end
         end
     end
 
-    for svc in /etc/systemd/system/*.service $HOME/.config/systemd/user/*.service
+    set -l system_units
+    if set -q AUR_TEST_SYSTEMD_SYSTEM_DIR
+        set system_units $AUR_TEST_SYSTEMD_SYSTEM_DIR/*.service
+    else
+        set system_units /etc/systemd/system/*.service
+    end
+    for svc in $system_units $HOME/.config/systemd/user/*.service
         test -f $svc; or continue
         while read -l line
             if string match -qir "ExecStart=$AUR_PERSISTENCE_EXEC_RE" -- $line
@@ -397,7 +409,7 @@ function aur_triage_unknown_pkg --argument-names pkg
     set -l issues
     set -l critical false
 
-    if pacman -Qi $pkg >/dev/null 2>&1
+    if aur_pkg_is_installed $pkg
         set -a issues "still installed"
         if aur_install_in_window_or_all_time $pkg
             set -a issues "installed during window"

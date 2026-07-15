@@ -4,7 +4,7 @@
 # Runs seven detection steps in order, aggregates exit severity, optional --recover wizard.
 
 set -g AUR_RESPONSE_DIR (dirname (status filename))
-source $AUR_RESPONSE_DIR/lib/common.fish
+source $AUR_RESPONSE_DIR/lib/bootstrap.fish
 
 aur_parse_common_args $argv
 
@@ -104,6 +104,14 @@ end
 
 aur_state_init
 
+# Child steps share one ALPM event cache (subprocess-safe via exported dir path).
+set -gx AUR_ALPM_CACHE_DIR (mktemp -d)
+
+# Timers/CI: --quiet on a non-TTY implies --quick unless the user already asked for a full walk.
+if test $AUR_OPT_quiet = true; and test $AUR_OPT_quick = false; and not test -t 0
+    set -g AUR_OPT_quick true
+end
+
 if test $AUR_OPT_quiet != true
     aur_preflight_environment
     aur_log ""
@@ -172,6 +180,9 @@ if aur_xeactor_enabled
     run_step "Step 1d: xeactor package scan" check/xeactor-pkgs.fish $step_args
     record_step_status $status xeactor
 end
+
+# Pre-parse pacman logs once so steps 2/3* hit the shared ALPM cache.
+aur_warmup_alpm_event_caches
 
 # Step 2: all foreign packages touched in window — catches packages not yet on public lists.
 run_step "Step 2/7: AUR activity window" scan/aur-window.fish $step_args
@@ -300,6 +311,10 @@ aur_log "############################################"
 
 if test $output_json = true
     cat $AUR_SUMMARY_FILE
+end
+
+if set -q AUR_ALPM_CACHE_DIR
+    rm -rf $AUR_ALPM_CACHE_DIR
 end
 
 exit $exit_code

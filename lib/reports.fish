@@ -382,3 +382,29 @@ function aur_write_summary_json --argument-names exit_code
         (aur_json_string_array $audit_history) >$AUR_SUMMARY_FILE
     cp $AUR_SUMMARY_FILE $AUR_FINDINGS_FILE
 end
+
+function aur_print_summary_dashboard --argument-names exit_code
+    aur_log ""
+    aur_log "=== Scan summary ==="
+    aur_log "  Toolkit version:          $AUR_VERSION"
+    aur_log "  Atomic Arch installed:    $AUR_SUMMARY_atomic_arch_installed ($AUR_SUMMARY_atomic_arch_high_risk high-risk)"
+    aur_log "  Atomic Arch timeline:     $AUR_SUMMARY_atomic_arch_timeline_hits"
+    aur_log "  Atomic Arch repeats:      $AUR_SUMMARY_atomic_arch_timeline_repeat_updates"
+    aur_log "  AUR pkgs in window:       $AUR_SUMMARY_window_aur_pkgs"
+    aur_log "  Malware artifacts:        $AUR_SUMMARY_artifact_critical critical"
+    aur_log "  Runtime IOCs:             $AUR_SUMMARY_runtime_iocs"
+    aur_log "  Chaos RAT packages:       $AUR_SUMMARY_chaos_rat_installed ($AUR_SUMMARY_chaos_rat_high_risk high-risk)"
+    aur_log "  Chaos RAT timeline hits:  $AUR_SUMMARY_chaos_rat_timeline_hits"
+    aur_log "  Shai-Hulud packages:      $AUR_SUMMARY_shai_hulud_installed ($AUR_SUMMARY_shai_hulud_high_risk high-risk)"
+    aur_log "  Shai-Hulud timeline hits: $AUR_SUMMARY_shai_hulud_timeline_hits"
+    aur_log "  xeactor packages:     $AUR_SUMMARY_xeactor_installed ($AUR_SUMMARY_xeactor_high_risk high-risk)"
+    aur_log "  xeactor timeline hits: $AUR_SUMMARY_xeactor_timeline_hits"
+    aur_log "  Credential exposures:     $AUR_SUMMARY_credential_exposed"
+    aur_log "  Hardening warnings:       $AUR_SUMMARY_hardening_warn"
+    aur_log "  Insufficient data:        $AUR_SUMMARY_insufficient_data"
+    if test $AUR_SUMMARY_list_added -gt 0 -o $AUR_SUMMARY_list_removed -gt 0
+        aur_log "  List changes:             +$AUR_SUMMARY_list_added / -$AUR_SUMMARY_list_removed"
+    end
+    aur_log "  Severity:                 "(aur_compute_severity $exit_code)
+    aur_log "  JSON summary:             $AUR_SUMMARY_FILE"
+end

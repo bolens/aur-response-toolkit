@@ -10,4 +10,4 @@ if not set -q AUR_RESPONSE_DIR
     end
     set -g AUR_RESPONSE_DIR $here
 end
-source $AUR_RESPONSE_DIR/lib/common.fish
+source $AUR_RESPONSE_DIR/lib/bootstrap.fish

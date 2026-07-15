@@ -9,10 +9,44 @@ All notable changes to **aur-response-toolkit** are documented here.
 - **CI** — Arch Linux container job, lint-before-test, concurrency, weekly schedule, `workflow_dispatch`; bump `actions/checkout@v6`, `softprops/action-gh-release@v3`
 - **Release automation** — GitHub Release workflow on `v*` tags (changelog excerpt from this file)
 - **`reports/.gitkeep`** — preserve empty reports directory in clones
+- **`aur_pkg_is_installed`** — mock-aware install check that avoids Fish "Unknown command" when `pacman` is absent
+- **Preflight** — warn when `pacman` is missing (non-Arch hosts / Ubuntu CI)
+- **Test hooks** — `AUR_TEST_SYSTEMD_SYSTEM_DIR` / `AUR_TEST_SKIP_LD_PRELOAD` so integration runs ignore host persistence
+- **`aur_atomic_arch_list_write_path` / `AUR_ATOMIC_ARCH_LIST_WRITE_FILE`** — redirect online merges (list-freshness uses a temp file)
+- **Shared campaign helpers** — `aur_classify_campaign_pkg`, `aur_collect_alpm_events[_all]`, `aur_collect_all_time_alpm_events_all`, `aur_load_and_read_{chaos_rat,shai_hulud,xeactor}_list`, `aur_load_single_url_pkg_list`
+- **FHS list caches** — when `data/lists/` is read-only, online merges go to `~/.local/share/aur-response/lists/` (bundled lists still used for `--local` / freshness)
+- **`aur_run_optional_campaign_{pkg_check,timeline}`** — shared runners for chaos-rat / shai-hulud / xeactor scripts
+- **`AUR_ALPM_CACHE_DIR`** — `run.fish` reuses pacman-log event collects across subprocess steps
+- **Unified list helpers** — `aur_list_file_path` / `aur_list_write_path` / `aur_optional_campaign_enabled`
+- **Tests** — ALPM cache, FHS list paths, list-freshness CLI, staged `install.fish`, stolen-credentials exits
+- **`aur_warmup_alpm_event_caches`** — `run.fish` pre-fills the shared ALPM event cache before window/timeline steps
+- **`AUR_TEST_JOBS`** — parallel suite runner in `tests/run-all.fish` (default `nproc` / 4)
+
+### Fixed
+- **`aur_collect_alpm_events`** — read logs via tempfile instead of `| while` so collection finishes before cache write (Arch CI flake)
 
 ### Changed
 - **fish_indent** — formatting pass across Fish scripts (fishcheck FC1001)
 - **`aur_hostname`** — fall back to `uname -n` when `hostname` is absent (minimal Arch / CI containers)
+- **`aur_list_staleness_days`** — floor to whole days (fixes flaky stale-list regex / equality on sub-second mtime skew)
+- **`aur_warn_local_list_stale`** — accept optional list path so Chaos/Shai-Hulud/xeactor `--local` ages the correct file
+- **Ubuntu CI deps** — install `zstd`, `iproute2`, `procps` for parity with the Arch job
+- **`check/list-freshness.fish`** — never overwrites the bundled list; fetch/data failures exit `3` (insufficient), not compromise
+- **List-load exit policy** — Atomic Arch check joins optional campaigns: missing/empty list → exit `3` (confirmed hits stay exit `1`)
+- **Optional check scripts** — load via `aur_load_and_read_*` so log lines no longer inflate package counts
+- **Arch CI** — refresh `archlinux-keyring` before installing packages
+- **`recovery/remove-packages.fish`** — require `pacman`; non-TTY needs `--force`; missing list exits `3`
+- **`test-curl-shim`** — curlie path uses offline `file://` fixture (no live `example.com`)
+- **`lib/` split** — `lib/bootstrap.fish` is the entry point (paths/constants + sources siblings); helpers live in `shims` / `lists` / `cli` / `windows` / `alpm` / `packages` / `campaign_runners` (no `lib/common.fish`)
+- **Timeline repeat scans** — only run when timeline hits exist (atomic-arch + optional campaigns)
+- **Deps ELF search** — drop `$HOME/.npm` / `$HOME/node_modules` from default roots; apply `-maxdepth` (10 / 6 with `--quick`)
+- **CI** — pin `mattmc3/fishcheck` to a commit SHA; lint once then parallel Ubuntu/Arch tests; path filters on push/PR; `AUR_TEST_JOBS=4`
+- **Docs** — FHS report paths in README flag table; config.fish trust boundary in `SECURITY.md`; CONTRIBUTING points at `lib/bootstrap.fish`
+- **`run.fish`** — `--quiet` on a non-TTY implies `--quick` (timers/CI default to narrower artifact walks)
+
+### Removed
+- **`packaging/arch/fhs-writable-state.patch`** — FHS/XDG report+list redirects are in-tree; PKGBUILD no longer patches
+- **`lib/common.fish`** — use `lib/bootstrap.fish` as the library entry point
 
 ## 1.9.0
 

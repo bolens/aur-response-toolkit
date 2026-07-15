@@ -1,6 +1,6 @@
 # Copy to ~/.config/aur-response/config.fish (optional)
 #
-# Override toolkit defaults. Sourced automatically by lib/common.fish after built-in paths.
+# Override toolkit defaults. Sourced automatically by lib/bootstrap.fish after built-in paths.
 # Threat list URLs and attribution: data/docs/sources.md
 
 # Directory scanned for .env / stack.env files (credential audit)
