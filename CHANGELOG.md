@@ -47,7 +47,7 @@ All notable changes to **aur-response-toolkit** are documented here.
 - **`lib/` split** — `lib/bootstrap.fish` is the entry point (paths/constants + sources siblings); helpers live in `shims` / `lists` / `cli` / `windows` / `alpm` / `packages` / `campaign_runners` (no `lib/common.fish`)
 - **Timeline repeat scans** — only run when timeline hits exist (atomic-arch + optional campaigns)
 - **Deps ELF search** — drop `$HOME/.npm` / `$HOME/node_modules` from default roots; apply `-maxdepth` (10 / 6 with `--quick`)
-- **CI** — pin `mattmc3/fishcheck` to a commit SHA; lint once then parallel Ubuntu/Arch tests; path filters on push/PR; `AUR_TEST_JOBS=4`
+- **CI** — pin `mattmc3/fishcheck` to a commit SHA; lint once then parallel Ubuntu/Arch tests; `dorny/paths-filter` + gate jobs `ubuntu`/`arch` (docs-only PRs resolve required checks); PR-number concurrency cancels superseded runs; schedules never cancelled by pushes; `AUR_TEST_JOBS=4`
 - **Docs** — FHS report paths in README flag table; config.fish trust boundary in `SECURITY.md`; CONTRIBUTING + PR template use Conventional Commits; `data/docs/sources.md` maps modular `lib/`
 - **`run.fish`** — `--quiet` on a non-TTY implies `--quick` (timers/CI default to narrower artifact walks)
 

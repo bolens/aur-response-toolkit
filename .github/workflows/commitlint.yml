@@ -8,14 +8,16 @@ permissions:
   contents: read
   pull-requests: read
 
+# Cancel superseded runs for the same PR (title edit / new commits).
 concurrency:
-  group: commitlint-${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
   conventional-commits:
     name: conventional commits
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
         with:

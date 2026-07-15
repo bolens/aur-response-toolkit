@@ -8,9 +8,15 @@ on:
 permissions:
   contents: write
 
+# One release job per tag; cancel is harmless if a tag is force-moved.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 

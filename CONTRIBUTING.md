@@ -92,9 +92,10 @@ Dependabot PRs use `chore(deps):` via [`.github/dependabot.yml`](.github/dependa
 - Integration tests should set isolated temp dirs via `tests/support/test-utils.fish`.
 - Mock package state with `AUR_TEST_PKG_INFO`, `AUR_TEST_INSTALLED_LIST`, or `AUR_TEST_FOREIGN_LIST`; do not call bare `pacman` from new helpers.
 - Full `run.fish` integration tests must isolate host IOCs: temp `HOME`, `AUR_HELPER_CACHE_ROOTS`, `AUR_TEST_SYSTEMD_SYSTEM_DIR`, and `AUR_DEPS_SEARCH_PATHS`.
-- CI runs lint once (Ubuntu), then Ubuntu + Arch test jobs in parallel.
+- CI runs lint once (Ubuntu), then Ubuntu + Arch test jobs in parallel; gate jobs `ubuntu` / `arch` satisfy branch protection.
 - fishcheck in CI is installed only for the lint job (`tools/fishcheck`; see `.github/workflows/ci.yml`).
-- CI jobs path-filter to Fish/code/list/packaging changes (docs-only PRs skip CI; weekly schedule still runs full).
+- Code-path filter (via `dorny/paths-filter`): Fish/lists/packaging/completions/CI workflow; docs-only PRs skip tests but still get green `ubuntu`/`arch` gates. Weekly schedule and `workflow_dispatch` always run the full suite.
+- Concurrency: new pushes/PR syncs cancel in-progress runs for the same branch/PR; scheduled weekly runs are never cancelled by a push.
 
 ## Pull requests
 
