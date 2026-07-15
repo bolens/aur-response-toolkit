@@ -43,6 +43,22 @@ fish_add_path -g ~/.local/bin/fishcheck
 - User-facing changes: update [`CHANGELOG.md`](CHANGELOG.md) under `## Unreleased` or the next version section.
 - User-facing release: bump [`VERSION`](VERSION) to match CHANGELOG.
 
+## Commit messages
+
+Use [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(optional-scope): <imperative summary>
+```
+
+- **Types:** `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `chore`, `build`, `ci`, `style`, `revert`
+- Imperative mood (“add”, “fix”, “remove”), ≤72 chars on the subject, no trailing period
+- Optional scope when it helps (`ci`, `packaging`, `alpm`, campaign slug, …)
+- Body only when the *why* is not obvious (breaking changes, migrations, security notes)
+- Breaking changes: `feat(api)!: …` and a `BREAKING CHANGE:` footer
+
+Examples: `fix(alpm): finish log collect before cache write`, `docs: document Conventional Commits`, `chore(deps): bump actions/checkout`.
+
 ## Adding a new campaign (outline)
 
 1. Bundled list: `data/lists/{slug}-pkgs.txt`
@@ -71,7 +87,7 @@ fish_add_path -g ~/.local/bin/fishcheck
 
 ## Pull requests
 
-Use the PR template checklist. CI must pass (lint + Ubuntu/Arch tests). One logical change per PR when possible.
+Use the PR template checklist. Title the PR (and commits) with Conventional Commits. CI must pass (lint + Ubuntu/Arch tests) unless the change is docs-only and path filters skip CI. One logical change per PR when possible.
 
 ## Security
 

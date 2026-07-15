@@ -41,7 +41,6 @@ files=(
   PKGBUILD
   .SRCINFO
   aur-response-toolkit.install
-  fhs-writable-state.patch
 )
 
 for f in "${files[@]}"; do

@@ -41,11 +41,11 @@ All notable changes to **aur-response-toolkit** are documented here.
 - **Timeline repeat scans** — only run when timeline hits exist (atomic-arch + optional campaigns)
 - **Deps ELF search** — drop `$HOME/.npm` / `$HOME/node_modules` from default roots; apply `-maxdepth` (10 / 6 with `--quick`)
 - **CI** — pin `mattmc3/fishcheck` to a commit SHA; lint once then parallel Ubuntu/Arch tests; path filters on push/PR; `AUR_TEST_JOBS=4`
-- **Docs** — FHS report paths in README flag table; config.fish trust boundary in `SECURITY.md`; CONTRIBUTING points at `lib/bootstrap.fish`
+- **Docs** — FHS report paths in README flag table; config.fish trust boundary in `SECURITY.md`; CONTRIBUTING + PR template use Conventional Commits; `data/docs/sources.md` maps modular `lib/`
 - **`run.fish`** — `--quiet` on a non-TTY implies `--quick` (timers/CI default to narrower artifact walks)
 
 ### Removed
-- **`packaging/arch/fhs-writable-state.patch`** — FHS/XDG report+list redirects are in-tree; PKGBUILD no longer patches
+- **`packaging/arch/fhs-writable-state.patch`** — FHS/XDG report+list redirects are in-tree; PKGBUILD no longer patches; `publish-to-aur.sh` no longer syncs the patch
 - **`lib/common.fish`** — use `lib/bootstrap.fish` as the library entry point
 
 ## 1.9.0

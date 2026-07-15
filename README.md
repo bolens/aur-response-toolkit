@@ -143,7 +143,7 @@ sudo pacman -S --needed fish curl findutils coreutils grep fd ripgrep curlie zst
 paru -S --needed paru      # or: yay -S --needed yay
 ```
 
-All shims live in `lib/shims.fish` / `lib/ioc.fish` / `lib/reports.fish` (loaded via `lib/bootstrap.fish`). Scripts and tests call `aur_*` helpers — not raw `grep`, `find`, `curl`, `sha256sum`, `pgrep`, or `ss` — so fish aliases and optional faster tools work without branching at call sites.
+Tool helpers live under `lib/` (entry point `lib/bootstrap.fish` — see [project layout](#project-layout)). Scripts and tests call `aur_*` helpers — not raw `grep`, `find`, `curl`, `sha256sum`, `pgrep`, or `ss` — so fish aliases and optional faster tools work without branching at call sites.
 
 ### Supported distributions
 
@@ -433,7 +433,13 @@ fish lint.fish
 
 # Run full test suite
 fish tests/run-all.fish
+
+# Optional: parallel suites
+set -x AUR_TEST_JOBS 8
+fish tests/run-all.fish
 ```
+
+Commits and PRs use [Conventional Commits](https://www.conventionalcommits.org/) — see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ### Project layout
 

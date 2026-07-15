@@ -13,12 +13,19 @@ Per-campaign provenance, upstream URLs, toolkit code mapping, and license notes.
 
 | Concern | Location |
 |---------|----------|
-| Default URLs, windows, IOC constants | `lib/bootstrap.fish` |
+| Entry point: paths, FHS redirects, constants; sources siblings | `lib/bootstrap.fish` |
+| grep/find/curl/sha256/hostname shims | `lib/shims.fish` |
+| List path/enable helpers, staleness | `lib/lists.fish` |
+| Flags, logging, state, exit policy | `lib/cli.fish` |
+| Date-window predicates + classifiers | `lib/windows.fish` |
+| Pacman log collect, ALPM cache, timeline helpers | `lib/alpm.fish` |
+| Package/list loaders, preflight, file/hook utils | `lib/packages.fish` |
+| Optional campaign check/timeline runners | `lib/campaign_runners.fish` |
 | ELF/npm/bun cache scans, persistence IOCs | `lib/ioc.fish` |
 | JSON summary / list SHA256 fields | `lib/reports.fish` |
 | User overrides | `config.fish.example` → `~/.config/aur-response/config.fish` |
 
-List loaders: `aur_load_atomic_arch_list`, `aur_load_chaos_rat_list`, `aur_load_shai_hulud_list`, `aur_load_xeactor_list`.
+List loaders live in `lib/packages.fish` (`aur_load_atomic_arch_list`, `aur_load_*`, `aur_load_and_read_*`). Optional campaigns prefer `aur_run_optional_campaign_{pkg_check,timeline}` in `lib/campaign_runners.fish`.
 
 ## License summary
 
