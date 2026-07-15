@@ -37,8 +37,6 @@ source=(
 sha256sums=(
   'SKIP'
 )
-  'adbae9f88e9cefe35763fbd1423201666b152ca60f547e0a988e5f5b4f73fc51'
-)
 install=aur-response-toolkit.install
 
 package() {
