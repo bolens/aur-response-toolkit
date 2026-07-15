@@ -26,6 +26,6 @@ pkgbase = aur-response-toolkit
 	optdepends = bun: bun cache hook scanning
 	optdepends = systemd: optional weekly scan timer units
 	source = aur-response-toolkit-1.10.0.tar.gz::https://github.com/bolens/aur-response-toolkit/archive/refs/tags/v1.10.0.tar.gz
-	sha256sums = SKIP
+	sha256sums = 67af4c934dd16d9ab6ceb8aa69ed88b1a0a8ab81b22b1954d22bd0930c217526
 
 pkgname = aur-response-toolkit

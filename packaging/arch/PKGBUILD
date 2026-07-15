@@ -35,7 +35,7 @@ source=(
   "$pkgname-$pkgver.tar.gz::https://github.com/bolens/aur-response-toolkit/archive/refs/tags/v$pkgver.tar.gz"
 )
 sha256sums=(
-  'SKIP'
+  '67af4c934dd16d9ab6ceb8aa69ed88b1a0a8ab81b22b1954d22bd0930c217526'
 )
 install=aur-response-toolkit.install
 
