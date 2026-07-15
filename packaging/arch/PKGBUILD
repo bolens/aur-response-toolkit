@@ -2,7 +2,7 @@
 # Fish-script toolkit — installed as /usr/bin wrappers over /usr/share scripts.
 
 pkgname=aur-response-toolkit
-pkgver=1.9.0
+pkgver=1.10.0
 pkgrel=1
 pkgdesc="Detect, triage, and recover from AUR supply-chain incidents (Fish)"
 arch=('any')
@@ -35,6 +35,8 @@ source=(
   "$pkgname-$pkgver.tar.gz::https://github.com/bolens/aur-response-toolkit/archive/refs/tags/v$pkgver.tar.gz"
 )
 sha256sums=(
+  'SKIP'
+)
   'adbae9f88e9cefe35763fbd1423201666b152ca60f547e0a988e5f5b4f73fc51'
 )
 install=aur-response-toolkit.install

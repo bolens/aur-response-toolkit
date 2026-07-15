@@ -4,6 +4,8 @@ All notable changes to **aur-response-toolkit** are documented here.
 
 ## Unreleased
 
+## 1.10.0
+
 ### Added
 - **Git hooks** — `.githooks/` + `scripts/install-git-hooks.fish`; path-filtered like CI (`fish_indent` / `lint.fish` / tests); Conventional Commits commit-msg
 - **Conventional Commits gate** — `scripts/check-conventional-commit.fish` + PR workflow; Dependabot `chore(deps)` prefix
