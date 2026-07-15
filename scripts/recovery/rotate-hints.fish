@@ -4,8 +4,24 @@
 
 source (dirname (dirname (status filename)))/_init.fish
 
+for arg in $argv
+    switch $arg
+        case --help -h
+            echo "Usage: recovery/rotate-hints.fish [--report] [--quiet]"
+            echo ""
+            echo "Print concrete credential-rotation commands from prior audit findings,"
+            echo "or rediscover common paths when run standalone."
+            echo ""
+            echo "Flags:"
+            echo "  --report  Append output to reports/"
+            echo "  --quiet   Suppress stdout (reports still written)"
+            exit 0
+    end
+end
+
 aur_validate_known_flags $argv
 aur_parse_common_args $argv
+aur_begin_report_if_requested rotate-hints-
 
 aur_log "=== Rotation command hints ==="
 aur_log ""

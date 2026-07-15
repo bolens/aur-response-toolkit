@@ -1,7 +1,7 @@
 #!/usr/bin/env fish
 
 # AUR malware response — full scan orchestrator.
-# Runs seven detection steps in order, aggregates exit severity, optional --recover wizard.
+# Runs detection steps in order (incl. optional campaigns), aggregates exit severity, optional --recover wizard.
 
 set -g AUR_RESPONSE_DIR (dirname (status filename))
 source $AUR_RESPONSE_DIR/lib/bootstrap.fish
@@ -46,15 +46,13 @@ for arg in $argv
         case --fail-on:compromise --fail-on:all --fail-on:none --fail-on:chaos-rat --fail-on:shai-hulud --fail-on:xeactor
             # handled by aur_parse_common_args
         case --help -h
-            echo "Usage: run.fish [--local] [--audit] [--report] [--json] [--quiet] [--recover]"
-            echo "       [--quick] [--if-compromised] [--fail-on all|compromise|chaos-rat|shai-hulud|xeactor|none] [--skip-pkg-check]"
-            echo "       [--all-time] [--prune-days N] [--chaos-rat] [--shai-hulud] [--xeactor]"
+            echo "Usage: run.fish [options]   (packaged: aur-response)"
             echo ""
             echo "Exit codes:"
             echo "  0  clean"
             echo "  1  compromise indicators"
-            echo "  2  warnings only (hardening, benign unknown AUR packages)"
-            echo "  3  insufficient data (unreadable logs)"
+            echo "  2  warnings only (hardening, benign unknown AUR packages, optional campaigns)"
+            echo "  3  insufficient data (unreadable logs or missing/empty lists)"
             echo "  4  invalid arguments"
             echo ""
             echo "Steps:"
@@ -64,28 +62,37 @@ for arg in $argv
             echo "  1d. xeactor package scan (optional, --xeactor or config)"
             echo "  2. AUR activity window scan"
             echo "  3. Pacman timeline (known infected list)"
-            echo "  3b. Chaos RAT pacman timeline (optional, --chaos-rat or config)"
-            echo "  3c. Shai-Hulud pacman timeline (optional, --shai-hulud or config)"
-            echo "  3d. xeactor pacman timeline (optional, --xeactor or config)"
+            echo "  3b–3d. Optional campaign timelines (with matching enable flags)"
             echo "  4. Malware artifact scan"
+            echo "  4b. Similar-heuristics scan (unknown foreign packages)"
             echo "  5. Build hardening check"
             echo "  6. Credential audit (if issues or --audit)"
             echo "  7. Rotation hints (if issues or --audit)"
             echo ""
-            echo "  --recover     Interactive recovery wizard (remove → audit → rotate → scrub)"
-            echo "  --chaos-rat   Also scan Chaos RAT / cracked-software AUR packages (warn-only)"
-            echo "  --shai-hulud  Also scan Mini Shai-Hulud AUR packages (warn-only)"
-            echo "  --xeactor Also scan 2018 xeactor AUR packages (warn-only)"
-            echo "  --quiet       Suppress scan output (still writes report/json)"
-            echo "  --json        Print JSON summary to stdout at end"
-            echo "  --all-time    Ignore compromise date window for pkg/timeline checks"
-            echo "  --prune-days  Delete report files older than N days"
-            echo "  --version     Print toolkit version"
+            echo "Options:"
+            echo "  --local            Use bundled Atomic Arch list (no network fetch)"
+            echo "  --audit            Always run credential audit + rotation hints"
+            echo "  --report           Append output under reports/ (or XDG data on FHS)"
+            echo "  --quiet            Suppress scan output (still writes report/json)"
+            echo "  --quick            Faster scans (narrower artifact search)"
+            echo "  --if-compromised   Only fail credential audit when compromise detected"
+            echo "  --skip-pkg-check   Skip step 1 package list checks"
+            echo "  --recover          Interactive recovery wizard (remove → audit → rotate → scrub)"
+            echo "  --chaos-rat        Also scan Chaos RAT packages (warn-only)"
+            echo "  --shai-hulud       Also scan Mini Shai-Hulud packages (warn-only)"
+            echo "  --xeactor          Also scan 2018 xeactor packages (warn-only)"
+            echo "  --fail-on MODE     Exit policy: all (default), compromise, chaos-rat,"
+            echo "                     shai-hulud, xeactor, none"
+            echo "  --json             Print JSON summary to stdout at end"
+            echo "  --all-time         Ignore compromise date window for pkg/timeline checks"
+            echo "  --prune-days N     Delete report files older than N days"
+            echo "  --version          Print toolkit version"
+            echo "  -h, --help         Show this help"
             echo ""
             echo "Helpers: scripts/recovery/remove-packages.fish  scripts/recovery/apply-hardening.fish  scripts/recovery/rotate-hints.fish"
             exit 0
         case '-*'
-            echo "Unknown option: $arg" >&2
+            echo "Unknown option: $arg (see --help)" >&2
             exit $AUR_EXIT_INVALID
     end
 end

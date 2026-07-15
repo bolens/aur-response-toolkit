@@ -86,6 +86,7 @@ if test "$system_mode" = false
     mkdir -p $bindir $configdir
 
     aur_install_wrapper $bindir/run.fish $src run.fish
+    aur_install_wrapper $bindir/aur-response $src run.fish
     aur_install_wrapper $bindir/lint.fish $src lint.fish
     aur_install_wrapper $bindir/aur-run.fish $src bin/aur-run.fish
 
@@ -96,14 +97,21 @@ if test "$system_mode" = false
         ln -sf $script $bindir/aur-$slug
     end
 
+    set -l completions_dir "$HOME/.config/fish/completions"
+    mkdir -p $completions_dir
+    cp $src/completions/aur-response.fish $completions_dir/aur-response.fish
+    # Same flags as aur-response (user wrapper name)
+    cp $src/completions/aur-response.fish $completions_dir/run.fish
+
     if not test -f $configdir/config.fish
         cp $src/config.fish.example $configdir/config.fish
         echo "Created $configdir/config.fish (edit to customize paths)"
     end
 
     echo "Installed to $bindir"
-    echo "  run.fish / aur-run.fish (portable wrappers)"
+    echo "  aur-response / run.fish / aur-run.fish (same full scan)"
     echo "  aur-{category}-{script}.fish (symlinks to individual scripts)"
+    echo "  Fish completions: ~/.config/fish/completions/{aur-response,run.fish}"
     echo ""
     echo "Ensure $bindir is in PATH:"
     echo "  fish_add_path $bindir"
@@ -185,14 +193,20 @@ if test "$prefix_norm" = /usr
     end
 end
 
+set -l compdir "$stage$prefix_norm/share/fish/vendor_completions.d"
+mkdir -p $compdir
+cp $src/completions/aur-response.fish $compdir/aur-response.fish
+
 echo "Installed FHS layout under $toolkit_root"
 echo "  Commands: $bindir/aur-response, aur-run, aur-response-bash"
 echo "  Per-script: $bindir/aur-{check,scan,recovery,audit}-*.fish"
+echo "  Completions: $compdir/aur-response.fish"
 if test "$prefix_norm" = /usr
     echo "  systemd user timer: $stage/usr/lib/systemd/user/aur-response-scan.{service,timer}"
     echo "    systemctl --user daemon-reload"
     echo "    systemctl --user enable --now aur-response-scan.timer"
 end
 echo ""
+echo "Try: aur-response --help"
 echo "Scan reports: ~/.local/share/aur-response/reports/"
 echo "Optional config: cp $toolkit_root/config.fish.example ~/.config/aur-response/config.fish"

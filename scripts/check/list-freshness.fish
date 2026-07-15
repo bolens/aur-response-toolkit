@@ -15,7 +15,10 @@ for arg in $argv
             echo "Compare bundled data/lists/atomic-arch-pkgs.txt to online sources and check"
             echo "whether installed foreign packages appear only on the fresh merged list."
             echo "Does not modify the bundled list on disk."
-            aur_common_flags_help
+            echo ""
+            echo "Flags:"
+            echo "  --report  Append output to reports/"
+            echo "  --quiet   Suppress stdout (reports still written)"
             exit 0
     end
 end

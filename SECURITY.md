@@ -11,7 +11,7 @@ Please do **not** open a public issue for exploitable toolkit bugs until a fix i
 
 Include:
 
-- Affected version (`fish run.fish --version` or `cat VERSION`)
+- Affected version (`aur-response --version`, `fish run.fish --version`, or `cat VERSION`)
 - Distro and Fish version
 - Steps to reproduce
 - Impact (what an attacker or a compromised scan could cause)

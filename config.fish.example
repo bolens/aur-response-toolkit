@@ -27,8 +27,15 @@
 # Max age (days) before --local warns that bundled atomic-arch-pkgs.txt may be stale
 # set -g AUR_LIST_MAX_AGE_DAYS 7
 
+# Upstream Atomic Arch list URLs (defaults in lib/bootstrap.fish)
+# set -g AUR_LIST_URL_ARCH "https://md.archlinux.org/s/SxbqukK6IA"
+# set -g AUR_LIST_URL_CSCS "https://cscs.pastes.sh/raw/aurvulntest20260611.sh"
 # Optional third infected-package list URL (merged with CSCS + Arch Security)
 # set -g AUR_LIST_URL_EXTRA "https://example.com/extra-infected-list.txt"
+
+# similar-heuristics PKGBUILD line pattern (advanced; default in lib/bootstrap.fish)
+# set -g AUR_SIMILAR_HEURISTICS_PATTERN 'atomic-lockfile|js-digest|...'
+# set -g AUR_SIMILAR_HEURISTICS_NOISE_PATTERN '^# (Maintainer|Contributor|Packager):.*base64 -d'
 
 # Chaos RAT / cracked-software AUR packages (separate threat from Atomic Arch)
 # set -g AUR_ENABLE_CHAOS_RAT 1

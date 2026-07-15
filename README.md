@@ -364,7 +364,7 @@ fish scripts/recovery/apply-hardening.fish --apply
 # 6. Rotate credentials — follow printed hints
 fish scripts/recovery/rotate-hints.fish
 
-# 6. After rotating secrets, redact them from shell history (all shells)
+# 7. After rotating secrets, redact them from shell history (all shells)
 fish scripts/recovery/scrub-history.fish --dry-run
 fish scripts/recovery/scrub-history.fish --all-shells
 ```
@@ -411,6 +411,8 @@ fish run.fish --local --json --fail-on compromise || notify-send "AUR incident: 
 
 ### Weekly systemd timer (optional)
 
+From a git checkout (adjust the clone path if yours differs):
+
 ```fish
 mkdir -p ~/.config/systemd/user
 ln -sf ~/aur-response-toolkit/systemd/aur-response-scan.service ~/.config/systemd/user/
@@ -419,7 +421,12 @@ systemctl --user daemon-reload
 systemctl --user enable --now aur-response-scan.timer
 ```
 
-The service uses `--fail-on compromise --quick` and respects `AUR_RESPONSE_DIR` in the unit file. Adjust the clone path in the symlinks if needed.
+The unit defaults to `AUR_RESPONSE_DIR=%h/aur-response-toolkit` and `fish run.fish`. After `sudo fish install.fish --system` (or the AUR package), enable the shipped user units instead — they already pin `/usr/share/aur-response-toolkit` and `ExecStart=/usr/bin/aur-response`:
+
+```fish
+systemctl --user daemon-reload
+systemctl --user enable --now aur-response-scan.timer
+```
 
 ---
 
@@ -452,6 +459,7 @@ aur-response-toolkit/
 ├── VERSION                       # Toolkit version (see file)
 ├── config.fish.example           # Optional user config template
 ├── lint.fish                     # fishcheck linter for all scripts
+├── completions/aur-response.fish # Fish completions (aur-response / run.fish)
 ├── lib/
 │   ├── bootstrap.fish            # Entry: paths/constants/FHS, then sources siblings
 │   ├── shims.fish                # grep/find/curl/sha256/hostname shims

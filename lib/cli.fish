@@ -118,7 +118,7 @@ function aur_common_flags_help
     echo "  --if-compromised   Only fail credential audit when compromise detected"
     echo "  --chaos-rat        Scan for Chaos RAT / cracked-software AUR packages (opt-in threat)"
     echo "  --shai-hulud       Scan for Mini Shai-Hulud AUR packages (opt-in threat)"
-    echo "  --xeactor      Scan for 2018 xeactor AUR packages (opt-in threat)"
+    echo "  --xeactor          Scan for 2018 xeactor AUR packages (opt-in threat)"
     echo "  --fail-on MODE     Exit policy: all (default), compromise, chaos-rat, shai-hulud, xeactor, none"
 end
 

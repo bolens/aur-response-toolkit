@@ -5,6 +5,7 @@ All notable changes to **aur-response-toolkit** are documented here.
 ## Unreleased
 
 ### Added
+- **Fish completions** — `completions/aur-response.fish` (user + FHS/AUR installs); user install also wraps `aur-response`
 - **GitHub repo hygiene** — `SECURITY.md`, `CONTRIBUTING.md`, issue/PR templates, `CODEOWNERS`, Dependabot for Actions
 - **CI** — Arch Linux container job, lint-before-test, concurrency, weekly schedule, `workflow_dispatch`; bump `actions/checkout@v6`, `softprops/action-gh-release@v3`
 - **Release automation** — GitHub Release workflow on `v*` tags (changelog excerpt from this file)
@@ -24,6 +25,10 @@ All notable changes to **aur-response-toolkit** are documented here.
 
 ### Fixed
 - **`aur_collect_alpm_events`** — read logs via tempfile instead of `| while` so collection finishes before cache write (Arch CI flake)
+- **`run.fish --help`** — document all flags and step 4b; unknown options point at `--help`
+- **`recovery/rotate-hints.fish --help`** — print usage instead of running hints
+- **`check/list-freshness.fish --help`** — only advertise flags this script uses
+- **README recovery steps** — renumber scrub-history to step 7; clarify clone vs FHS systemd timers
 
 ### Changed
 - **fish_indent** — formatting pass across Fish scripts (fishcheck FC1001)

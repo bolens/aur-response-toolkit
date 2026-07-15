@@ -43,12 +43,14 @@ package() {
   local root="$pkgdir/usr/share/aur-response-toolkit"
   cd "$pkgname-$pkgver"
 
-  install -dm755 "$root"/{lib,scripts/{check,scan,audit,recovery},data/{lists,docs},bin}
+  install -dm755 "$root"/{lib,scripts/{check,scan,audit,recovery},data/{lists,docs},bin,completions}
 
   install -Dm644 VERSION "$root/VERSION"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm644 README.md "$root/README.md"
   install -Dm644 config.fish.example "$root/config.fish.example"
+  install -Dm644 completions/aur-response.fish \
+    "$pkgdir/usr/share/fish/vendor_completions.d/aur-response.fish"
 
   install -Dm755 run.fish lint.fish "$root/"
   install -Dm755 run.sh "$root/"
