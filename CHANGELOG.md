@@ -2,6 +2,12 @@
 
 All notable changes to **aur-response-toolkit** are documented here.
 
+## 2.0.1
+
+- Resolve development data from the runtime working directory instead of
+  embedding the build machine's source path in release binaries.
+- Remap Rust build paths in the Arch package for reproducible package contents.
+
 ## 2.0.0
 
 - Replace the Fish implementation with a native Rust application covering typed

@@ -39,14 +39,7 @@ impl Paths {
     pub fn resolve(config: &Config) -> Self {
         let root = env::var_os("AUR_RESPONSE_DIR")
             .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                let development = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-                if development.join("data/lists").is_dir() {
-                    development
-                } else {
-                    PathBuf::from("/usr/share/aur-response-toolkit")
-                }
-            });
+            .unwrap_or_else(|| default_root(env::current_dir().ok()));
         let xdg = env::var_os("XDG_DATA_HOME")
             .map(PathBuf::from)
             .unwrap_or_else(|| {
@@ -99,6 +92,12 @@ impl Paths {
                 .join(format!("{}-pkgs.txt", campaign.slug()))
         })
     }
+}
+
+fn default_root(working_dir: Option<PathBuf>) -> PathBuf {
+    working_dir
+        .filter(|path| path.join("data/lists").is_dir())
+        .unwrap_or_else(|| PathBuf::from("/usr/share/aur-response-toolkit"))
 }
 
 pub struct Engine {
@@ -1408,5 +1407,31 @@ impl Engine {
             }
         }
         code
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::default_root;
+    use std::fs;
+    use std::path::PathBuf;
+
+    #[test]
+    fn development_root_is_resolved_at_runtime() {
+        let working = tempfile::tempdir().unwrap();
+        fs::create_dir_all(working.path().join("data/lists")).unwrap();
+
+        assert_eq!(
+            default_root(Some(working.path().to_path_buf())),
+            working.path()
+        );
+    }
+
+    #[test]
+    fn installed_root_does_not_embed_the_build_directory() {
+        assert_eq!(
+            default_root(None),
+            PathBuf::from("/usr/share/aur-response-toolkit")
+        );
     }
 }
