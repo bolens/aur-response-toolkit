@@ -30,7 +30,7 @@ install=aur-response-toolkit.install
 
 build() {
   cd "$pkgname-$pkgver"
-  export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=$srcdir=/usr/src/debug/$pkgname-$pkgver"
+  export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=$PWD=/usr/src/debug/$pkgname-$pkgver"
   cargo build --release --locked
 }
 

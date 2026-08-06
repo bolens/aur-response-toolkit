@@ -96,7 +96,12 @@ impl Paths {
 
 fn default_root(working_dir: Option<PathBuf>) -> PathBuf {
     working_dir
-        .filter(|path| path.join("data/lists").is_dir())
+        .as_deref()
+        .and_then(|path| {
+            path.ancestors()
+                .find(|ancestor| ancestor.join("data/lists").is_dir())
+        })
+        .map(Path::to_path_buf)
         .unwrap_or_else(|| PathBuf::from("/usr/share/aur-response-toolkit"))
 }
 
@@ -1417,18 +1422,27 @@ mod tests {
     use std::path::PathBuf;
 
     #[test]
-    fn development_root_is_resolved_at_runtime() {
+    fn development_root_is_resolved_from_a_runtime_ancestor() {
         let working = tempfile::tempdir().unwrap();
         fs::create_dir_all(working.path().join("data/lists")).unwrap();
+        let nested = working.path().join("src/nested");
+        fs::create_dir_all(&nested).unwrap();
+
+        assert_eq!(default_root(Some(nested)), working.path());
+    }
+
+    #[test]
+    fn existing_directory_without_data_uses_the_installed_root() {
+        let working = tempfile::tempdir().unwrap();
 
         assert_eq!(
             default_root(Some(working.path().to_path_buf())),
-            working.path()
+            PathBuf::from("/usr/share/aur-response-toolkit")
         );
     }
 
     #[test]
-    fn installed_root_does_not_embed_the_build_directory() {
+    fn unavailable_working_directory_uses_the_installed_root() {
         assert_eq!(
             default_root(None),
             PathBuf::from("/usr/share/aur-response-toolkit")
