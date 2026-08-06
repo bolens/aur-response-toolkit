@@ -3,11 +3,15 @@ use aur_response::cli::{self, CommandKind};
 use aur_response::model::{FailOn, ScanState};
 use aur_response::report;
 use aur_response::{EXIT_INVALID, VERSION};
+use flate2::write::GzEncoder;
+use flate2::Compression;
 use std::fs;
+use std::io::Write;
+use std::process::Command;
 use tempfile::tempdir;
 
 #[test]
-fn cli_preserves_exit_policy_variants_and_alias_dispatch() {
+fn cli_preserves_exit_policy_variants_and_subcommands() {
     let args = [
         "--local",
         "--all-time",
@@ -100,12 +104,38 @@ fn json_contract_has_stable_fields_and_finding_arrays() {
 }
 
 #[test]
-fn reads_plain_gzip_xz_and_zstd_pacman_logs() {
+fn reads_plain_gzip_xz_zstd_and_bzip2_pacman_logs() {
     let fixture = "[2026-06-10T12:00:00-0600] [ALPM] installed beef (1-1)\n";
     let dir = tempdir().unwrap();
     fs::write(dir.path().join("pacman.log"), fixture).unwrap();
+
+    let mut gzip = GzEncoder::new(Vec::new(), Compression::default());
+    gzip.write_all(fixture.as_bytes()).unwrap();
+    fs::write(dir.path().join("pacman.log.1.gz"), gzip.finish().unwrap()).unwrap();
+
+    for (program, extension, arguments) in [
+        ("xz", "xz", &["-zc"][..]),
+        ("zstd", "zst", &["-q", "-c"][..]),
+        ("bzip2", "bz2", &["-c"][..]),
+    ] {
+        let source = dir.path().join(format!("{program}.log"));
+        fs::write(&source, fixture).unwrap();
+        let output = Command::new(program)
+            .args(arguments)
+            .arg(&source)
+            .output()
+            .unwrap_or_else(|error| panic!("{program} is required for this test: {error}"));
+        assert!(output.status.success(), "{program} compression failed");
+        fs::write(
+            dir.path().join(format!("pacman.log.2.{extension}")),
+            output.stdout,
+        )
+        .unwrap();
+        fs::remove_file(source).unwrap();
+    }
+
     let events =
         alpm::events(dir.path(), aur_response::model::Campaign::AtomicArch, false).unwrap();
-    assert_eq!(events.len(), 1);
-    assert_eq!(events[0].package, "beef");
+    assert_eq!(events.len(), 5);
+    assert!(events.iter().all(|event| event.package == "beef"));
 }

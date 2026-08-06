@@ -13,9 +13,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - name: Validate PR title
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: .+'
           printf '%s\n' "$PR_TITLE" | grep -Eq "$pattern"
+      - name: Validate commits in PR
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: .+'
+          git log --format=%s "$BASE_SHA..$HEAD_SHA" |
+            while IFS= read -r subject; do
+              case "$subject" in
+                Merge\ *|Revert\ *|fixup\!\ *|squash\!\ *|Amend\!\ *) continue ;;
+              esac
+              if ! printf '%s\n' "$subject" | grep -Eq "$pattern"; then
+                echo "Invalid commit subject: $subject" >&2
+                exit 1
+              fi
+            done

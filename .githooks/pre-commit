@@ -9,7 +9,7 @@ if [ "${AUR_SKIP_HOOKS:-}" = "1" ]; then
   exit 0
 fi
 
-if [ -z "$(git diff --cached --name-only --diff-filter=ACM)" ]; then
+if [ -z "$(git diff --cached --name-only --diff-filter=ACMRD)" ]; then
   echo "pre-commit: no staged files — skipping"
   exit 0
 fi
