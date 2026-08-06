@@ -1,0 +1,18 @@
+# Canonical Rust configuration. Copy to:
+#   ~/.config/aur-response/config.toml
+
+# dev_root = "/home/user/dev"
+# deps_search_paths = ["/home/user/.cache", "/home/user/.local"]
+# helper_cache_roots = ["/home/user/.cache/paru/clone"]
+# makepkg_build_dirs = ["/home/user/abs", "/home/user/aur"]
+# pamac_build_globs = ["/var/tmp/pamac-build-*"]
+# pacman_log_dir = "/var/log"
+# pacman_local_dir = "/var/lib/pacman/local"
+# history_helpers = "paru|yay|pamac|pikaur|trizen|aura|aurman|pacaur|makepkg"
+# atomic_arch_list_file = "/home/user/.local/share/aur-response/atomic-arch-pkgs.txt"
+# list_max_age_days = 7
+# list_url_extra = "https://example.com/extra-infected-list.txt"
+# enable_chaos_rat = false
+# enable_shai_hulud = false
+# enable_xeactor = false
+

@@ -1,0 +1,44 @@
+[package]
+name = "aur-response-toolkit"
+version = "1.10.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+description = "Detect, triage, and recover from AUR supply-chain incidents"
+
+[lib]
+name = "aur_response"
+path = "src/lib.rs"
+
+[[bin]]
+name = "aur-response"
+path = "src/main.rs"
+
+[dependencies]
+chrono = { version = "0.4.38", default-features = false, features = ["clock"] }
+flate2 = "1.0.27"
+regex = "1.10.6"
+serde = { version = "1.0.188", features = ["derive"] }
+serde_json = "1.0.107"
+sha2 = "0.10.8"
+toml = "0.8.2"
+walkdir = "2.4.0"
+
+[dev-dependencies]
+tempfile = "3.8.1"
+
+[[test]]
+name = "config"
+path = "tests-rust/config.rs"
+
+[[test]]
+name = "contracts"
+path = "tests-rust/contracts.rs"
+
+[[test]]
+name = "native_cli"
+path = "tests-rust/native_cli.rs"
+
+[profile.release]
+lto = "thin"
+strip = true
