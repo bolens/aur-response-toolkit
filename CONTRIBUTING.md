@@ -37,6 +37,16 @@ container.
 8. Commit the post-release PKGBUILD and `.SRCINFO` checksum update to `main`
    through a focused PR.
 
+### CI infrastructure failures
+
+Before changing code, inspect failed logs and distinguish project failures from
+runner setup failures. A check that fails before checkout with errors such as
+`Failed to resolve action download info: Service Unavailable` is a GitHub
+infrastructure failure. Retry the workflow when GitHub permits it. Some
+generated analysis checks cannot be rerun; in that case, push the next valid
+follow-up commit or close and reopen the PR to request a fresh check. Never
+merge by dismissing a required infrastructure-failed check.
+
 ## Design
 
 - `src/cli.rs` owns native subcommand and flag contracts.
