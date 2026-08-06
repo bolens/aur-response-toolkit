@@ -14,6 +14,9 @@ sudo install -Dm755 target/release/aur-response /usr/local/bin/aur-response
 ```
 
 Arch packaging is available under `packaging/arch/`.
+Release tags publish a native Linux x86_64 bundle and checksums. Before
+publishing the AUR package, replace its temporary `SKIP` source checksum with
+the tagged source checksum asset and regenerate `.SRCINFO`.
 
 Configuration is optional:
 

@@ -2,7 +2,7 @@
 # Native Rust scanner.
 
 pkgname=aur-response-toolkit
-pkgver=1.10.0
+pkgver=2.0.0
 pkgrel=1
 pkgdesc="Detect, triage, and recover from AUR supply-chain incidents"
 arch=('x86_64' 'aarch64')
@@ -23,9 +23,9 @@ optdepends=(
 source=(
   "$pkgname-$pkgver.tar.gz::https://github.com/bolens/aur-response-toolkit/archive/refs/tags/v$pkgver.tar.gz"
 )
-sha256sums=(
-  '67af4c934dd16d9ab6ceb8aa69ed88b1a0a8ab81b22b1954d22bd0930c217526'
-)
+# GitHub generates the tag archive during release. Update this checksum from
+# release assets before publishing to AUR.
+sha256sums=('SKIP')
 install=aur-response-toolkit.install
 
 build() {

@@ -16,9 +16,30 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build native release
+        run: cargo build --release --locked
+
+      - name: Package native release
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          bundle="aur-response-toolkit-${version}-linux-x86_64"
+          mkdir "$bundle"
+          install -Dm755 target/release/aur-response "$bundle/aur-response"
+          install -Dm644 README.md config.toml.example LICENSE "$bundle/"
+          cp -R data "$bundle/data"
+          tar -czf "$bundle.tar.gz" "$bundle"
+          sha256sum "$bundle.tar.gz" > "$bundle.tar.gz.sha256"
+          curl -fsSL \
+            "https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz" \
+            -o "aur-response-toolkit-${version}-source.tar.gz"
+          sha256sum "aur-response-toolkit-${version}-source.tar.gz" \
+            > "aur-response-toolkit-${version}-source.tar.gz.sha256"
 
       - name: Extract changelog for tag
         run: |
@@ -38,3 +59,7 @@ jobs:
         with:
           body_path: release-notes.md
           generate_release_notes: false
+          files: |
+            aur-response-toolkit-*-linux-x86_64.tar.gz
+            aur-response-toolkit-*-linux-x86_64.tar.gz.sha256
+            aur-response-toolkit-*-source.tar.gz.sha256

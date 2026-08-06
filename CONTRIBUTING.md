@@ -18,6 +18,16 @@ cargo test --locked
 CI runs the same checks on Ubuntu and executes the test suite in an Arch Linux
 container.
 
+## Release checklist
+
+1. Keep `VERSION`, `Cargo.toml`, `PKGBUILD`, `.SRCINFO`, and the changelog
+   release heading aligned.
+2. Tag the release as `vX.Y.Z`; the release workflow publishes the native
+   archive and source checksum.
+3. Replace `SKIP` in `packaging/arch/PKGBUILD` with that source checksum.
+4. Run `makepkg --printsrcinfo > .SRCINFO`, build with `makepkg`, and publish
+   through `packaging/arch/publish-to-aur.sh`.
+
 ## Design
 
 - `src/cli.rs` owns native subcommand and flag contracts.

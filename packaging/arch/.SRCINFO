@@ -1,6 +1,6 @@
 pkgbase = aur-response-toolkit
 	pkgdesc = Detect, triage, and recover from AUR supply-chain incidents
-	pkgver = 1.10.0
+	pkgver = 2.0.0
 	pkgrel = 1
 	url = https://github.com/bolens/aur-response-toolkit
 	install = aur-response-toolkit.install
@@ -15,7 +15,7 @@ pkgbase = aur-response-toolkit
 	optdepends = procps-ng: runtime process IOC checks
 	optdepends = iproute2: ss-based network IOC checks
 	optdepends = systemd: optional weekly scan timer units
-	source = aur-response-toolkit-1.10.0.tar.gz::https://github.com/bolens/aur-response-toolkit/archive/refs/tags/v1.10.0.tar.gz
-	sha256sums = 67af4c934dd16d9ab6ceb8aa69ed88b1a0a8ab81b22b1954d22bd0930c217526
+	source = aur-response-toolkit-2.0.0.tar.gz::https://github.com/bolens/aur-response-toolkit/archive/refs/tags/v2.0.0.tar.gz
+	sha256sums = SKIP
 
 pkgname = aur-response-toolkit

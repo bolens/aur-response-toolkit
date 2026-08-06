@@ -2,7 +2,7 @@
 
 All notable changes to **aur-response-toolkit** are documented here.
 
-## Unreleased
+## 2.0.0
 
 - Replace the Fish implementation with a native Rust application covering typed
   configuration, ALPM parsing, campaign scans, reports, audit, and recovery.
