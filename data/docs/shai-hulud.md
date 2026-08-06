@@ -73,7 +73,7 @@ These sources describe the **npm/PyPI Mini Shai-Hulud worm**, not the four-packa
 
 ## Malware IOCs (code)
 
-Defined in `lib/bootstrap.fish`; scanned in `lib/ioc.fish` / npm cache walks in `scripts/scan/malware-artifacts.fish`.
+Implemented in `src/ioc.rs` and  npm cache walks in `aur-response scan malware-artifacts`.
 
 | Indicator | Constant / function | Origin |
 |-----------|---------------------|--------|
@@ -93,10 +93,10 @@ Defined in `lib/bootstrap.fish`; scanned in `lib/ioc.fish` / npm cache walks in 
 
 1. **Stop and disable** `gh-token-monitor` before revoking GitHub/npm/cloud tokens.
 2. Remove persistence files listed above (and any `.claude` / `.vscode` hooks if npm worm artifacts are present — see cross-ecosystem sources).
-3. Remove affected AUR packages (`recovery/remove-packages.fish --list shai-hulud`).
+3. Remove affected AUR packages (`aur-response recovery remove-packages --list shai-hulud`).
 4. Rotate credentials and audit CI runners / npm publish tokens.
 
-```fish
+```console
 systemctl --user stop gh-token-monitor.service
 systemctl --user disable gh-token-monitor.service
 ```
@@ -115,10 +115,10 @@ Installing an AUR package from the **June Atomic Arch** list is a different inci
 
 | Step | Script | Loader / helpers |
 |------|--------|------------------|
-| 1c | `scripts/check/shai-hulud-pkgs.fish` | `aur_load_shai_hulud_list`, `aur_classify_shai_hulud_pkg` |
-| 3c | `scripts/scan/shai-hulud-timeline.fish` | `aur_collect_shai_hulud_window_alpm_events*` |
-| 4 | `scripts/scan/malware-artifacts.fish` | `AUR_SHAI_HULUD_MALICIOUS_NPM`, `aur_check_shai_hulud_persistence` |
-| — | `scripts/recovery/remove-packages.fish` | `--list shai-hulud` |
+| 1c | `aur-response scan packages shai-hulud` | `aur_load_shai_hulud_list`, `aur_classify_shai_hulud_pkg` |
+| 3c | `aur-response scan timeline shai-hulud` | `aur_collect_shai_hulud_window_alpm_events*` |
+| 4 | `aur-response scan malware-artifacts` | `AUR_SHAI_HULUD_MALICIOUS_NPM`, `aur_check_shai_hulud_persistence` |
+| — | `aur-response recovery remove-packages` | `--list shai-hulud` |
 
 | Piece | Location |
 |-------|----------|

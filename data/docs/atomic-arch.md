@@ -4,7 +4,7 @@ Primary campaign: **atomic-lockfile**, **lockfile-js**, and **js-digest** npm/bu
 
 ## Package list sources
 
-Merged online by `aur_load_atomic_arch_list` (`lib/bootstrap.fish`). Cached at `data/lists/atomic-arch-pkgs.txt`.
+Merged online by `aur_load_atomic_arch_list` (`src/config.rs` and `src/engine.rs`). Cached at `data/lists/atomic-arch-pkgs.txt`.
 
 | Tier | URL | Config override |
 |------|-----|-----------------|
@@ -68,13 +68,13 @@ Community script lineage (Kidev, BrianCArnold, commonsourcecs, Kacper-Kondracki,
 
 ## Malware IOCs (code)
 
-Defined in `lib/bootstrap.fish`; scanned in `lib/ioc.fish` / `scripts/scan/malware-artifacts.fish`.
+Implemented in `src/ioc.rs` and  `aur-response scan malware-artifacts`.
 
 | Indicator | Constant / pattern | Origin |
 |-----------|-------------------|--------|
 | npm hooks | `AUR_MALICIOUS_NPM` | Arch reports, lenucksi `malicious_npm_packages.txt` |
 | PKGBUILD hooks | `AUR_HOOK_PATTERN` | Community PKGBUILD samples |
-| Non-listed heuristics | `AUR_SIMILAR_HEURISTICS_PATTERN` | Broader npm/bun/obfuscation patterns in `scan/similar-heuristics.fish` |
+| Non-listed heuristics | `AUR_SIMILAR_HEURISTICS_PATTERN` | Broader npm/bun/obfuscation patterns in `aur-response scan similar-heuristics` |
 | ELF `deps` | `AUR_MALWARE_SHA256_DEPS` | ioctl.fail / lenucksi `iocs.txt` |
 | js-digest payload | `AUR_MALWARE_SHA256_JS_DIGEST` | ioctl.fail / IFIN |
 | Cryptominer staging | `AUR_MALWARE_SHA256_CRYPTO` | ioctl.fail |
@@ -85,13 +85,13 @@ Defined in `lib/bootstrap.fish`; scanned in `lib/ioc.fish` / `scripts/scan/malwa
 
 | Step | Script | Loader / helpers |
 |------|--------|------------------|
-| 1 | `scripts/check/atomic-arch-pkgs.fish` | `aur_load_atomic_arch_list`, `aur_classify_atomic_arch_installed_pkg` |
-| 2 | `scripts/scan/aur-window.fish` | `AUR_WINDOW_*` |
-| 3 | `scripts/scan/atomic-arch-timeline.fish` | `aur_collect_window_alpm_events*` |
-| 4 | `scripts/scan/malware-artifacts.fish` | `lib/ioc.fish` |
-| 4b | `scripts/scan/similar-heuristics.fish` | `aur_foreign_installed_not_on_list`, `aur_pkg_similar_heuristics_files` |
-| — | `scripts/check/list-freshness.fish` | bundled vs online list delta + installed staleness check |
-| — | `scripts/recovery/remove-packages.fish` | default `--list atomic-arch` |
+| 1 | `aur-response scan packages atomic-arch` | `aur_load_atomic_arch_list`, `aur_classify_atomic_arch_installed_pkg` |
+| 2 | `aur-response scan aur-window` | `AUR_WINDOW_*` |
+| 3 | `aur-response scan timeline atomic-arch` | `aur_collect_window_alpm_events*` |
+| 4 | `aur-response scan malware-artifacts` | `src/ioc.rs` |
+| 4b | `scripts/aur-response scan similar-heuristics` | `aur_foreign_installed_not_on_list`, `aur_pkg_similar_heuristics_files` |
+| — | `aur-response check list-freshness` | bundled vs online list delta + installed staleness check |
+| — | `aur-response recovery remove-packages` | default `--list atomic-arch` |
 
 Config: `AUR_ATOMIC_ARCH_LIST_FILE` (default: `data/lists/atomic-arch-pkgs.txt`).
 
