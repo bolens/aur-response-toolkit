@@ -12,7 +12,7 @@ body:
     id: version
     attributes:
       label: Toolkit version
-      description: Output of `aur-response --version`, `fish run.fish --version`, or contents of `VERSION`
+      description: Output of `aur-response --version` or contents of `VERSION`
       placeholder: "1.9.0"
     validations:
       required: true
@@ -26,10 +26,10 @@ body:
       required: true
 
   - type: input
-    id: fish_version
+    id: rust_version
     attributes:
-      label: Fish version
-      placeholder: "fish --version"
+      label: Installation source
+      placeholder: "cargo build, Arch package, release binary, …"
     validations:
       required: true
 
@@ -37,7 +37,7 @@ body:
     id: command
     attributes:
       label: Command and flags
-      placeholder: "aur-response --local --report  (or: fish run.fish --local --report)"
+      placeholder: "aur-response --local --report"
     validations:
       required: true
 

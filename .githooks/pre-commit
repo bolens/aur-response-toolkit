@@ -1,110 +1,22 @@
-#!/usr/bin/env fish
-#
-# Path-filtered checks (aligned with CI `code:` filter in .github/workflows/ci.yml):
-#   fish_indent  — staged *.fish
-#   lint.fish    — Fish / lib / scripts / tests / completions / entrypoints
-#   tests        — same plus data/lists (skips packaging-only / workflow-only)
-#
-# Env:
-#   AUR_SKIP_HOOKS=1     — skip all hook checks
-#   AUR_HOOK_FULL=1      — lint + full test suite regardless of paths
-#   AUR_HOOK_LINT_ONLY=1 — never run tests from the hook
-#   AUR_TEST_JOBS=N      — passed through to tests/run-all.fish
+#!/bin/sh
+set -eu
 
-set -l root (git rev-parse --show-toplevel)
-builtin cd $root
-or exit 1
+root=$(git rev-parse --show-toplevel)
+cd "$root"
 
-if set -q AUR_SKIP_HOOKS
-    echo "AUR_SKIP_HOOKS set — skipping pre-commit hooks" >&2
-    exit 0
-end
+if [ "${AUR_SKIP_HOOKS:-}" = "1" ]; then
+  echo "AUR_SKIP_HOOKS=1 — skipping pre-commit checks" >&2
+  exit 0
+fi
 
-source $root/scripts/hooks/classify-paths.fish
+if [ -z "$(git diff --cached --name-only --diff-filter=ACM)" ]; then
+  echo "pre-commit: no staged files — skipping"
+  exit 0
+fi
 
-set -l staged_all
-for f in (git diff --cached --name-only --diff-filter=ACM)
-    test -n "$f"; or continue
-    set -a staged_all $f
-end
-
-if test (count $staged_all) -eq 0
-    echo "pre-commit: no staged files — skipping"
-    exit 0
-end
-
-aur_hook_classify_paths $staged_all
-
-if set -q AUR_HOOK_FULL
-    set -g AUR_HOOK_NEEDS_LINT true
-    set -g AUR_HOOK_NEEDS_TEST true
-    set -g AUR_HOOK_NEEDS_CODE true
-end
-
-if set -q AUR_HOOK_LINT_ONLY
-    set -g AUR_HOOK_NEEDS_TEST false
-end
-
-# --- fish_indent on staged Fish files (CI FC1001) ---
-set -l staged_fish
-for f in $staged_all
-    string match -q '*.fish' -- $f; or continue
-    test -f $f; or continue
-    set -a staged_fish $f
-end
-
-if test (count $staged_fish) -gt 0
-    if not command -sq fish_indent
-        echo "error: fish_indent not found (install fish)" >&2
-        exit 1
-    end
-    for f in $staged_fish
-        fish_indent -w $f
-        or begin
-            echo "error: fish_indent failed on $f" >&2
-            exit 1
-        end
-        git add -- $f
-        or exit 1
-    end
-    echo "pre-commit: fish_indent "(count $staged_fish)" file(s)"
-end
-
-if test "$AUR_HOOK_NEEDS_CODE" != true
-    echo "pre-commit: non-code paths only (docs/etc.) — skipping lint and tests"
-    echo "  (CI gates still pass via skip jobs; push/PR with code paths runs full suite)"
-    exit 0
-end
-
-# --- lint ---
-if test "$AUR_HOOK_NEEDS_LINT" = true
-    echo "pre-commit: lint.fish"
-    fish $root/lint.fish
-    or begin
-        echo "" >&2
-        echo "pre-commit: lint.fish failed — fix or AUR_SKIP_HOOKS=1" >&2
-        exit 1
-    end
-else
-    echo "pre-commit: packaging/workflow-only — skipping lint.fish (CI still runs)"
-end
-
-# --- tests ---
-if test "$AUR_HOOK_NEEDS_TEST" = true
-    echo "pre-commit: tests/run-all.fish"
-    if not set -q AUR_TEST_JOBS
-        set -gx AUR_TEST_JOBS (nproc 2>/dev/null; or echo 4)
-    end
-    fish $root/tests/run-all.fish
-    or begin
-        echo "" >&2
-        echo "pre-commit: tests failed — fix or AUR_HOOK_LINT_ONLY=1 / AUR_SKIP_HOOKS=1" >&2
-        exit 1
-    end
-else if set -q AUR_HOOK_LINT_ONLY
-    echo "pre-commit: AUR_HOOK_LINT_ONLY set — skipping tests"
-else
-    echo "pre-commit: no Fish/list test paths — skipping tests (CI still runs for packaging/workflows)"
-end
-
+cargo fmt --check
+cargo clippy --all-targets --locked -- -D warnings
+if [ "${AUR_HOOK_LINT_ONLY:-}" != "1" ]; then
+  cargo test --locked
+fi
 echo "pre-commit: ok"
