@@ -91,17 +91,17 @@ Recon-focused dropper; no dedicated hash constants in this toolkit (unlike Atomi
 
 | Step | Script | Loader / helpers |
 |------|--------|------------------|
-| 1d | `scripts/check/xeactor-pkgs.fish` | `aur_load_xeactor_list`, `aur_classify_xeactor_pkg` |
-| 3d | `scripts/scan/xeactor-timeline.fish` | `aur_collect_xeactor_window_alpm_events*` |
-| — | `scripts/recovery/remove-packages.fish` | `--list xeactor` |
+| 1d | `aur-response scan packages xeactor` | `aur_load_xeactor_list`, `aur_classify_xeactor_pkg` |
+| 3d | `aur-response scan timeline xeactor` | `aur_collect_xeactor_window_alpm_events*` |
+| — | `aur-response recovery remove-packages` | `--list xeactor` |
 
 | Piece | Location |
 |-------|----------|
 | Enable | `--xeactor`, `AUR_ENABLE_XEACTOR`, `aur_xeactor_enabled` |
-| JSON | `xeactor_*` in `lib/reports.fish` |
+| JSON | `xeactor_*` in `src/report.rs` |
 | Exit policy | `--fail-on xeactor` |
 
-Legacy config aliases: `AUR_ENABLE_LEGACY_2018`, `AUR_LEGACY_2018_*` → xeactor names in `lib/bootstrap.fish`.
+Legacy config aliases: `AUR_ENABLE_LEGACY_2018`, `AUR_LEGACY_2018_*` → xeactor names in `src/config.rs` and `src/engine.rs`.
 
 ## Integrity
 

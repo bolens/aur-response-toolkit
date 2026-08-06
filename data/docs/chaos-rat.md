@@ -80,7 +80,7 @@ This toolkit checks **installed package names** and **pacman timeline**; runtime
 | Malicious patch repo | PKGBUILD `source` → `zenbrowser-patch.git` | BleepingComputer, advisory |
 | CHAOS RAT binary | VirusTotal / AV (`Trojan.Linux.ChaosRAT.A`) | Community upload, Acronis TRU |
 
-**Not scanned in code:** no dedicated Chaos RAT persistence grep (unlike Atomic Arch `lib/ioc.fish`). After removal, hunt `systemd-initd` and consider rebuild from trusted backup if infection is suspected.
+**Not scanned in code:** no dedicated Chaos RAT persistence grep (unlike Atomic Arch `src/ioc.rs`). After removal, hunt `systemd-initd` and consider rebuild from trusted backup if infection is suspected.
 
 ## Not the same campaign
 
@@ -96,9 +96,9 @@ Do not merge Chaos RAT URLs into `AUR_LIST_URL_EXTRA` (Atomic Arch third source)
 
 | Step | Script | Loader / helpers |
 |------|--------|------------------|
-| 1b | `scripts/check/chaos-rat-pkgs.fish` | `aur_load_chaos_rat_list`, `aur_classify_chaos_rat_pkg` |
-| 3b | `scripts/scan/chaos-rat-timeline.fish` | `aur_collect_chaos_rat_window_alpm_events*` |
-| — | `scripts/recovery/remove-packages.fish` | `--list chaos-rat` |
+| 1b | `aur-response scan packages chaos-rat` | `aur_load_chaos_rat_list`, `aur_classify_chaos_rat_pkg` |
+| 3b | `aur-response scan timeline chaos-rat` | `aur_collect_chaos_rat_window_alpm_events*` |
+| — | `aur-response recovery remove-packages` | `--list chaos-rat` |
 
 | Piece | Location |
 |-------|----------|

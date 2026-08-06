@@ -17,8 +17,8 @@ Conventional Commits type for the title (`type(scope): summary`):
 ## Checklist
 
 - [ ] Commit/PR title follows Conventional Commits ([CONTRIBUTING.md](../CONTRIBUTING.md))
-- [ ] `fish tests/run-all.fish` passes locally (skip if docs-only)
-- [ ] `fish lint.fish` passes locally (skip if docs-only)
+- [ ] `cargo test --locked` passes locally (skip if docs-only)
+- [ ] `cargo fmt --check` and strict clippy pass locally
 - [ ] User-facing changes update [`CHANGELOG.md`](../CHANGELOG.md)
 - [ ] Release-worthy changes bump [`VERSION`](../VERSION) to match CHANGELOG
 - [ ] New campaigns: `data/docs/{slug}.md` + entry in `data/docs/sources.md` (not duplicated URLs in README)

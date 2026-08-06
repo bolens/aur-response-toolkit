@@ -1,33 +1,16 @@
-#!/usr/bin/env fish
-#
-# Enforce Conventional Commits on the subject line (matches CI commitlint).
-# Skip: AUR_SKIP_HOOKS=1 git commit ...
+#!/bin/sh
+set -eu
 
-set -l msg_file $argv[1]
-if test -z "$msg_file"; or not test -f $msg_file
-    echo "error: commit-msg hook expected a message file" >&2
-    exit 1
-end
+[ "${AUR_SKIP_HOOKS:-}" = "1" ] && exit 0
+message_file=${1:?commit-msg hook requires a message file}
+subject=$(head -n 1 "$message_file")
 
-if set -q AUR_SKIP_HOOKS
-    exit 0
-end
+case "$subject" in
+  ""|Merge\ *|Revert\ *|fixup\!\ *|squash\!\ *|Amend\!\ *) exit 0 ;;
+esac
 
-set -l root (git rev-parse --show-toplevel)
-set -l subject (head -n 1 -- $msg_file)
-
-# Allow git-generated / workflow subjects that are not Conventional Commits.
-if string match -qr '^(Merge |Revert |fixup! |squash! |Amend! )' -- $subject
-    exit 0
-end
-if test -z (string trim -- $subject)
-    exit 0
-end
-
-fish $root/scripts/check-conventional-commit.fish --message $subject
-or begin
-    echo "" >&2
-    echo "commit-msg: subject must be Conventional Commits (see CONTRIBUTING.md)" >&2
-    echo "  skip once: AUR_SKIP_HOOKS=1 git commit ..." >&2
-    exit 1
-end
+pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: .+'
+if ! printf '%s\n' "$subject" | grep -Eq "$pattern"; then
+  echo "commit-msg: subject must use Conventional Commits" >&2
+  exit 1
+fi

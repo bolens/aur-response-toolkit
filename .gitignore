@@ -16,4 +16,6 @@ data/lists/*.previous.txt
 .DS_Store
 
 # CI dev tools (cloned in GitHub Actions)
-tools/fishcheck/
+
+# Rust build output
+/target/

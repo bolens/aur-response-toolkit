@@ -4,173 +4,47 @@ on:
   push:
   pull_request:
   schedule:
-    # Weekly Arch smoke (Sunday 06:00 UTC) — always full suite
     - cron: "0 6 * * 0"
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# PRs: cancel superseded runs for the same PR number.
-# Push: cancel older runs on the same branch (keep latest tip).
-# Schedule: own group + never cancel — a push must not abort the weekly smoke.
 concurrency:
-  group: >-
-    ${{ github.workflow }}-${{
-      github.event.pull_request.number
-      || (github.event_name == 'schedule' && format('schedule-{0}', github.run_id))
-      || github.ref
-    }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name != 'schedule' }}
 
-env:
-  # mattmc3/fishcheck@main (pin for reproducible lint)
-  FISHCHECK_SHA: a2b10b5d46a9c55b312b60eda83e1e686ec8136f
-  AUR_TEST_JOBS: "4"
-
 jobs:
-  changes:
-    name: detect changes
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      code: ${{ steps.set.outputs.code }}
-    steps:
-      - uses: actions/checkout@v7
-
-      # Keep globs in sync with scripts/hooks/classify-paths.fish (aur_hook_path_is_code).
-      - uses: dorny/paths-filter@v4
-        id: filter
-        if: github.event_name == 'pull_request' || github.event_name == 'push'
-        with:
-          filters: |
-            code:
-              - '**.fish'
-              - 'lib/**'
-              - 'scripts/**'
-              - 'tests/**'
-              - 'data/lists/**'
-              - 'bin/**'
-              - 'systemd/**'
-              - 'packaging/**'
-              - 'completions/**'
-              - 'VERSION'
-              - 'run.fish'
-              - 'run.sh'
-              - 'lint.fish'
-              - 'install.fish'
-              - 'config.fish.example'
-              - '.github/workflows/**'
-
-      - id: set
-        run: |
-          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "code=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "code=${{ steps.filter.outputs.code }}" >> "$GITHUB_OUTPUT"
-          fi
-
-  lint:
-    name: lint
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Install fish
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y fish curl jq findutils coreutils grep
-
-      - name: Install fishcheck
-        run: |
-          git init tools/fishcheck
-          git -C tools/fishcheck remote add origin https://github.com/mattmc3/fishcheck
-          git -C tools/fishcheck fetch --depth 1 origin "$FISHCHECK_SHA"
-          git -C tools/fishcheck checkout --force FETCH_HEAD
-
-      - name: Lint Fish scripts
-        run: fish lint.fish
-
-  test-ubuntu:
-    name: test-ubuntu
-    needs: lint
+  rust:
+    name: rust
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-
-      - name: Install fish
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Install compressed-log tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y fish curl jq findutils coreutils grep zstd iproute2 procps
+          sudo apt-get install -y xz-utils bzip2 zstd
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets --locked -- -D warnings
+      - run: cargo test --locked
 
-      - name: Run test suite
-        run: fish tests/run-all.fish
-
-  test-arch:
-    name: test-arch
-    needs: lint
+  arch:
+    name: arch
     runs-on: ubuntu-latest
     timeout-minutes: 25
     container:
       image: archlinux:latest
     steps:
       - uses: actions/checkout@v7
-
-      - name: Install dependencies
+      - name: Install native dependencies
         run: |
-          # Fresh archlinux images often need a keyring refresh before -Sy packages.
           pacman -Sy --noconfirm archlinux-keyring
           pacman-key --init
           pacman-key --populate archlinux
-          pacman -Sy --noconfirm fish curl jq findutils coreutils grep git iproute2 procps-ng zstd
-
-      - name: Run test suite
-        run: fish tests/run-all.fish
-
-  # Branch-protection contexts must stay named "ubuntu" / "arch".
-  # Docs-only PRs skip lint/tests but still report success so required checks resolve.
-  ubuntu:
-    name: ubuntu
-    needs: [changes, test-ubuntu]
-    if: always() && needs.changes.result == 'success'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Gate ubuntu status
-        run: |
-          code="${{ needs.changes.outputs.code }}"
-          result="${{ needs.test-ubuntu.result }}"
-          if [ "$code" != "true" ]; then
-            echo "No code paths changed — ubuntu check green (tests skipped)"
-            exit 0
-          fi
-          if [ "$result" = "success" ]; then
-            exit 0
-          fi
-          echo "test-ubuntu result: $result" >&2
-          exit 1
-
-  arch:
-    name: arch
-    needs: [changes, test-arch]
-    if: always() && needs.changes.result == 'success'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Gate arch status
-        run: |
-          code="${{ needs.changes.outputs.code }}"
-          result="${{ needs.test-arch.result }}"
-          if [ "$code" != "true" ]; then
-            echo "No code paths changed — arch check green (tests skipped)"
-            exit 0
-          fi
-          if [ "$result" = "success" ]; then
-            exit 0
-          fi
-          echo "test-arch result: $result" >&2
-          exit 1
+          pacman -Sy --noconfirm rust cargo curl git iproute2 procps-ng zstd
+      - run: cargo test --locked

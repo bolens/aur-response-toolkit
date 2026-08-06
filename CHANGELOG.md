@@ -2,7 +2,19 @@
 
 All notable changes to **aur-response-toolkit** are documented here.
 
-## Unreleased
+## 2.0.0
+
+- Replace the Fish implementation with a native Rust application covering typed
+  configuration, ALPM parsing, campaign scans, reports, audit, and recovery.
+- Add `config.toml` support and `aur-response config migrate` for documented
+  legacy `config.fish` assignments.
+- Add native `scan`, `check`, `audit`, `recovery`, and `config` subcommands for
+  every former per-script operation.
+- Add source-specific remote-list parsers, atomic cache refreshes, previous-list
+  preservation, list-delta counters, and native/differential parity tests.
+- Remove the Fish runtime, wrappers, executable configuration, Fish tests,
+  Fish-only dependencies, and aliases. CI, hooks, systemd, and Arch packaging
+  now run the Rust binary directly.
 
 ## 1.10.0
 

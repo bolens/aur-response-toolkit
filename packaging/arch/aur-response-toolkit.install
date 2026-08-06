@@ -8,8 +8,6 @@ Quick start
   aur-response --audit         Always run credential audit + rotation hints
   aur-response --report --json Save report + print JSON summary
   aur-response --recover       Interactive recovery wizard
-  aur-response-bash            Same entry point from bash login shells
-  aur-run                      Alternate wrapper (same as aur-response)
 
 Exit codes
   0  clean
@@ -18,16 +16,18 @@ Exit codes
   3  insufficient data (unreadable pacman.log — try: sudo aur-response)
   4  invalid CLI arguments
 
-Individual scripts (symlinks in PATH)
-  aur-check-atomic-arch-pkgs.fish, aur-check-chaos-rat-pkgs.fish,
-  aur-check-shai-hulud-pkgs.fish, aur-check-xeactor-pkgs.fish,
-  aur-scan-malware-artifacts.fish, aur-scan-hardening.fish,
-  aur-recovery-remove-packages.fish, aur-audit-stolen-credentials.fish, …
+Native subcommands
+  aur-response scan packages atomic-arch
+  aur-response scan timeline atomic-arch
+  aur-response scan malware-artifacts
+  aur-response scan hardening
+  aur-response audit
+  aur-response recovery remove-packages --dry-run
 
 Configuration (optional)
   mkdir -p ~/.config/aur-response
-  cp /usr/share/aur-response-toolkit/config.fish.example \
-     ~/.config/aur-response/config.fish
+  cp /usr/share/aur-response-toolkit/config.toml.example \
+     ~/.config/aur-response/config.toml
   Override AUR helper cache paths, pamac build dirs, pacman.log location
   (chroots/containers), dev-root for .env scans, optional campaign toggles
   (AUR_ENABLE_CHAOS_RAT, AUR_ENABLE_SHAI_HULUD, AUR_ENABLE_XEACTOR), etc.
@@ -44,14 +44,14 @@ Optional threat campaigns (off by default; separate from Atomic Arch)
   aur-response --chaos-rat --local
   aur-response --shai-hulud --local
   aur-response --xeactor --local
-  Or enable permanently in ~/.config/aur-response/config.fish.
+  Or enable permanently in ~/.config/aur-response/config.toml.
 
 Recovery flow (if compromise found)
-  aur-recovery-remove-packages.fish --dry-run
-  aur-recovery-remove-packages.fish
+  aur-response recovery remove-packages --dry-run
+  aur-response recovery remove-packages
   aur-response --audit --report
-  aur-recovery-rotate-hints.fish
-  aur-recovery-scrub-history.fish --all-shells
+  aur-response recovery rotate-hints
+  aur-response recovery scrub-history --all-shells
 
 Weekly systemd timer (optional; user unit)
   systemctl --user daemon-reload

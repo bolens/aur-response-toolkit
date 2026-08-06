@@ -43,6 +43,13 @@ files=(
   aur-response-toolkit.install
 )
 
+if grep -Eq "^sha256sums=\\(['\"]?SKIP" "$here/PKGBUILD"; then
+  echo "Refusing to publish PKGBUILD with a SKIP source checksum." >&2
+  echo "After tagging, copy the SHA256 from the GitHub release source checksum asset," >&2
+  echo "then regenerate .SRCINFO with: makepkg --printsrcinfo > .SRCINFO" >&2
+  exit 1
+fi
+
 for f in "${files[@]}"; do
   install -Dm644 "$here/$f" "$aur_dir/$f"
 done

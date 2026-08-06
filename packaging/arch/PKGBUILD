@@ -1,114 +1,53 @@
 # Maintainer: Michael Bolens <bolens@duck.com>
-# Fish-script toolkit — installed as /usr/bin wrappers over /usr/share scripts.
+# Native Rust scanner.
 
 pkgname=aur-response-toolkit
-pkgver=1.10.0
+pkgver=2.0.0
 pkgrel=1
-pkgdesc="Detect, triage, and recover from AUR supply-chain incidents (Fish)"
-arch=('any')
+pkgdesc="Detect, triage, and recover from AUR supply-chain incidents"
+arch=('x86_64' 'aarch64')
 url="https://github.com/bolens/aur-response-toolkit"
 license=('MIT')
 depends=(
-  'fish'
   'curl'
-  'findutils'
-  'coreutils'
-  'grep'
 )
+makedepends=('cargo')
 optdepends=(
-  'fd: faster filesystem scans'
-  'ripgrep: faster pattern matching'
-  'curlie: improved HTTP fetch UX'
+  'xz: read rotated .xz pacman logs'
+  'bzip2: read rotated .bz2 pacman logs'
   'zstd: read rotated .zst pacman logs'
-  'jq: JSON summary helpers'
   'procps-ng: runtime process IOC checks'
   'iproute2: ss-based network IOC checks'
-  'paru: AUR helper cache scanning'
-  'yay: AUR helper cache scanning'
-  'pikaur: AUR helper cache scanning'
-  'libpamac: Manjaro GUI AUR cache scanning'
-  'npm: npm cache hook scanning'
-  'bun: bun cache hook scanning'
   'systemd: optional weekly scan timer units'
 )
 source=(
   "$pkgname-$pkgver.tar.gz::https://github.com/bolens/aur-response-toolkit/archive/refs/tags/v$pkgver.tar.gz"
 )
-sha256sums=(
-  '67af4c934dd16d9ab6ceb8aa69ed88b1a0a8ab81b22b1954d22bd0930c217526'
-)
+# GitHub generates the tag archive during release. Update this checksum from
+# release assets before publishing to AUR.
+sha256sums=('SKIP')
 install=aur-response-toolkit.install
+
+build() {
+  cd "$pkgname-$pkgver"
+  cargo build --release --locked
+}
 
 package() {
   local root="$pkgdir/usr/share/aur-response-toolkit"
   cd "$pkgname-$pkgver"
 
-  install -dm755 "$root"/{lib,scripts/{check,scan,audit,recovery},data/{lists,docs},bin,completions}
+  install -dm755 "$root"/data/{lists,docs}
 
   install -Dm644 VERSION "$root/VERSION"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm644 README.md "$root/README.md"
-  install -Dm644 config.fish.example "$root/config.fish.example"
-  install -Dm644 completions/aur-response.fish \
-    "$pkgdir/usr/share/fish/vendor_completions.d/aur-response.fish"
-
-  install -Dm755 run.fish lint.fish "$root/"
-  install -Dm755 run.sh "$root/"
-  install -Dm755 bin/aur-run.fish "$root/bin/"
-
-  install -Dm644 lib/*.fish "$root/lib/"
-  install -Dm755 scripts/_init.fish "$root/scripts/"
-  install -Dm755 scripts/check/*.fish "$root/scripts/check/"
-  install -Dm755 scripts/scan/*.fish "$root/scripts/scan/"
-  install -Dm755 scripts/audit/*.fish "$root/scripts/audit/"
-  install -Dm755 scripts/recovery/*.fish "$root/scripts/recovery/"
+  install -Dm644 config.toml.example "$root/config.toml.example"
+  install -Dm755 target/release/aur-response "$pkgdir/usr/bin/aur-response"
   install -Dm644 data/lists/*.txt "$root/data/lists/"
   install -Dm644 data/docs/*.md "$root/data/docs/"
-
-  # Thin fish stubs in PATH — same pattern as install.fish, pinned to FHS root.
-  _aur_install_wrapper() {
-    local dest="$1" relpath="$2"
-    install -Dm755 /dev/null "$dest"
-    cat >"$dest" <<EOF
-#!/usr/bin/env fish
-set -g AUR_RESPONSE_DIR /usr/share/aur-response-toolkit
-exec fish /usr/share/aur-response-toolkit/$relpath \$argv
-EOF
-    chmod 755 "$dest"
-  }
-
-  _aur_install_wrapper "$pkgdir/usr/bin/aur-response" run.fish
-  _aur_install_wrapper "$pkgdir/usr/bin/aur-run" bin/aur-run.fish
-
-  install -Dm755 /dev/null "$pkgdir/usr/bin/aur-response-bash"
-  cat >"$pkgdir/usr/bin/aur-response-bash" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-exec fish /usr/share/aur-response-toolkit/run.fish "$@"
-EOF
-  chmod 755 "$pkgdir/usr/bin/aur-response-bash"
-
-  local script relpath category name slug
-  for script in scripts/*/*.fish; do
-    relpath=${script#./}
-    category=${relpath#scripts/}
-    category=${category%%/*}
-    name=${relpath##*/}
-    slug="aur-${category}-${name}"
-    ln -sf "/usr/share/aur-response-toolkit/$relpath" "$pkgdir/usr/bin/$slug"
-  done
 
   install -Dm644 systemd/aur-response-scan.service "$pkgdir/usr/lib/systemd/user/aur-response-scan.service"
   install -Dm644 systemd/aur-response-scan.timer "$pkgdir/usr/lib/systemd/user/aur-response-scan.timer"
   install -Dm644 systemd/aur-response-notify@.service "$pkgdir/usr/lib/systemd/system/aur-response-notify@.service"
-
-  # Point shipped units at the FHS install path.
-  sed -i \
-    -e 's|Environment=AUR_RESPONSE_DIR=%h/aur-response-toolkit|Environment=AUR_RESPONSE_DIR=/usr/share/aur-response-toolkit|' \
-    -e 's|WorkingDirectory=%h/aur-response-toolkit|WorkingDirectory=/usr/share/aur-response-toolkit|' \
-    -e 's|ExecStart=/usr/bin/fish run.fish|ExecStart=/usr/bin/aur-response|' \
-    -e 's|Environment=AUR_RESPONSE_DIR=/opt/aur-response-toolkit|Environment=AUR_RESPONSE_DIR=/usr/share/aur-response-toolkit|' \
-    -e 's|ExecStart=/usr/bin/fish %AUR_RESPONSE_DIR%/run.fish|ExecStart=/usr/bin/aur-response|' \
-    "$pkgdir/usr/lib/systemd/user/aur-response-scan.service" \
-    "$pkgdir/usr/lib/systemd/system/aur-response-notify@.service"
 }

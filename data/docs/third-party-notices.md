@@ -15,7 +15,7 @@ We **do not** ship third-party shell scripts (e.g. `aur_check-v2.sh`, CSCS paste
 
 ## What we reference at runtime
 
-Online scans may fetch current lists from URLs configured in `lib/bootstrap.fish` / user `config.fish`. SHA256 checksums of fetched content are logged for verification.
+Online scans may fetch current lists from URLs configured in `src/config.rs` and `src/engine.rs` / user `config.toml`. SHA256 checksums of fetched content are logged for verification.
 
 ## Per-source license status
 
@@ -39,7 +39,7 @@ Package names, version numbers, file hashes, and security advisory facts are use
 
 ## Changes to upstream lists
 
-Bundled `.txt` files may lag live upstream feeds. Prefer `fish run.fish` (online fetch) for current Arch/CSCS merges, or refresh snapshots when advisories update.
+Bundled `.txt` files may lag live upstream feeds. Prefer `aur-response` (online fetch) for current Arch/CSCS merges, or refresh snapshots when advisories update.
 
 ## Contact
 
