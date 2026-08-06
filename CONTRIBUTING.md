@@ -20,13 +20,22 @@ container.
 
 ## Release checklist
 
-1. Keep `VERSION`, `Cargo.toml`, `PKGBUILD`, `.SRCINFO`, and the changelog
-   release heading aligned.
-2. Tag the release as `vX.Y.Z`; the release workflow publishes the native
-   archive and source checksum.
-3. Replace `SKIP` in `packaging/arch/PKGBUILD` with that source checksum.
-4. Run `makepkg --printsrcinfo > .SRCINFO`, build with `makepkg`, and publish
-   through `packaging/arch/publish-to-aur.sh`.
+1. Align `VERSION`, `Cargo.toml`, `Cargo.lock`, `PKGBUILD`, `.SRCINFO`, and the
+   changelog release heading in the release PR.
+2. Run the required checks and a local release build. For a native packaging
+   smoke test, stage `package()` against `target/release/aur-response`; the
+   GitHub tag archive does not exist before tagging.
+3. Merge the release PR only after all required GitHub checks pass.
+4. Tag the merged `main` commit as `vX.Y.Z` and push the tag.
+5. Wait for the Release workflow and verify the GitHub release contains the
+   native archive, its checksum, and the tagged source checksum.
+6. Download the tagged source archive, verify it matches the published source
+   checksum, then replace `SKIP` in `packaging/arch/PKGBUILD`.
+7. Run `makepkg --printsrcinfo > .SRCINFO`, build with `makepkg`, and publish
+   through `packaging/arch/publish-to-aur.sh`. The publisher intentionally
+   refuses `SKIP` checksums.
+8. Commit the post-release PKGBUILD and `.SRCINFO` checksum update to `main`
+   through a focused PR.
 
 ## Design
 
