@@ -101,6 +101,7 @@ fn json_contract_has_stable_fields_and_finding_arrays() {
     assert_eq!(json["atomic_arch_installed"], 1);
     assert_eq!(json["findings"]["atomic_arch_installed"][0], "beef");
     assert_eq!(json["list_sha256"].as_str().unwrap().len(), 64);
+    assert_eq!(report::sha256(&dir.path().join("missing.txt")), None);
 }
 
 #[test]
@@ -138,4 +139,13 @@ fn reads_plain_gzip_xz_zstd_and_bzip2_pacman_logs() {
         alpm::events(dir.path(), aur_response::model::Campaign::AtomicArch, false).unwrap();
     assert_eq!(events.len(), 5);
     assert!(events.iter().all(|event| event.package == "beef"));
+}
+
+#[test]
+fn compressed_log_errors_are_reported_instead_of_truncated() {
+    let dir = tempdir().unwrap();
+    fs::write(dir.path().join("pacman.log.1.xz"), "not an xz stream").unwrap();
+    let error =
+        alpm::events(dir.path(), aur_response::model::Campaign::AtomicArch, false).unwrap_err();
+    assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
 }

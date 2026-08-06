@@ -19,8 +19,8 @@ pub struct Summary<'a> {
     #[serde(flatten)]
     counters: &'a Counters,
     report_file: String,
-    list_sha256: String,
-    chaos_rat_list_sha256: String,
+    list_sha256: Option<String>,
+    chaos_rat_list_sha256: Option<String>,
     findings: BTreeMap<&'a str, Vec<&'a str>>,
 }
 
@@ -33,10 +33,10 @@ pub fn severity(code: i32) -> &'static str {
     }
 }
 
-pub fn sha256(path: &Path) -> String {
+pub fn sha256(path: &Path) -> Option<String> {
     fs::read(path)
         .map(|bytes| format!("{:x}", Sha256::digest(bytes)))
-        .unwrap_or_default()
+        .ok()
 }
 
 fn hostname() -> String {

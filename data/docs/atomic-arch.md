@@ -89,7 +89,7 @@ Implemented in `src/ioc.rs` and  `aur-response scan malware-artifacts`.
 | 2 | `aur-response scan aur-window` | `AUR_WINDOW_*` |
 | 3 | `aur-response scan timeline atomic-arch` | `aur_collect_window_alpm_events*` |
 | 4 | `aur-response scan malware-artifacts` | `src/ioc.rs` |
-| 4b | `scripts/aur-response scan similar-heuristics` | `aur_foreign_installed_not_on_list`, `aur_pkg_similar_heuristics_files` |
+| 4b | `aur-response scan similar-heuristics` | `aur_foreign_installed_not_on_list`, `aur_pkg_similar_heuristics_files` |
 | — | `aur-response check list-freshness` | bundled vs online list delta + installed staleness check |
 | — | `aur-response recovery remove-packages` | default `--list atomic-arch` |
 

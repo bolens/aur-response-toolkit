@@ -6,7 +6,7 @@ use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Child, ChildStdout, Command, Stdio};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Event {
@@ -15,27 +15,65 @@ pub struct Event {
     pub date: String,
 }
 
+struct ChildReader {
+    child: Child,
+    stdout: ChildStdout,
+    program: &'static str,
+    finished: bool,
+}
+
+impl Read for ChildReader {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+        let read = self.stdout.read(buffer)?;
+        if read == 0 && !self.finished {
+            self.finished = true;
+            let status = self.child.wait()?;
+            if !status.success() {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("{} failed with {status}", self.program),
+                ));
+            }
+        }
+        Ok(read)
+    }
+}
+
+impl Drop for ChildReader {
+    fn drop(&mut self) {
+        if !self.finished {
+            let _ = self.child.wait();
+        }
+    }
+}
+
 fn reader(path: &Path) -> io::Result<Box<dyn Read>> {
-    let file = File::open(path)?;
     match path.extension().and_then(OsStr::to_str) {
-        Some("gz") => Ok(Box::new(GzDecoder::new(file))),
+        Some("gz") => Ok(Box::new(GzDecoder::new(File::open(path)?))),
         Some(ext @ ("xz" | "zst" | "bz2")) => {
             let program = match ext {
                 "xz" => "xz",
                 "zst" => "zstd",
                 _ => "bzip2",
             };
-            let output = Command::new(program).args(["-dc"]).arg(path).output()?;
-            if output.status.success() {
-                Ok(Box::new(io::Cursor::new(output.stdout)))
-            } else {
-                Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    format!("{program} failed"),
-                ))
-            }
+            let mut child = Command::new(program)
+                .args(["-dc"])
+                .arg(path)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null())
+                .spawn()?;
+            let stdout = child
+                .stdout
+                .take()
+                .ok_or_else(|| io::Error::other(format!("{program} stdout unavailable")))?;
+            Ok(Box::new(ChildReader {
+                child,
+                stdout,
+                program,
+                finished: false,
+            }))
         }
-        _ => Ok(Box::new(file)),
+        _ => Ok(Box::new(File::open(path)?)),
     }
 }
 
@@ -76,7 +114,8 @@ pub fn events_with_window(
     let mut result = Vec::new();
     for path in log_paths(dir)? {
         let input = BufReader::new(reader(&path)?);
-        for line in input.lines().map_while(Result::ok) {
+        for line in input.lines() {
+            let line = line?;
             let Some(cap) = action.captures(&line) else {
                 continue;
             };
