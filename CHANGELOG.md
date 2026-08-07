@@ -2,7 +2,7 @@
 
 All notable changes to **aur-response-toolkit** are documented here.
 
-## Unreleased
+## 2.1.0
 
 - Add package and timeline coverage for the July 2026 `openconnect-sso`
   validator compromise and the May 2026 `browsh-bin` / `linux-utils`
