@@ -353,3 +353,116 @@ fn native_similar_heuristics_subcommand_detects_nonlisted_package_hooks() {
         .unwrap()
         .contains("evil-pkg"));
 }
+
+#[test]
+fn new_campaign_timelines_match_packages_only_inside_incident_windows() {
+    let home = tempdir().unwrap();
+    let logs = home.path().join("logs");
+    fs::create_dir_all(&logs).unwrap();
+    fs::write(
+        logs.join("pacman.log"),
+        concat!(
+            "[2026-07-29T08:00:00-0600] [ALPM] installed openconnect-sso (1-1)\n",
+            "[2026-07-30T08:00:00-0600] [ALPM] upgraded openconnect-sso (1-1 -> 2-1)\n",
+            "[2026-05-27T08:00:00-0600] [ALPM] installed browsh-bin (1-1)\n",
+            "[2026-05-28T08:00:00-0600] [ALPM] upgraded browsh-bin (1-1 -> 2-1)\n",
+            "[2026-05-28T09:00:00-0600] [ALPM] installed plex-media-player (1-1)\n",
+        ),
+    )
+    .unwrap();
+    let openconnect = home.path().join("openconnect.txt");
+    let browsh = home.path().join("browsh.txt");
+    let shai = home.path().join("shai.txt");
+    fs::write(&openconnect, "openconnect-sso\n").unwrap();
+    fs::write(&browsh, "browsh-bin\n").unwrap();
+    fs::write(&shai, "plex-media-player\n").unwrap();
+
+    for (campaign, list_env, list, counter, expected_package) in [
+        (
+            "openconnect-sso",
+            "AUR_OPENCONNECT_SSO_LIST_FILE",
+            &openconnect,
+            "openconnect_sso_timeline_hits",
+            "openconnect-sso",
+        ),
+        (
+            "browsh-linux-utils",
+            "AUR_BROWSH_LINUX_UTILS_LIST_FILE",
+            &browsh,
+            "browsh_linux_utils_timeline_hits",
+            "browsh-bin",
+        ),
+        (
+            "shai-hulud",
+            "AUR_SHAI_HULUD_LIST_FILE",
+            &shai,
+            "shai_hulud_timeline_hits",
+            "plex-media-player",
+        ),
+    ] {
+        let output = Command::new(binary())
+            .env("HOME", home.path())
+            .env("AUR_RESPONSE_DIR", home.path())
+            .env("AUR_TEST_PACMAN_LOG_DIR", &logs)
+            .env(list_env, list)
+            .args(["scan", "timeline", campaign, "--local", "--json"])
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(2));
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        assert!(stdout.contains(expected_package));
+        let json: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
+        assert_eq!(json[counter], 1);
+    }
+}
+
+#[test]
+fn artifact_scan_detects_linux_utils_embedded_elf_payload() {
+    let home = tempdir().unwrap();
+    let payload = home
+        .path()
+        .join("cache/browsh-bin/node_modules/linux-utils/index.mjs");
+    let local = home.path().join("pacman-local");
+    fs::create_dir_all(payload.parent().unwrap()).unwrap();
+    fs::create_dir_all(&local).unwrap();
+    fs::write(&payload, b"javascript wrapper\n\x7fELFpayload").unwrap();
+
+    let output = Command::new(binary())
+        .env("HOME", home.path())
+        .env("AUR_RESPONSE_DIR", home.path())
+        .env("AUR_DEPS_SEARCH_PATHS", home.path().join("cache"))
+        .env("AUR_PACMAN_LOCAL_DIR", local)
+        .env("AUR_TEST_SYSTEMD_SYSTEM_DIR", home.path().join("systemd"))
+        .env("AUR_TEST_SKIP_LD_PRELOAD", "1")
+        .args(["scan", "malware-artifacts", "--quick"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(String::from_utf8(output.stdout)
+        .unwrap()
+        .contains("linux-utils/index.mjs"));
+}
+
+#[test]
+fn similar_heuristics_scan_checks_install_hooks_for_privileged_validators() {
+    let home = tempdir().unwrap();
+    let cache = home.path().join("cache/openconnect-sso");
+    fs::create_dir_all(&cache).unwrap();
+    fs::write(
+        cache.join(".INSTALL"),
+        "post_install() { sudo ./validator; }\n",
+    )
+    .unwrap();
+
+    let output = Command::new(binary())
+        .env("HOME", home.path())
+        .env("AUR_RESPONSE_DIR", home.path())
+        .env("AUR_HELPER_CACHE_ROOTS", home.path().join("cache"))
+        .args(["scan", "similar-heuristics", "--local"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(String::from_utf8(output.stdout)
+        .unwrap()
+        .contains("openconnect-sso/.INSTALL"));
+}

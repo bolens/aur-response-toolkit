@@ -13,3 +13,14 @@
 
 Online list URLs are configured through TOML or documented `AUR_*` environment
 variables. The engine records merged-list hashes in JSON reports.
+
+## Incident references
+
+| Campaign | Incident notes |
+|---|---|
+| Atomic Arch | [atomic-arch.md](atomic-arch.md) |
+| Chaos RAT | [chaos-rat.md](chaos-rat.md) |
+| Mini Shai-Hulud | [shai-hulud.md](shai-hulud.md) |
+| OpenConnect SSO validator | [openconnect-sso.md](openconnect-sso.md) |
+| browsh-bin / linux-utils | [browsh-linux-utils.md](browsh-linux-utils.md) |
+| xeactor | [xeactor.md](xeactor.md) |

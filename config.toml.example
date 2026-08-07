@@ -14,5 +14,6 @@
 # list_url_extra = "https://example.com/extra-infected-list.txt"
 # enable_chaos_rat = false
 # enable_shai_hulud = false
+# enable_openconnect_sso = false
+# enable_browsh_linux_utils = false
 # enable_xeactor = false
-

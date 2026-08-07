@@ -35,6 +35,12 @@ pub struct Config {
     pub shai_hulud_window_install_days_re: Option<String>,
     pub shai_hulud_window_install_month: Option<String>,
     pub shai_hulud_window_label: Option<String>,
+    pub enable_openconnect_sso: Option<bool>,
+    pub openconnect_sso_list_file: Option<PathBuf>,
+    pub openconnect_sso_url: Option<String>,
+    pub enable_browsh_linux_utils: Option<bool>,
+    pub browsh_linux_utils_list_file: Option<PathBuf>,
+    pub browsh_linux_utils_url: Option<String>,
     pub enable_xeactor: Option<bool>,
     pub xeactor_list_file: Option<PathBuf>,
     pub xeactor_url: Option<String>,
@@ -75,6 +81,11 @@ fn apply_environment(config: &mut Config) {
     path!(atomic_arch_list_file, "AUR_ATOMIC_ARCH_LIST_FILE");
     path!(chaos_rat_list_file, "AUR_CHAOS_RAT_LIST_FILE");
     path!(shai_hulud_list_file, "AUR_SHAI_HULUD_LIST_FILE");
+    path!(openconnect_sso_list_file, "AUR_OPENCONNECT_SSO_LIST_FILE");
+    path!(
+        browsh_linux_utils_list_file,
+        "AUR_BROWSH_LINUX_UTILS_LIST_FILE"
+    );
     path!(xeactor_list_file, "AUR_XEACTOR_LIST_FILE");
     path!(reports_dir, "AUR_REPORTS_DIR");
     string!(history_helpers, "AUR_HISTORY_HELPERS");
@@ -96,6 +107,8 @@ fn apply_environment(config: &mut Config) {
         "AUR_SHAI_HULUD_WINDOW_INSTALL_MONTH"
     );
     string!(shai_hulud_window_label, "AUR_SHAI_HULUD_WINDOW_LABEL");
+    string!(openconnect_sso_url, "AUR_OPENCONNECT_SSO_URL");
+    string!(browsh_linux_utils_url, "AUR_BROWSH_LINUX_UTILS_URL");
     string!(xeactor_url, "AUR_XEACTOR_URL");
     string!(xeactor_window_log_re, "AUR_XEACTOR_WINDOW_LOG_RE");
     string!(xeactor_window_label, "AUR_XEACTOR_WINDOW_LABEL");
@@ -104,6 +117,10 @@ fn apply_environment(config: &mut Config) {
     }
     config.enable_chaos_rat = env_bool("AUR_ENABLE_CHAOS_RAT").or(config.enable_chaos_rat);
     config.enable_shai_hulud = env_bool("AUR_ENABLE_SHAI_HULUD").or(config.enable_shai_hulud);
+    config.enable_openconnect_sso =
+        env_bool("AUR_ENABLE_OPENCONNECT_SSO").or(config.enable_openconnect_sso);
+    config.enable_browsh_linux_utils =
+        env_bool("AUR_ENABLE_BROWSH_LINUX_UTILS").or(config.enable_browsh_linux_utils);
     config.enable_xeactor = env_bool("AUR_ENABLE_XEACTOR").or(config.enable_xeactor);
     if let Some(value) = env::var_os("AUR_DEPS_SEARCH_PATHS") {
         config.deps_search_paths = env::split_paths(&value).collect();
@@ -263,6 +280,14 @@ fn legacy_config(values: &BTreeMap<String, Vec<String>>) -> Config {
         shai_hulud_window_install_days_re: first(values, "AUR_SHAI_HULUD_WINDOW_INSTALL_DAYS_RE"),
         shai_hulud_window_install_month: first(values, "AUR_SHAI_HULUD_WINDOW_INSTALL_MONTH"),
         shai_hulud_window_label: first(values, "AUR_SHAI_HULUD_WINDOW_LABEL"),
+        enable_openconnect_sso: bool_value(values, "AUR_ENABLE_OPENCONNECT_SSO"),
+        openconnect_sso_list_file: first(values, "AUR_OPENCONNECT_SSO_LIST_FILE")
+            .map(PathBuf::from),
+        openconnect_sso_url: first(values, "AUR_OPENCONNECT_SSO_URL"),
+        enable_browsh_linux_utils: bool_value(values, "AUR_ENABLE_BROWSH_LINUX_UTILS"),
+        browsh_linux_utils_list_file: first(values, "AUR_BROWSH_LINUX_UTILS_LIST_FILE")
+            .map(PathBuf::from),
+        browsh_linux_utils_url: first(values, "AUR_BROWSH_LINUX_UTILS_URL"),
         enable_xeactor: bool_value(values, "AUR_ENABLE_XEACTOR"),
         xeactor_list_file: first(values, "AUR_XEACTOR_LIST_FILE").map(PathBuf::from),
         xeactor_url: first(values, "AUR_XEACTOR_URL"),

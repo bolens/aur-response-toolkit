@@ -1,5 +1,5 @@
 use crate::config::atomic_write;
-use crate::model::{Counters, ScanState};
+use crate::model::{Campaign, Counters, ScanState};
 use crate::VERSION;
 use chrono::Local;
 use serde::Serialize;
@@ -21,6 +21,10 @@ pub struct Summary<'a> {
     report_file: String,
     list_sha256: Option<String>,
     chaos_rat_list_sha256: Option<String>,
+    shai_hulud_list_sha256: Option<String>,
+    openconnect_sso_list_sha256: Option<String>,
+    browsh_linux_utils_list_sha256: Option<String>,
+    xeactor_list_sha256: Option<String>,
     findings: BTreeMap<&'a str, Vec<&'a str>>,
 }
 
@@ -51,8 +55,7 @@ pub fn write_summary(
     reports_dir: &Path,
     state: &ScanState,
     exit_code: i32,
-    atomic_list: &Path,
-    chaos_list: &Path,
+    lists: &[(Campaign, &Path)],
 ) -> io::Result<PathBuf> {
     fs::create_dir_all(reports_dir)?;
     let findings = state
@@ -60,6 +63,12 @@ pub fn write_summary(
         .iter()
         .map(|(key, values)| (key.as_str(), values.iter().map(String::as_str).collect()))
         .collect();
+    let list_hash = |campaign| {
+        lists
+            .iter()
+            .find(|(candidate, _)| *candidate == campaign)
+            .and_then(|(_, path)| sha256(path))
+    };
     let summary = Summary {
         timestamp: Local::now().format("%Y-%m-%dT%H:%M:%S%z").to_string(),
         version: VERSION,
@@ -72,8 +81,12 @@ pub fn write_summary(
             .as_ref()
             .map(|p| p.display().to_string())
             .unwrap_or_default(),
-        list_sha256: sha256(atomic_list),
-        chaos_rat_list_sha256: sha256(chaos_list),
+        list_sha256: list_hash(Campaign::AtomicArch),
+        chaos_rat_list_sha256: list_hash(Campaign::ChaosRat),
+        shai_hulud_list_sha256: list_hash(Campaign::ShaiHulud),
+        openconnect_sso_list_sha256: list_hash(Campaign::OpenconnectSso),
+        browsh_linux_utils_list_sha256: list_hash(Campaign::BrowshLinuxUtils),
+        xeactor_list_sha256: list_hash(Campaign::Xeactor),
         findings,
     };
     let bytes = serde_json::to_vec_pretty(&summary)?;

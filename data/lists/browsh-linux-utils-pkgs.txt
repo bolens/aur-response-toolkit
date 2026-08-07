@@ -1,0 +1,4 @@
+# browsh-bin / malicious linux-utils npm incident (May 27, 2026).
+# The npm preinstall hook executed an embedded ELF payload.
+# See: data/docs/browsh-linux-utils.md
+browsh-bin

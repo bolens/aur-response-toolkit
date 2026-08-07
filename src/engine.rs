@@ -18,8 +18,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use walkdir::WalkDir;
 
-const HOOK_PATTERN: &str = r"atomic-lockfile|js-digest|lockfile-js|nextfile-js|crypto-javascript|bun install js-digest|npm install atomic-lockfile|npm install lockfile-js|npm install nextfile-js|npm install crypto-javascript";
-const HEURISTIC_PATTERN: &str = r"atomic-lockfile|js-digest|lockfile-js|nextfile-js|crypto-javascript|/var/lib/deps|bun (pm )?install|npm (ci|install).*(--ignore-scripts=false|--foreground-scripts)|node -e |eval \(|base64 -d|openssl enc|curl .*\| (bash|sh)|wget .*\| (bash|sh)|atob\(|Buffer\.from\(.*base64";
+const HOOK_PATTERN: &str = r"atomic-lockfile|js-digest|lockfile-js|nextfile-js|crypto-javascript|linux-utils|bun install js-digest|npm install atomic-lockfile|npm install lockfile-js|npm install nextfile-js|npm install crypto-javascript|npm install linux-utils|sudo\s+(?:\./)?validator";
+const HEURISTIC_PATTERN: &str = r"atomic-lockfile|js-digest|lockfile-js|nextfile-js|crypto-javascript|linux-utils|/var/lib/deps|bun (pm )?install|npm (ci|install).*(--ignore-scripts=false|--foreground-scripts)|cd\s+/tmp.*(?:npm|bun)|sudo\s+(?:\./)?[[:alnum:]_.+-]+|(?:^|[\s/])validator(?:\s|$)|node -e |eval \(|base64 -d|openssl enc|curl .*\| (bash|sh)|wget .*\| (bash|sh)|atob\(|Buffer\.from\(.*base64";
 const MALWARE_HASHES: &[&str] = &[
     "6144d433f8a0316869877b5f834c801251bbb936e5f1577c5680878c7443c98b",
     "7883bda1ff15425f2dbe622c45a3ae105ddfa6175009bbf0b0cad9bf5c79b316",
@@ -85,6 +85,8 @@ impl Paths {
             Campaign::AtomicArch => config.atomic_arch_list_file.clone(),
             Campaign::ChaosRat => config.chaos_rat_list_file.clone(),
             Campaign::ShaiHulud => config.shai_hulud_list_file.clone(),
+            Campaign::OpenconnectSso => config.openconnect_sso_list_file.clone(),
+            Campaign::BrowshLinuxUtils => config.browsh_linux_utils_list_file.clone(),
             Campaign::Xeactor => config.xeactor_list_file.clone(),
         }
         .unwrap_or_else(|| {
@@ -113,6 +115,18 @@ pub struct Engine {
 }
 
 impl Engine {
+    fn campaign_enabled(&self, options: &crate::model::RunOptions, slug: &str) -> bool {
+        options.campaigns.contains(slug)
+            || match slug {
+                "chaos-rat" => self.config.enable_chaos_rat == Some(true),
+                "shai-hulud" => self.config.enable_shai_hulud == Some(true),
+                "openconnect-sso" => self.config.enable_openconnect_sso == Some(true),
+                "browsh-linux-utils" => self.config.enable_browsh_linux_utils == Some(true),
+                "xeactor" => self.config.enable_xeactor == Some(true),
+                _ => false,
+            }
+    }
+
     pub fn new(config: Config) -> Self {
         let paths = Paths::resolve(&config);
         let compromised = fs::read_to_string(paths.reports.join(".scan-state"))
@@ -219,6 +233,20 @@ impl Engine {
                 self.config.shai_hulud_url.clone().unwrap_or_default(),
                 lists::plain as Parser,
             )],
+            Campaign::OpenconnectSso => vec![(
+                self.config
+                    .openconnect_sso_url
+                    .clone()
+                    .unwrap_or_default(),
+                lists::plain as Parser,
+            )],
+            Campaign::BrowshLinuxUtils => vec![(
+                self.config
+                    .browsh_linux_utils_url
+                    .clone()
+                    .unwrap_or_default(),
+                lists::plain as Parser,
+            )],
             Campaign::Xeactor => vec![(
                 self.config.xeactor_url.clone().unwrap_or_default(),
                 lists::plain as Parser,
@@ -293,6 +321,8 @@ impl Engine {
             "atomic-arch" => Some(Campaign::AtomicArch),
             "chaos-rat" => Some(Campaign::ChaosRat),
             "shai-hulud" => Some(Campaign::ShaiHulud),
+            "openconnect-sso" => Some(Campaign::OpenconnectSso),
+            "browsh-linux-utils" => Some(Campaign::BrowshLinuxUtils),
             "xeactor" => Some(Campaign::Xeactor),
             _ => None,
         }
@@ -351,7 +381,7 @@ impl Engine {
                 .config
                 .shai_hulud_window_install_days_re
                 .as_deref()
-                .unwrap_or("(1[67])");
+                .unwrap_or("(1[6-9]|2[0-8])");
             let month = self
                 .config
                 .shai_hulud_window_install_month
@@ -440,6 +470,24 @@ impl Engine {
                     }
                     self.state.optional_warnings.insert("shai-hulud".into());
                 }
+                Campaign::OpenconnectSso => {
+                    self.state.counters.openconnect_sso_installed += 1;
+                    if high {
+                        self.state.counters.openconnect_sso_high_risk += 1;
+                    }
+                    self.state
+                        .optional_warnings
+                        .insert("openconnect-sso".into());
+                }
+                Campaign::BrowshLinuxUtils => {
+                    self.state.counters.browsh_linux_utils_installed += 1;
+                    if high {
+                        self.state.counters.browsh_linux_utils_high_risk += 1;
+                    }
+                    self.state
+                        .optional_warnings
+                        .insert("browsh-linux-utils".into());
+                }
                 Campaign::Xeactor => {
                     self.state.counters.xeactor_installed += 1;
                     if high {
@@ -515,6 +563,18 @@ impl Engine {
                     self.state.counters.shai_hulud_timeline_hits += lines.len() as u64;
                     self.state.optional_warnings.insert("shai-hulud".into());
                 }
+                Campaign::OpenconnectSso => {
+                    self.state.counters.openconnect_sso_timeline_hits += lines.len() as u64;
+                    self.state
+                        .optional_warnings
+                        .insert("openconnect-sso".into());
+                }
+                Campaign::BrowshLinuxUtils => {
+                    self.state.counters.browsh_linux_utils_timeline_hits += lines.len() as u64;
+                    self.state
+                        .optional_warnings
+                        .insert("browsh-linux-utils".into());
+                }
                 Campaign::Xeactor => {
                     self.state.counters.xeactor_timeline_hits += lines.len() as u64;
                     self.state.optional_warnings.insert("xeactor".into());
@@ -574,16 +634,21 @@ impl Engine {
                     .file_name()
                     .and_then(|v| v.to_str())
                     .unwrap_or_default();
-                let suspicious_name = matches!(name, "deps" | "PKGBUILD" | ".INSTALL")
-                    || [
-                        "atomic-lockfile",
-                        "js-digest",
-                        "lockfile-js",
-                        "nextfile-js",
-                        "crypto-javascript",
-                    ]
-                    .iter()
-                    .any(|v| path.to_string_lossy().contains(v));
+                let path_text = path.to_string_lossy();
+                let suspicious_name =
+                    matches!(name, "deps" | "PKGBUILD" | ".INSTALL" | "validator")
+                        || [
+                            "atomic-lockfile",
+                            "js-digest",
+                            "lockfile-js",
+                            "nextfile-js",
+                            "crypto-javascript",
+                            "linux-utils",
+                            "openconnect-sso",
+                            "browsh-bin",
+                        ]
+                        .iter()
+                        .any(|v| path_text.contains(v));
                 if !suspicious_name {
                     continue;
                 }
@@ -593,7 +658,11 @@ impl Engine {
                 };
                 let hash = format!("{:x}", Sha256::digest(&bytes));
                 let text_hit = std::str::from_utf8(&bytes).is_ok_and(|v| hook.is_match(v));
-                if MALWARE_HASHES.contains(&hash.as_str()) || text_hit {
+                let embedded_elf = (path_text.contains("linux-utils")
+                    || path_text.contains("node_modules")
+                    || path_text.contains("/.npm/"))
+                    && bytes.windows(4).any(|window| window == b"\x7fELF");
+                if MALWARE_HASHES.contains(&hash.as_str()) || text_hit || embedded_elf {
                     let item = path.display().to_string();
                     self.state.finding("artifacts", &item);
                     self.state.counters.artifact_critical += 1;
@@ -674,7 +743,10 @@ impl Engine {
                 .into_iter()
                 .filter_map(Result::ok)
             {
-                if entry.file_name() != "PKGBUILD" {
+                if !matches!(
+                    entry.file_name().to_str(),
+                    Some("PKGBUILD" | ".INSTALL" | "install")
+                ) {
                     continue;
                 }
                 let Ok(input) = fs::read_to_string(entry.path()) else {
@@ -972,7 +1044,7 @@ impl Engine {
             .map(|w| w[1].as_str())
             .unwrap_or("atomic-arch");
         let Some(campaign) = Self::campaign(list_slug) else {
-            eprintln!("ERROR: unknown list type '{list_slug}' (use atomic-arch, chaos-rat, shai-hulud, or xeactor)");
+            eprintln!("ERROR: unknown list type '{list_slug}' (use atomic-arch, chaos-rat, shai-hulud, openconnect-sso, browsh-linux-utils, or xeactor)");
             return crate::EXIT_INVALID;
         };
         let explicit = args
@@ -1002,6 +1074,8 @@ impl Engine {
             Campaign::AtomicArch => "Atomic Arch",
             Campaign::ChaosRat => "Chaos RAT",
             Campaign::ShaiHulud => "Shai-Hulud",
+            Campaign::OpenconnectSso => "OpenConnect SSO",
+            Campaign::BrowshLinuxUtils => "browsh/linux-utils",
             Campaign::Xeactor => "xeactor",
         };
         if verify {
@@ -1245,6 +1319,8 @@ impl Engine {
         let optional = match fail_on {
             FailOn::ChaosRat => self.state.optional_warnings.contains("chaos-rat"),
             FailOn::ShaiHulud => self.state.optional_warnings.contains("shai-hulud"),
+            FailOn::OpenconnectSso => self.state.optional_warnings.contains("openconnect-sso"),
+            FailOn::BrowshLinuxUtils => self.state.optional_warnings.contains("browsh-linux-utils"),
             FailOn::Xeactor => self.state.optional_warnings.contains("xeactor"),
             FailOn::All => !self.state.optional_warnings.is_empty(),
             _ => false,
@@ -1278,21 +1354,27 @@ impl Engine {
                 if !o.skip_pkg_check {
                     self.scan_packages(Campaign::AtomicArch, o.all_time, o.quiet);
                 }
-                for slug in ["chaos-rat", "shai-hulud", "xeactor"] {
-                    let enabled = o.campaigns.contains(slug)
-                        || match slug {
-                            "chaos-rat" => self.config.enable_chaos_rat == Some(true),
-                            "shai-hulud" => self.config.enable_shai_hulud == Some(true),
-                            _ => self.config.enable_xeactor == Some(true),
-                        };
-                    if enabled {
+                for slug in [
+                    "chaos-rat",
+                    "shai-hulud",
+                    "openconnect-sso",
+                    "browsh-linux-utils",
+                    "xeactor",
+                ] {
+                    if self.campaign_enabled(o, slug) {
                         self.scan_packages(Self::campaign(slug).unwrap(), o.all_time, o.quiet);
                     }
                 }
                 self.scan_aur_window(o.quiet);
                 self.scan_timeline(Campaign::AtomicArch, o.all_time, o.quiet);
-                for slug in ["chaos-rat", "shai-hulud", "xeactor"] {
-                    if o.campaigns.contains(slug) {
+                for slug in [
+                    "chaos-rat",
+                    "shai-hulud",
+                    "openconnect-sso",
+                    "browsh-linux-utils",
+                    "xeactor",
+                ] {
+                    if self.campaign_enabled(o, slug) {
                         self.scan_timeline(Self::campaign(slug).unwrap(), o.all_time, o.quiet);
                     }
                 }
@@ -1382,9 +1464,23 @@ impl Engine {
             let _ = report::write_findings(&self.paths.reports, &self.state.findings);
             let atomic = self.paths.list(Campaign::AtomicArch, &self.config);
             let chaos = self.paths.list(Campaign::ChaosRat, &self.config);
-            if let Ok(path) =
-                report::write_summary(&self.paths.reports, &self.state, code, &atomic, &chaos)
-            {
+            let shai = self.paths.list(Campaign::ShaiHulud, &self.config);
+            let openconnect = self.paths.list(Campaign::OpenconnectSso, &self.config);
+            let browsh = self.paths.list(Campaign::BrowshLinuxUtils, &self.config);
+            let xeactor = self.paths.list(Campaign::Xeactor, &self.config);
+            if let Ok(path) = report::write_summary(
+                &self.paths.reports,
+                &self.state,
+                code,
+                &[
+                    (Campaign::AtomicArch, atomic.as_path()),
+                    (Campaign::ChaosRat, chaos.as_path()),
+                    (Campaign::ShaiHulud, shai.as_path()),
+                    (Campaign::OpenconnectSso, openconnect.as_path()),
+                    (Campaign::BrowshLinuxUtils, browsh.as_path()),
+                    (Campaign::Xeactor, xeactor.as_path()),
+                ],
+            ) {
                 if o.json {
                     if let Ok(json) = fs::read_to_string(path) {
                         println!("{json}");

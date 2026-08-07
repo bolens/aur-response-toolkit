@@ -5,3 +5,7 @@ gnome-vfs
 expressvpn
 atomicwallet-bin
 exodus-bin
+plex-media-player
+plex-media-player-v2
+plex-media-player-mod
+plex-media-player-custom
