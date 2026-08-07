@@ -2,6 +2,18 @@
 
 All notable changes to **aur-response-toolkit** are documented here.
 
+## Unreleased
+
+- Add package and timeline coverage for the July 2026 `openconnect-sso`
+  validator compromise and the May 2026 `browsh-bin` / `linux-utils`
+  compromise.
+- Extend Mini Shai-Hulud coverage through May 28 with the four affected
+  `plex-media-player` variants.
+- Detect privileged validator install hooks and embedded ELF payloads in npm
+  dependency/cache paths.
+- Record hashes for every campaign list in JSON summaries and add regression
+  tests for new CLI, configuration, timeline, artifact, and heuristic paths.
+
 ## 2.0.1
 
 - Resolve development data from the runtime working directory instead of

@@ -1,8 +1,9 @@
 # aur-response-toolkit
 
 Native Rust toolkit to detect, triage, and recover from Arch User Repository
-supply-chain incidents. It covers Atomic Arch, Chaos RAT, Mini Shai-Hulud, and
-the 2018 xeactor campaign.
+supply-chain incidents. It covers Atomic Arch, Chaos RAT, Mini Shai-Hulud, the
+OpenConnect SSO validator compromise, the browsh-bin/linux-utils compromise,
+and the 2018 xeactor campaign.
 
 The former Fish implementation and executable aliases have been removed.
 
@@ -36,7 +37,7 @@ aur-response config migrate /path/to/config.fish ~/.config/aur-response/config.t
 ```console
 aur-response
 aur-response --local
-aur-response --chaos-rat --shai-hulud --xeactor
+aur-response --chaos-rat --shai-hulud --openconnect-sso --browsh-linux-utils --xeactor
 aur-response --audit --report --json
 aur-response --local --quiet --report --json --fail-on compromise --quick
 aur-response --recover --report
@@ -51,11 +52,15 @@ source-specific parsed lists.
 aur-response scan packages atomic-arch --local
 aur-response scan packages chaos-rat --local
 aur-response scan packages shai-hulud --local
+aur-response scan packages openconnect-sso --local
+aur-response scan packages browsh-linux-utils --local
 aur-response scan packages xeactor --local
 
 aur-response scan timeline atomic-arch --local
 aur-response scan timeline chaos-rat --local
 aur-response scan timeline shai-hulud --local
+aur-response scan timeline openconnect-sso --local
+aur-response scan timeline browsh-linux-utils --local
 aur-response scan timeline xeactor --local
 
 aur-response scan aur-window --local
@@ -73,7 +78,8 @@ aur-response recovery apply-hardening --apply
 aur-response recovery scrub-history --all-shells --dry-run
 ```
 
-Campaign names are `atomic-arch`, `chaos-rat`, `shai-hulud`, and `xeactor`.
+Campaign names are `atomic-arch`, `chaos-rat`, `shai-hulud`,
+`openconnect-sso`, `browsh-linux-utils`, and `xeactor`.
 
 ## Exit codes
 
@@ -85,8 +91,8 @@ Campaign names are `atomic-arch`, `chaos-rat`, `shai-hulud`, and `xeactor`.
 | 3 | insufficient data |
 | 4 | invalid arguments |
 
-`--fail-on` accepts `all`, `compromise`, `chaos-rat`, `shai-hulud`, `xeactor`,
-or `none`.
+`--fail-on` accepts `all`, `compromise`, `chaos-rat`, `shai-hulud`,
+`openconnect-sso`, `browsh-linux-utils`, `xeactor`, or `none`.
 
 ## Reports and state
 
