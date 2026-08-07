@@ -48,6 +48,12 @@ generated analysis checks cannot be rerun; in that case, push the next valid
 follow-up commit or close and reopen the PR to request a fresh check. Never
 merge by dismissing a required infrastructure-failed check.
 
+Check GitHub's official service status before repeatedly retrying zero-step
+failures. During a declared Actions outage, pause retries until the service
+recovers; webhook triggers may remain throttled briefly afterward. Once Actions
+is operational, rerun failed jobs and use the next valid commit or one
+close/reopen cycle for non-rerunnable generated checks.
+
 ### Branch protection after CI migrations
 
 When workflow or job names change, verify the required status-check contexts on
