@@ -116,19 +116,30 @@ fn every_native_subcommand_routes_without_legacy_executables() {
 fn json_contract_has_stable_fields_and_finding_arrays() {
     let dir = tempdir().unwrap();
     let list = dir.path().join("atomic.txt");
+    let xeactor_list = dir.path().join("xeactor.txt");
     fs::write(&list, "beef\n").unwrap();
+    fs::write(&xeactor_list, "acroread\n").unwrap();
     let mut state = ScanState::default();
     state.counters.atomic_arch_installed = 1;
     state.finding("atomic_arch_installed", "beef");
     let lists = [
-        ("atomic-arch", list.as_path()),
-        ("chaos-rat", list.as_path()),
-        ("shai-hulud", list.as_path()),
-        ("openconnect-sso", list.as_path()),
-        ("browsh-linux-utils", list.as_path()),
-        ("xeactor", list.as_path()),
+        (
+            aur_response::model::Campaign::Xeactor,
+            xeactor_list.as_path(),
+        ),
+        (
+            aur_response::model::Campaign::BrowshLinuxUtils,
+            list.as_path(),
+        ),
+        (
+            aur_response::model::Campaign::OpenconnectSso,
+            list.as_path(),
+        ),
+        (aur_response::model::Campaign::ShaiHulud, list.as_path()),
+        (aur_response::model::Campaign::ChaosRat, list.as_path()),
+        (aur_response::model::Campaign::AtomicArch, list.as_path()),
     ];
-    let path = report::write_summary(dir.path(), &state, 1, lists).unwrap();
+    let path = report::write_summary(dir.path(), &state, 1, &lists).unwrap();
     let json: serde_json::Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
     assert_eq!(json["version"], VERSION);
     assert_eq!(json["exit_code"], 1);
@@ -136,6 +147,11 @@ fn json_contract_has_stable_fields_and_finding_arrays() {
     assert_eq!(json["atomic_arch_installed"], 1);
     assert_eq!(json["findings"]["atomic_arch_installed"][0], "beef");
     assert_eq!(json["list_sha256"].as_str().unwrap().len(), 64);
+    assert_eq!(
+        json["xeactor_list_sha256"],
+        report::sha256(&xeactor_list).unwrap()
+    );
+    assert_ne!(json["xeactor_list_sha256"], json["list_sha256"]);
     for key in [
         "chaos_rat_list_sha256",
         "shai_hulud_list_sha256",

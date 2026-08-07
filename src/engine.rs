@@ -635,21 +635,20 @@ impl Engine {
                     .and_then(|v| v.to_str())
                     .unwrap_or_default();
                 let path_text = path.to_string_lossy();
-                let suspicious_name = matches!(
-                    name,
-                    "deps" | "PKGBUILD" | ".INSTALL" | "install" | "validator" | "index.mjs"
-                ) || [
-                    "atomic-lockfile",
-                    "js-digest",
-                    "lockfile-js",
-                    "nextfile-js",
-                    "crypto-javascript",
-                    "linux-utils",
-                    "openconnect-sso",
-                    "browsh-bin",
-                ]
-                .iter()
-                .any(|v| path_text.contains(v));
+                let suspicious_name =
+                    matches!(name, "deps" | "PKGBUILD" | ".INSTALL" | "validator")
+                        || [
+                            "atomic-lockfile",
+                            "js-digest",
+                            "lockfile-js",
+                            "nextfile-js",
+                            "crypto-javascript",
+                            "linux-utils",
+                            "openconnect-sso",
+                            "browsh-bin",
+                        ]
+                        .iter()
+                        .any(|v| path_text.contains(v));
                 if !suspicious_name {
                     continue;
                 }
@@ -1473,13 +1472,13 @@ impl Engine {
                 &self.paths.reports,
                 &self.state,
                 code,
-                [
-                    (Campaign::AtomicArch.slug(), atomic.as_path()),
-                    (Campaign::ChaosRat.slug(), chaos.as_path()),
-                    (Campaign::ShaiHulud.slug(), shai.as_path()),
-                    (Campaign::OpenconnectSso.slug(), openconnect.as_path()),
-                    (Campaign::BrowshLinuxUtils.slug(), browsh.as_path()),
-                    (Campaign::Xeactor.slug(), xeactor.as_path()),
+                &[
+                    (Campaign::AtomicArch, atomic.as_path()),
+                    (Campaign::ChaosRat, chaos.as_path()),
+                    (Campaign::ShaiHulud, shai.as_path()),
+                    (Campaign::OpenconnectSso, openconnect.as_path()),
+                    (Campaign::BrowshLinuxUtils, browsh.as_path()),
+                    (Campaign::Xeactor, xeactor.as_path()),
                 ],
             ) {
                 if o.json {
