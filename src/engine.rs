@@ -39,14 +39,7 @@ impl Paths {
     pub fn resolve(config: &Config) -> Self {
         let root = env::var_os("AUR_RESPONSE_DIR")
             .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                let development = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-                if development.join("data/lists").is_dir() {
-                    development
-                } else {
-                    PathBuf::from("/usr/share/aur-response-toolkit")
-                }
-            });
+            .unwrap_or_else(|| default_root(env::current_dir().ok()));
         let xdg = env::var_os("XDG_DATA_HOME")
             .map(PathBuf::from)
             .unwrap_or_else(|| {
@@ -99,6 +92,17 @@ impl Paths {
                 .join(format!("{}-pkgs.txt", campaign.slug()))
         })
     }
+}
+
+fn default_root(working_dir: Option<PathBuf>) -> PathBuf {
+    working_dir
+        .as_deref()
+        .and_then(|path| {
+            path.ancestors()
+                .find(|ancestor| ancestor.join("data/lists").is_dir())
+        })
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| PathBuf::from("/usr/share/aur-response-toolkit"))
 }
 
 pub struct Engine {
@@ -1408,5 +1412,40 @@ impl Engine {
             }
         }
         code
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::default_root;
+    use std::fs;
+    use std::path::PathBuf;
+
+    #[test]
+    fn development_root_is_resolved_from_a_runtime_ancestor() {
+        let working = tempfile::tempdir().unwrap();
+        fs::create_dir_all(working.path().join("data/lists")).unwrap();
+        let nested = working.path().join("src/nested");
+        fs::create_dir_all(&nested).unwrap();
+
+        assert_eq!(default_root(Some(nested)), working.path());
+    }
+
+    #[test]
+    fn existing_directory_without_data_uses_the_installed_root() {
+        let working = tempfile::tempdir().unwrap();
+
+        assert_eq!(
+            default_root(Some(working.path().to_path_buf())),
+            PathBuf::from("/usr/share/aur-response-toolkit")
+        );
+    }
+
+    #[test]
+    fn unavailable_working_directory_uses_the_installed_root() {
+        assert_eq!(
+            default_root(None),
+            PathBuf::from("/usr/share/aur-response-toolkit")
+        );
     }
 }

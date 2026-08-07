@@ -31,9 +31,10 @@ container.
    native archive, its checksum, and the tagged source checksum.
 6. Download the tagged source archive, verify it matches the published source
    checksum, then replace `SKIP` in `packaging/arch/PKGBUILD`.
-7. Run `makepkg --printsrcinfo > .SRCINFO`, build with `makepkg`, and publish
-   through `packaging/arch/publish-to-aur.sh`. The publisher intentionally
-   refuses `SKIP` checksums.
+7. Run `makepkg --printsrcinfo > .SRCINFO`, build with `makepkg`, and confirm
+   the package contains no build-directory references. Publish through
+   `packaging/arch/publish-to-aur.sh`; the publisher intentionally refuses
+   `SKIP` checksums.
 8. Commit the post-release PKGBUILD and `.SRCINFO` checksum update to `main`
    through a focused PR.
 
@@ -46,6 +47,20 @@ infrastructure failure. Retry the workflow when GitHub permits it. Some
 generated analysis checks cannot be rerun; in that case, push the next valid
 follow-up commit or close and reopen the PR to request a fresh check. Never
 merge by dismissing a required infrastructure-failed check.
+
+Check GitHub's official service status before repeatedly retrying zero-step
+failures. During a declared Actions outage, pause retries until the service
+recovers; webhook triggers may remain throttled briefly afterward. Once Actions
+is operational, rerun failed jobs and use the next valid commit or one
+close/reopen cycle for non-rerunnable generated checks.
+
+### Branch protection after CI migrations
+
+When workflow or job names change, verify the required status-check contexts on
+`main` before the release PR. GitHub matches those contexts by exact name, so a
+stale requirement can block an otherwise passing PR. Replace obsolete contexts
+with the current job names; do not bypass branch protection with an
+administrator merge.
 
 ## Design
 

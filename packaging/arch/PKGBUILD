@@ -2,7 +2,7 @@
 # Native Rust scanner.
 
 pkgname=aur-response-toolkit
-pkgver=2.0.0
+pkgver=2.0.1
 pkgrel=1
 pkgdesc="Detect, triage, and recover from AUR supply-chain incidents"
 arch=('x86_64' 'aarch64')
@@ -30,6 +30,7 @@ install=aur-response-toolkit.install
 
 build() {
   cd "$pkgname-$pkgver"
+  export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=$PWD=/usr/src/debug/$pkgname-$pkgver"
   cargo build --release --locked
 }
 
