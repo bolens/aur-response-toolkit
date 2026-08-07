@@ -52,8 +52,12 @@ Options:
   --if-compromised   Only fail credential audit when compromise detected
   --chaos-rat        Also scan Chaos RAT packages (warn-only)
   --shai-hulud       Also scan Mini Shai-Hulud packages (warn-only)
+  --openconnect-sso   Also scan the OpenConnect SSO validator incident (warn-only)
+  --browsh-linux-utils
+                     Also scan the browsh/linux-utils incident (warn-only)
   --xeactor          Also scan 2018 xeactor packages (warn-only)
-  --fail-on MODE     Exit policy: all, compromise, chaos-rat, shai-hulud, xeactor, none
+  --fail-on MODE     Exit policy: all, compromise, chaos-rat, shai-hulud,
+                     openconnect-sso, browsh-linux-utils, xeactor, none
   --skip-pkg-check   Skip step 1 package list checks
   --recover          Interactive recovery wizard
   --json             Print JSON summary to stdout at end
@@ -96,7 +100,7 @@ pub fn help_for(kind: &CommandKind) -> String {
         CommandKind::ApplyHardening => {
             "Usage: aur-response recovery apply-hardening [--apply]".into()
         }
-        CommandKind::RemovePackages => "Usage: aur-response recovery remove-packages [--list atomic-arch|chaos-rat|shai-hulud|xeactor] [--dry-run] [--force] [--verify] [pkg ...]".into(),
+        CommandKind::RemovePackages => "Usage: aur-response recovery remove-packages [--list atomic-arch|chaos-rat|shai-hulud|openconnect-sso|browsh-linux-utils|xeactor] [--dry-run] [--force] [--verify] [pkg ...]".into(),
         CommandKind::ScrubHistory => {
             "Usage: aur-response recovery scrub-history [--dry-run] [--all-shells]".into()
         }
@@ -108,7 +112,9 @@ pub fn help_for(kind: &CommandKind) -> String {
         CommandKind::Package(slug) | CommandKind::Timeline(slug) => match slug.as_str() {
             "atomic-arch" => "\nCampaign window: Jun 9–14, 2026",
             "chaos-rat" => "\nCampaign window: Jul 16–18, 2025",
-            "shai-hulud" => "\nCampaign window: May 16–17, 2026",
+            "shai-hulud" => "\nCampaign window: May 16–28, 2026",
+            "openconnect-sso" => "\nCampaign window: Jul 29, 2026",
+            "browsh-linux-utils" => "\nCampaign window: May 27, 2026",
             "xeactor" => "\nCampaign window: Jun 7–Jul 10, 2018",
             _ => "",
         },
@@ -145,7 +151,12 @@ fn command(args: &[String]) -> Result<(CommandKind, usize), (i32, String)> {
     if let CommandKind::Package(campaign) | CommandKind::Timeline(campaign) = &result.0 {
         if !matches!(
             campaign.as_str(),
-            "atomic-arch" | "chaos-rat" | "shai-hulud" | "xeactor"
+            "atomic-arch"
+                | "chaos-rat"
+                | "shai-hulud"
+                | "openconnect-sso"
+                | "browsh-linux-utils"
+                | "xeactor"
         ) {
             return Err((EXIT_INVALID, format!("unknown campaign: {campaign}\n")));
         }
@@ -177,6 +188,12 @@ pub fn parse(_argv0: &str, args: &[String]) -> Result<Parsed, (i32, String)> {
             }
             "--shai-hulud" => {
                 options.campaigns.insert("shai-hulud".into());
+            }
+            "--openconnect-sso" => {
+                options.campaigns.insert("openconnect-sso".into());
+            }
+            "--browsh-linux-utils" => {
+                options.campaigns.insert("browsh-linux-utils".into());
             }
             "--xeactor" => {
                 options.campaigns.insert("xeactor".into());

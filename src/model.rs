@@ -9,6 +9,8 @@ pub enum FailOn {
     Compromise,
     ChaosRat,
     ShaiHulud,
+    OpenconnectSso,
+    BrowshLinuxUtils,
     Xeactor,
     None,
 }
@@ -20,6 +22,8 @@ impl FailOn {
             "compromise" => Some(Self::Compromise),
             "chaos-rat" => Some(Self::ChaosRat),
             "shai-hulud" => Some(Self::ShaiHulud),
+            "openconnect-sso" => Some(Self::OpenconnectSso),
+            "browsh-linux-utils" => Some(Self::BrowshLinuxUtils),
             "xeactor" => Some(Self::Xeactor),
             "none" => Some(Self::None),
             _ => None,
@@ -32,6 +36,8 @@ pub enum Campaign {
     AtomicArch,
     ChaosRat,
     ShaiHulud,
+    OpenconnectSso,
+    BrowshLinuxUtils,
     Xeactor,
 }
 
@@ -41,6 +47,8 @@ impl Campaign {
             Self::AtomicArch => "atomic-arch",
             Self::ChaosRat => "chaos-rat",
             Self::ShaiHulud => "shai-hulud",
+            Self::OpenconnectSso => "openconnect-sso",
+            Self::BrowshLinuxUtils => "browsh-linux-utils",
             Self::Xeactor => "xeactor",
         }
     }
@@ -50,6 +58,8 @@ impl Campaign {
             Self::AtomicArch => "atomic_arch",
             Self::ChaosRat => "chaos_rat",
             Self::ShaiHulud => "shai_hulud",
+            Self::OpenconnectSso => "openconnect_sso",
+            Self::BrowshLinuxUtils => "browsh_linux_utils",
             Self::Xeactor => "xeactor",
         }
     }
@@ -58,7 +68,9 @@ impl Campaign {
         match self {
             Self::AtomicArch => ("2026-06-09", "2026-06-14", "Jun 9–14, 2026"),
             Self::ChaosRat => ("2025-07-16", "2025-07-18", "Jul 16–18, 2025"),
-            Self::ShaiHulud => ("2026-05-16", "2026-05-17", "May 16–17, 2026"),
+            Self::ShaiHulud => ("2026-05-16", "2026-05-28", "May 16–28, 2026"),
+            Self::OpenconnectSso => ("2026-07-29", "2026-07-29", "Jul 29, 2026"),
+            Self::BrowshLinuxUtils => ("2026-05-27", "2026-05-27", "May 27, 2026"),
             Self::Xeactor => ("2018-06-07", "2018-07-10", "Jun 7–Jul 10, 2018"),
         }
     }
@@ -101,6 +113,12 @@ pub struct Counters {
     pub shai_hulud_installed: u64,
     pub shai_hulud_high_risk: u64,
     pub shai_hulud_timeline_hits: u64,
+    pub openconnect_sso_installed: u64,
+    pub openconnect_sso_high_risk: u64,
+    pub openconnect_sso_timeline_hits: u64,
+    pub browsh_linux_utils_installed: u64,
+    pub browsh_linux_utils_high_risk: u64,
+    pub browsh_linux_utils_timeline_hits: u64,
     pub xeactor_installed: u64,
     pub xeactor_high_risk: u64,
     pub xeactor_timeline_hits: u64,

@@ -18,6 +18,7 @@ const PACKAGES: &[&str] = &[
     "lockfile-js",
     "nextfile-js",
     "crypto-javascript",
+    "linux-utils",
 ];
 
 fn command_output(program: &str, args: &[&str]) -> String {
@@ -71,7 +72,8 @@ pub fn runtime_iocs(home: &Path) -> BTreeSet<String> {
         PathBuf::from("/etc/cron.hourly"),
         home.join(".config/crontab"),
     ];
-    let pattern = Regex::new(r"(?i)deps|/var/lib/|atomic-lockfile|js-digest").unwrap();
+    let pattern =
+        Regex::new(r"(?i)deps|/var/lib/|atomic-lockfile|js-digest|linux-utils|validator").unwrap();
     for root in cron_roots {
         for entry in WalkDir::new(root)
             .max_depth(3)
@@ -91,7 +93,8 @@ pub fn runtime_iocs(home: &Path) -> BTreeSet<String> {
 
 pub fn persistence_iocs(home: &Path) -> BTreeSet<String> {
     let mut hits = BTreeSet::new();
-    let persistence = Regex::new(r"(?i)deps|/var/lib/|atomic-lockfile|js-digest").unwrap();
+    let persistence =
+        Regex::new(r"(?i)deps|/var/lib/|atomic-lockfile|js-digest|linux-utils|validator").unwrap();
     if env::var_os("AUR_TEST_SKIP_LD_PRELOAD").is_none() {
         let path = Path::new("/etc/ld.so.preload");
         if fs::read_to_string(path).is_ok_and(|text| persistence.is_match(&text)) {

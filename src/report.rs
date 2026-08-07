@@ -21,6 +21,10 @@ pub struct Summary<'a> {
     report_file: String,
     list_sha256: Option<String>,
     chaos_rat_list_sha256: Option<String>,
+    shai_hulud_list_sha256: Option<String>,
+    openconnect_sso_list_sha256: Option<String>,
+    browsh_linux_utils_list_sha256: Option<String>,
+    xeactor_list_sha256: Option<String>,
     findings: BTreeMap<&'a str, Vec<&'a str>>,
 }
 
@@ -51,8 +55,7 @@ pub fn write_summary(
     reports_dir: &Path,
     state: &ScanState,
     exit_code: i32,
-    atomic_list: &Path,
-    chaos_list: &Path,
+    lists: [(&str, &Path); 6],
 ) -> io::Result<PathBuf> {
     fs::create_dir_all(reports_dir)?;
     let findings = state
@@ -72,8 +75,12 @@ pub fn write_summary(
             .as_ref()
             .map(|p| p.display().to_string())
             .unwrap_or_default(),
-        list_sha256: sha256(atomic_list),
-        chaos_rat_list_sha256: sha256(chaos_list),
+        list_sha256: sha256(lists[0].1),
+        chaos_rat_list_sha256: sha256(lists[1].1),
+        shai_hulud_list_sha256: sha256(lists[2].1),
+        openconnect_sso_list_sha256: sha256(lists[3].1),
+        browsh_linux_utils_list_sha256: sha256(lists[4].1),
+        xeactor_list_sha256: sha256(lists[5].1),
         findings,
     };
     let bytes = serde_json::to_vec_pretty(&summary)?;

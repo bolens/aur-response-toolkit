@@ -1,0 +1,4 @@
+# OpenConnect SSO validator incident (Jul 29, 2026).
+# Orphan adoption added a validator binary executed with sudo during packaging.
+# See: data/docs/openconnect-sso.md
+openconnect-sso
