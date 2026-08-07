@@ -22,7 +22,12 @@ fn migration_is_atomic_and_preserves_source() {
     let target = dir.path().join("config.toml");
     fs::write(
         &source,
-        "set -g AUR_LIST_MAX_AGE_DAYS 14\nset -g AUR_ENABLE_XEACTOR 1\n",
+        concat!(
+            "set -g AUR_LIST_MAX_AGE_DAYS 14\n",
+            "set -g AUR_ENABLE_XEACTOR 1\n",
+            "set -g AUR_ENABLE_OPENCONNECT_SSO 1\n",
+            "set -g AUR_BROWSH_LINUX_UTILS_URL https://example.invalid/browsh.txt\n",
+        ),
     )
     .unwrap();
     migrate(&source, &target).unwrap();
@@ -30,6 +35,8 @@ fn migration_is_atomic_and_preserves_source() {
     let output = fs::read_to_string(target).unwrap();
     assert!(output.contains("list_max_age_days = 14"));
     assert!(output.contains("enable_xeactor = true"));
+    assert!(output.contains("enable_openconnect_sso = true"));
+    assert!(output.contains("browsh_linux_utils_url = \"https://example.invalid/browsh.txt\""));
 }
 
 #[test]
