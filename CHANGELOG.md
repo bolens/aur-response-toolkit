@@ -4,6 +4,8 @@ All notable changes to **aur-response-toolkit** are documented here.
 
 ## Unreleased
 
+## 2.2.0
+
 - Add package and timeline coverage for the August 2026 `xsnow` / `xsnow-bin`
   worm incident.
 - Detect `systemmanager`, Tor onion references, and AUR propagation behavior in

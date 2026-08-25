@@ -2,7 +2,7 @@
 # Native Rust scanner.
 
 pkgname=aur-response-toolkit
-pkgver=2.1.0
+pkgver=2.2.0
 pkgrel=1
 pkgdesc="Detect, triage, and recover from AUR supply-chain incidents"
 arch=('x86_64' 'aarch64')
@@ -25,7 +25,7 @@ source=(
 )
 # GitHub generates the tag archive during release. Update this checksum from
 # release assets before publishing to AUR.
-sha256sums=('6a43b23ff80ef47e6f422b0ae232c7b0a47b59b3acb1283fab97d95fda14556d')
+sha256sums=('SKIP')
 install=aur-response-toolkit.install
 
 build() {
@@ -45,6 +45,7 @@ package() {
   install -Dm644 README.md "$root/README.md"
   install -Dm644 config.toml.example "$root/config.toml.example"
   install -Dm755 target/release/aur-response "$pkgdir/usr/bin/aur-response"
+  install -Dm644 data/integrity.toml "$root/data/integrity.toml"
   install -Dm644 data/lists/*.txt "$root/data/lists/"
   install -Dm644 data/docs/*.md "$root/data/docs/"
 
