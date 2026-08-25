@@ -21,10 +21,14 @@ container.
 ## Release checklist
 
 1. Align `VERSION`, `Cargo.toml`, `Cargo.lock`, `PKGBUILD`, `.SRCINFO`, and the
-   changelog release heading in the release PR.
+   changelog release heading in the release PR. Set the release source checksum
+   to `SKIP` in both packaging files; never carry the previous tag's checksum
+   into a new version.
 2. Run the required checks and a local release build. For a native packaging
    smoke test, stage `package()` against `target/release/aur-response`; the
-   GitHub tag archive does not exist before tagging.
+   GitHub tag archive does not exist before tagging. Verify the staged package
+   includes `data/integrity.toml` and that a local scan can validate the bundled
+   campaign data.
 3. Merge the release PR only after all required GitHub checks pass.
 4. Tag the merged `main` commit as `vX.Y.Z` and push the tag.
 5. Wait for the Release workflow and verify the GitHub release contains the
