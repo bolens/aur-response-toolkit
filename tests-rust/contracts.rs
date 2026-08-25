@@ -11,6 +11,16 @@ use std::process::Command;
 use tempfile::tempdir;
 
 #[test]
+fn bundled_validator_corpus_excludes_candidate_false_positives() {
+    let input = include_str!("../data/lists/openconnect-sso-pkgs.txt");
+    let packages = aur_response::lists::plain(input);
+    assert_eq!(packages.len(), 203);
+    assert!(packages.contains("openconnect-sso"));
+    assert!(packages.contains("brave-origin"));
+    assert!(!packages.contains("debtap-bin"));
+}
+
+#[test]
 fn cli_preserves_exit_policy_variants_and_subcommands() {
     let args = [
         "--local",
@@ -43,15 +53,17 @@ fn cli_accepts_new_campaign_flags_and_exit_policies() {
         &[
             "--openconnect-sso".into(),
             "--browsh-linux-utils".into(),
+            "--xsnow-worm".into(),
             "--fail-on=browsh-linux-utils".into(),
         ],
     )
     .unwrap();
     assert!(parsed.options.campaigns.contains("openconnect-sso"));
     assert!(parsed.options.campaigns.contains("browsh-linux-utils"));
+    assert!(parsed.options.campaigns.contains("xsnow-worm"));
     assert_eq!(parsed.options.fail_on, FailOn::BrowshLinuxUtils);
 
-    for campaign in ["openconnect-sso", "browsh-linux-utils"] {
+    for campaign in ["openconnect-sso", "browsh-linux-utils", "xsnow-worm"] {
         let args = ["scan", "packages", campaign]
             .into_iter()
             .map(str::to_owned)
@@ -135,6 +147,7 @@ fn json_contract_has_stable_fields_and_finding_arrays() {
             aur_response::model::Campaign::OpenconnectSso,
             list.as_path(),
         ),
+        (aur_response::model::Campaign::XsnowWorm, list.as_path()),
         (aur_response::model::Campaign::ShaiHulud, list.as_path()),
         (aur_response::model::Campaign::ChaosRat, list.as_path()),
         (aur_response::model::Campaign::AtomicArch, list.as_path()),
@@ -144,6 +157,9 @@ fn json_contract_has_stable_fields_and_finding_arrays() {
     assert_eq!(json["version"], VERSION);
     assert_eq!(json["exit_code"], 1);
     assert_eq!(json["severity"], "critical");
+    assert_eq!(json["ioc_registry_version"], "2026-08-24.1");
+    assert_eq!(json["ioc_registry_sha256"].as_str().unwrap().len(), 64);
+    assert_eq!(json["openconnect_sso_list_retrieved"], "2026-08-24");
     assert_eq!(json["atomic_arch_installed"], 1);
     assert_eq!(json["findings"]["atomic_arch_installed"][0], "beef");
     assert_eq!(json["list_sha256"].as_str().unwrap().len(), 64);
@@ -157,11 +173,74 @@ fn json_contract_has_stable_fields_and_finding_arrays() {
         "shai_hulud_list_sha256",
         "openconnect_sso_list_sha256",
         "browsh_linux_utils_list_sha256",
+        "xsnow_worm_list_sha256",
         "xeactor_list_sha256",
     ] {
         assert_eq!(json[key].as_str().unwrap().len(), 64);
     }
     assert_eq!(report::sha256(&dir.path().join("missing.txt")), None);
+}
+
+#[test]
+fn json_contract_reports_campaign_provenance_and_incomplete_coverage() {
+    let dir = tempdir().unwrap();
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let lists = aur_response::model::Campaign::ALL.map(|campaign| {
+        (
+            campaign,
+            root.join("data/lists")
+                .join(format!("{}-pkgs.txt", campaign.slug())),
+        )
+    });
+    let list_refs = lists
+        .iter()
+        .map(|(campaign, path)| (*campaign, path.as_path()))
+        .collect::<Vec<_>>();
+    let mut state = ScanState::default();
+    state.counters.files_skipped_oversize = 1;
+
+    let path = report::write_summary(dir.path(), &state, 3, &list_refs).unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+    assert_eq!(json["coverage_complete"], false);
+    assert_eq!(json["campaigns"].as_array().unwrap().len(), 7);
+    let xsnow = json["campaigns"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|campaign| campaign["slug"] == "xsnow-worm")
+        .unwrap();
+    assert_eq!(xsnow["observed_start"], "2026-08-23");
+    assert_eq!(xsnow["observed_end"], "2026-08-23");
+    assert_eq!(xsnow["scan_end"], "2026-08-24");
+    assert_eq!(xsnow["retrieved"], "2026-08-24");
+    assert_eq!(xsnow["list_sha256"], xsnow["expected_list_sha256"]);
+    assert_eq!(xsnow["list_sha256"].as_str().unwrap().len(), 64);
+}
+
+#[test]
+fn persisted_state_and_findings_are_deterministic_and_complete() {
+    let dir = tempdir().unwrap();
+    let mut state = ScanState {
+        compromise: true,
+        ..ScanState::default()
+    };
+    state.counters.runtime_iocs = 2;
+    state.counters.roots_unreadable = 1;
+    state.finding("runtime", "process:systemmanager");
+    state.finding("artifacts", "/tmp/agent.bin");
+
+    report::write_state(dir.path(), &state).unwrap();
+    report::write_findings(dir.path(), &state.findings).unwrap();
+
+    let persisted = fs::read_to_string(dir.path().join(".scan-state")).unwrap();
+    assert!(persisted.contains("compromised=1\n"));
+    assert!(persisted.contains("runtime_iocs=2\n"));
+    assert!(persisted.contains("roots_unreadable=1\n"));
+    let findings = fs::read_to_string(dir.path().join(".scan-findings.list")).unwrap();
+    assert_eq!(
+        findings,
+        "artifacts\t/tmp/agent.bin\nruntime\tprocess:systemmanager\n"
+    );
 }
 
 #[test]

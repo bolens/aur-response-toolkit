@@ -5,6 +5,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use crate::model::Campaign;
+
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Config {
@@ -41,12 +43,41 @@ pub struct Config {
     pub enable_browsh_linux_utils: Option<bool>,
     pub browsh_linux_utils_list_file: Option<PathBuf>,
     pub browsh_linux_utils_url: Option<String>,
+    pub enable_xsnow_worm: Option<bool>,
+    pub xsnow_worm_list_file: Option<PathBuf>,
+    pub xsnow_worm_url: Option<String>,
     pub enable_xeactor: Option<bool>,
     pub xeactor_list_file: Option<PathBuf>,
     pub xeactor_url: Option<String>,
     pub xeactor_window_log_re: Option<String>,
     pub xeactor_window_label: Option<String>,
     pub reports_dir: Option<PathBuf>,
+}
+
+impl Config {
+    pub fn campaign_enabled(&self, campaign: Campaign) -> bool {
+        match campaign {
+            Campaign::AtomicArch => true,
+            Campaign::ChaosRat => self.enable_chaos_rat == Some(true),
+            Campaign::ShaiHulud => self.enable_shai_hulud == Some(true),
+            Campaign::OpenconnectSso => self.enable_openconnect_sso == Some(true),
+            Campaign::BrowshLinuxUtils => self.enable_browsh_linux_utils == Some(true),
+            Campaign::XsnowWorm => self.enable_xsnow_worm == Some(true),
+            Campaign::Xeactor => self.enable_xeactor == Some(true),
+        }
+    }
+
+    pub fn campaign_list_file(&self, campaign: Campaign) -> Option<PathBuf> {
+        match campaign {
+            Campaign::AtomicArch => self.atomic_arch_list_file.clone(),
+            Campaign::ChaosRat => self.chaos_rat_list_file.clone(),
+            Campaign::ShaiHulud => self.shai_hulud_list_file.clone(),
+            Campaign::OpenconnectSso => self.openconnect_sso_list_file.clone(),
+            Campaign::BrowshLinuxUtils => self.browsh_linux_utils_list_file.clone(),
+            Campaign::XsnowWorm => self.xsnow_worm_list_file.clone(),
+            Campaign::Xeactor => self.xeactor_list_file.clone(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -87,6 +118,7 @@ fn apply_environment(config: &mut Config) {
         "AUR_BROWSH_LINUX_UTILS_LIST_FILE"
     );
     path!(xeactor_list_file, "AUR_XEACTOR_LIST_FILE");
+    path!(xsnow_worm_list_file, "AUR_XSNOW_WORM_LIST_FILE");
     path!(reports_dir, "AUR_REPORTS_DIR");
     string!(history_helpers, "AUR_HISTORY_HELPERS");
     string!(list_url_arch, "AUR_LIST_URL_ARCH");
@@ -110,6 +142,7 @@ fn apply_environment(config: &mut Config) {
     string!(openconnect_sso_url, "AUR_OPENCONNECT_SSO_URL");
     string!(browsh_linux_utils_url, "AUR_BROWSH_LINUX_UTILS_URL");
     string!(xeactor_url, "AUR_XEACTOR_URL");
+    string!(xsnow_worm_url, "AUR_XSNOW_WORM_URL");
     string!(xeactor_window_log_re, "AUR_XEACTOR_WINDOW_LOG_RE");
     string!(xeactor_window_label, "AUR_XEACTOR_WINDOW_LABEL");
     if let Ok(value) = env::var("AUR_LIST_MAX_AGE_DAYS") {
@@ -122,6 +155,7 @@ fn apply_environment(config: &mut Config) {
     config.enable_browsh_linux_utils =
         env_bool("AUR_ENABLE_BROWSH_LINUX_UTILS").or(config.enable_browsh_linux_utils);
     config.enable_xeactor = env_bool("AUR_ENABLE_XEACTOR").or(config.enable_xeactor);
+    config.enable_xsnow_worm = env_bool("AUR_ENABLE_XSNOW_WORM").or(config.enable_xsnow_worm);
     if let Some(value) = env::var_os("AUR_DEPS_SEARCH_PATHS") {
         config.deps_search_paths = env::split_paths(&value).collect();
     }
@@ -288,6 +322,9 @@ fn legacy_config(values: &BTreeMap<String, Vec<String>>) -> Config {
         browsh_linux_utils_list_file: first(values, "AUR_BROWSH_LINUX_UTILS_LIST_FILE")
             .map(PathBuf::from),
         browsh_linux_utils_url: first(values, "AUR_BROWSH_LINUX_UTILS_URL"),
+        enable_xsnow_worm: bool_value(values, "AUR_ENABLE_XSNOW_WORM"),
+        xsnow_worm_list_file: first(values, "AUR_XSNOW_WORM_LIST_FILE").map(PathBuf::from),
+        xsnow_worm_url: first(values, "AUR_XSNOW_WORM_URL"),
         enable_xeactor: bool_value(values, "AUR_ENABLE_XEACTOR"),
         xeactor_list_file: first(values, "AUR_XEACTOR_LIST_FILE").map(PathBuf::from),
         xeactor_url: first(values, "AUR_XEACTOR_URL"),

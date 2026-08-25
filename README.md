@@ -3,7 +3,7 @@
 Native Rust toolkit to detect, triage, and recover from Arch User Repository
 supply-chain incidents. It covers Atomic Arch, Chaos RAT, Mini Shai-Hulud, the
 OpenConnect SSO validator compromise, the browsh-bin/linux-utils compromise,
-and the 2018 xeactor campaign.
+the August 2026 xsnow worm, and the 2018 xeactor campaign.
 
 The former Fish implementation and executable aliases have been removed.
 
@@ -37,7 +37,7 @@ aur-response config migrate /path/to/config.fish ~/.config/aur-response/config.t
 ```console
 aur-response
 aur-response --local
-aur-response --chaos-rat --shai-hulud --openconnect-sso --browsh-linux-utils --xeactor
+aur-response --chaos-rat --shai-hulud --openconnect-sso --browsh-linux-utils --xsnow-worm --xeactor
 aur-response --audit --report --json
 aur-response --local --quiet --report --json --fail-on compromise --quick
 aur-response --recover --report
@@ -54,6 +54,7 @@ aur-response scan packages chaos-rat --local
 aur-response scan packages shai-hulud --local
 aur-response scan packages openconnect-sso --local
 aur-response scan packages browsh-linux-utils --local
+aur-response scan packages xsnow-worm --local
 aur-response scan packages xeactor --local
 
 aur-response scan timeline atomic-arch --local
@@ -61,6 +62,7 @@ aur-response scan timeline chaos-rat --local
 aur-response scan timeline shai-hulud --local
 aur-response scan timeline openconnect-sso --local
 aur-response scan timeline browsh-linux-utils --local
+aur-response scan timeline xsnow-worm --local
 aur-response scan timeline xeactor --local
 
 aur-response scan aur-window --local
@@ -79,7 +81,7 @@ aur-response recovery scrub-history --all-shells --dry-run
 ```
 
 Campaign names are `atomic-arch`, `chaos-rat`, `shai-hulud`,
-`openconnect-sso`, `browsh-linux-utils`, and `xeactor`.
+`openconnect-sso`, `browsh-linux-utils`, `xsnow-worm`, and `xeactor`.
 
 ## Exit codes
 
@@ -92,13 +94,19 @@ Campaign names are `atomic-arch`, `chaos-rat`, `shai-hulud`,
 | 4 | invalid arguments |
 
 `--fail-on` accepts `all`, `compromise`, `chaos-rat`, `shai-hulud`,
-`openconnect-sso`, `browsh-linux-utils`, `xeactor`, or `none`.
+`openconnect-sso`, `browsh-linux-utils`, `xsnow-worm`, `xeactor`, or `none`.
 
 ## Reports and state
 
 Reports, JSON summaries, findings, and scan state are written beneath
 `reports/` for a writable clone or `~/.local/share/aur-response/reports/` for
 system installs. Override this with `AUR_REPORTS_DIR` or `reports_dir` in TOML.
+JSON summaries include per-campaign source, retrieval date, incident and scan
+windows, and actual and expected list hashes. Coverage counters identify unreadable
+roots, oversized skipped files, and unavailable runtime adapters; an otherwise
+clean scan with incomplete coverage exits 3. Bundled IOC and campaign-list data is
+verified against `data/integrity.toml`, and online results are unioned with that
+trusted baseline.
 
 ## Development
 

@@ -1,4 +1,4 @@
-use crate::model::{FailOn, RunOptions};
+use crate::model::{Campaign, FailOn, RunOptions};
 use crate::{EXIT_INVALID, VERSION};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -55,9 +55,10 @@ Options:
   --openconnect-sso   Also scan the OpenConnect SSO validator incident (warn-only)
   --browsh-linux-utils
                      Also scan the browsh/linux-utils incident (warn-only)
+  --xsnow-worm       Also scan the Aug 2026 xsnow worm incident (warn-only)
   --xeactor          Also scan 2018 xeactor packages (warn-only)
   --fail-on MODE     Exit policy: all, compromise, chaos-rat, shai-hulud,
-                     openconnect-sso, browsh-linux-utils, xeactor, none
+                     openconnect-sso, browsh-linux-utils, xsnow-worm, xeactor, none
   --skip-pkg-check   Skip step 1 package list checks
   --recover          Interactive recovery wizard
   --json             Print JSON summary to stdout at end
@@ -100,7 +101,7 @@ pub fn help_for(kind: &CommandKind) -> String {
         CommandKind::ApplyHardening => {
             "Usage: aur-response recovery apply-hardening [--apply]".into()
         }
-        CommandKind::RemovePackages => "Usage: aur-response recovery remove-packages [--list atomic-arch|chaos-rat|shai-hulud|openconnect-sso|browsh-linux-utils|xeactor] [--dry-run] [--force] [--verify] [pkg ...]".into(),
+        CommandKind::RemovePackages => "Usage: aur-response recovery remove-packages [--list atomic-arch|chaos-rat|shai-hulud|openconnect-sso|browsh-linux-utils|xsnow-worm|xeactor] [--dry-run] [--force] [--verify] [pkg ...]".into(),
         CommandKind::ScrubHistory => {
             "Usage: aur-response recovery scrub-history [--dry-run] [--all-shells]".into()
         }
@@ -113,8 +114,9 @@ pub fn help_for(kind: &CommandKind) -> String {
             "atomic-arch" => "\nCampaign window: Jun 9–14, 2026",
             "chaos-rat" => "\nCampaign window: Jul 16–18, 2025",
             "shai-hulud" => "\nCampaign window: May 16–28, 2026",
-            "openconnect-sso" => "\nCampaign window: Jul 29, 2026",
+            "openconnect-sso" => "\nCampaign window: Jul 29–Aug 2, 2026",
             "browsh-linux-utils" => "\nCampaign window: May 27, 2026",
+            "xsnow-worm" => "\nCampaign window: Aug 23–24, 2026",
             "xeactor" => "\nCampaign window: Jun 7–Jul 10, 2018",
             _ => "",
         },
@@ -149,15 +151,7 @@ fn command(args: &[String]) -> Result<(CommandKind, usize), (i32, String)> {
         _ => (CommandKind::Full, 0),
     };
     if let CommandKind::Package(campaign) | CommandKind::Timeline(campaign) = &result.0 {
-        if !matches!(
-            campaign.as_str(),
-            "atomic-arch"
-                | "chaos-rat"
-                | "shai-hulud"
-                | "openconnect-sso"
-                | "browsh-linux-utils"
-                | "xeactor"
-        ) {
+        if Campaign::from_slug(campaign).is_none() {
             return Err((EXIT_INVALID, format!("unknown campaign: {campaign}\n")));
         }
     }
@@ -194,6 +188,9 @@ pub fn parse(_argv0: &str, args: &[String]) -> Result<Parsed, (i32, String)> {
             }
             "--browsh-linux-utils" => {
                 options.campaigns.insert("browsh-linux-utils".into());
+            }
+            "--xsnow-worm" => {
+                options.campaigns.insert("xsnow-worm".into());
             }
             "--xeactor" => {
                 options.campaigns.insert("xeactor".into());

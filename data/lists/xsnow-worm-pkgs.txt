@@ -1,0 +1,5 @@
+# xsnow AUR worm incident (Aug 23–24, 2026).
+# Arch staff confirmed and reverted both malicious updates.
+# See: data/docs/xsnow-worm.md
+xsnow
+xsnow-bin

