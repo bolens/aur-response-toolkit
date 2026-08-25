@@ -16,6 +16,6 @@ pkgbase = aur-response-toolkit
 	optdepends = iproute2: ss-based network IOC checks
 	optdepends = systemd: optional weekly scan timer units
 	source = aur-response-toolkit-2.2.0.tar.gz::https://github.com/bolens/aur-response-toolkit/archive/refs/tags/v2.2.0.tar.gz
-	sha256sums = SKIP
+	sha256sums = 52f80be250799ddeaab1202ba6dd2f8d48cf61d33beffa9440359c40b5ce5851
 
 pkgname = aur-response-toolkit

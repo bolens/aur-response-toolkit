@@ -25,7 +25,7 @@ source=(
 )
 # GitHub generates the tag archive during release. Update this checksum from
 # release assets before publishing to AUR.
-sha256sums=('SKIP')
+sha256sums=('52f80be250799ddeaab1202ba6dd2f8d48cf61d33beffa9440359c40b5ce5851')
 install=aur-response-toolkit.install
 
 build() {
