@@ -118,7 +118,7 @@ pub fn runtime_iocs(home: &Path) -> ScanResult {
             result.hits.insert(format!("network:{line}"));
         }
     }
-    let cron_roots = [
+    let default_cron_roots = [
         PathBuf::from("/etc/crontab"),
         PathBuf::from("/var/spool/cron"),
         PathBuf::from("/etc/cron.d"),
@@ -126,6 +126,9 @@ pub fn runtime_iocs(home: &Path) -> ScanResult {
         PathBuf::from("/etc/cron.hourly"),
         home.join(".config/crontab"),
     ];
+    let cron_roots = env::var_os("AUR_TEST_CRON_ROOTS")
+        .map(|roots| env::split_paths(&roots).collect::<Vec<_>>())
+        .unwrap_or_else(|| default_cron_roots.into());
     let pattern = Regex::new(
         r"(?i)deps|/var/lib/|atomic-lockfile|js-digest|linux-utils|validator|systemmanager|\.onion",
     )
