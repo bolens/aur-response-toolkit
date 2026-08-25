@@ -1,9 +1,11 @@
 use crate::config::atomic_write;
+use crate::inspection::{self, Bounded};
+use crate::integrity;
+use crate::ioc;
 use crate::model::{Campaign, Counters, ScanState};
 use crate::VERSION;
 use chrono::Local;
 use serde::Serialize;
-use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io;
@@ -16,6 +18,9 @@ pub struct Summary<'a> {
     host: String,
     exit_code: i32,
     severity: &'static str,
+    ioc_registry_version: &'static str,
+    ioc_registry_sha256: String,
+    coverage_complete: bool,
     #[serde(flatten)]
     counters: &'a Counters,
     report_file: String,
@@ -23,9 +28,26 @@ pub struct Summary<'a> {
     chaos_rat_list_sha256: Option<String>,
     shai_hulud_list_sha256: Option<String>,
     openconnect_sso_list_sha256: Option<String>,
+    openconnect_sso_list_source: &'static str,
+    openconnect_sso_list_retrieved: &'static str,
     browsh_linux_utils_list_sha256: Option<String>,
+    xsnow_worm_list_sha256: Option<String>,
     xeactor_list_sha256: Option<String>,
+    campaigns: Vec<CampaignMetadata>,
     findings: BTreeMap<&'a str, Vec<&'a str>>,
+}
+
+#[derive(Serialize)]
+struct CampaignMetadata {
+    slug: &'static str,
+    source: &'static str,
+    retrieved: &'static str,
+    observed_start: &'static str,
+    observed_end: &'static str,
+    scan_start: &'static str,
+    scan_end: &'static str,
+    list_sha256: Option<String>,
+    expected_list_sha256: Option<String>,
 }
 
 pub fn severity(code: i32) -> &'static str {
@@ -38,9 +60,10 @@ pub fn severity(code: i32) -> &'static str {
 }
 
 pub fn sha256(path: &Path) -> Option<String> {
-    fs::read(path)
-        .map(|bytes| format!("{:x}", Sha256::digest(bytes)))
-        .ok()
+    match inspection::sha256(path, inspection::MAX_ARTIFACT_BYTES).ok()? {
+        Bounded::Value(hash) => Some(hash),
+        Bounded::Oversize => None,
+    }
 }
 
 fn hostname() -> String {
@@ -69,12 +92,42 @@ pub fn write_summary(
             .find(|(candidate, _)| *candidate == campaign)
             .and_then(|(_, path)| sha256(path))
     };
+    let manifest = lists
+        .iter()
+        .find_map(|(_, path)| path.parent()?.parent())
+        .and_then(|data| integrity::load(&data.join("integrity.toml")).ok());
+    let campaigns = Campaign::ALL
+        .into_iter()
+        .map(|campaign| {
+            let provenance = campaign.provenance();
+            let (observed_start, observed_end) = campaign.observed_window();
+            let (scan_start, scan_end, _) = campaign.window();
+            CampaignMetadata {
+                slug: campaign.slug(),
+                source: provenance.source,
+                retrieved: provenance.retrieved,
+                observed_start,
+                observed_end,
+                scan_start,
+                scan_end,
+                list_sha256: list_hash(campaign),
+                expected_list_sha256: manifest
+                    .as_ref()
+                    .and_then(|manifest| manifest.lists.get(campaign.slug()).cloned()),
+            }
+        })
+        .collect();
     let summary = Summary {
         timestamp: Local::now().format("%Y-%m-%dT%H:%M:%S%z").to_string(),
         version: VERSION,
         host: hostname(),
         exit_code,
         severity: severity(exit_code),
+        ioc_registry_version: ioc::IOC_REGISTRY_VERSION,
+        ioc_registry_sha256: ioc::registry_sha256(),
+        coverage_complete: state.counters.roots_unreadable == 0
+            && state.counters.files_skipped_oversize == 0
+            && state.counters.runtime_adapters_unavailable == 0,
         counters: &state.counters,
         report_file: state
             .report_file
@@ -85,8 +138,13 @@ pub fn write_summary(
         chaos_rat_list_sha256: list_hash(Campaign::ChaosRat),
         shai_hulud_list_sha256: list_hash(Campaign::ShaiHulud),
         openconnect_sso_list_sha256: list_hash(Campaign::OpenconnectSso),
+        openconnect_sso_list_source:
+            "gist-firstp1ck:3ea306410a8894d28806a1629c67e825+arch-aur-general",
+        openconnect_sso_list_retrieved: "2026-08-24",
         browsh_linux_utils_list_sha256: list_hash(Campaign::BrowshLinuxUtils),
+        xsnow_worm_list_sha256: list_hash(Campaign::XsnowWorm),
         xeactor_list_sha256: list_hash(Campaign::Xeactor),
+        campaigns,
         findings,
     };
     let bytes = serde_json::to_vec_pretty(&summary)?;

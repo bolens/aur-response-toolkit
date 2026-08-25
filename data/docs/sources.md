@@ -7,12 +7,16 @@
 | Pacman/ALPM events | `src/alpm.rs` |
 | Threat-list parsing | `src/lists.rs` |
 | Runtime and persistence IOCs | `src/ioc.rs` |
+| Bounded hostile-file inspection | `src/inspection.rs` |
+| Bundled corpus integrity | `src/integrity.rs`, `data/integrity.toml` |
 | Package, timeline, audit, recovery | `src/engine.rs` |
 | JSON and reports | `src/report.rs` |
 | User overrides | `config.toml.example` |
 
 Online list URLs are configured through TOML or documented `AUR_*` environment
-variables. The engine records merged-list hashes in JSON reports.
+variables. The engine verifies bundled lists before use, retains them as the
+trusted baseline for online merges, and records actual and expected hashes in
+JSON reports.
 
 ## Incident references
 
@@ -23,4 +27,5 @@ variables. The engine records merged-list hashes in JSON reports.
 | Mini Shai-Hulud | [shai-hulud.md](shai-hulud.md) |
 | OpenConnect SSO validator | [openconnect-sso.md](openconnect-sso.md) |
 | browsh-bin / linux-utils | [browsh-linux-utils.md](browsh-linux-utils.md) |
+| xsnow worm | [xsnow-worm.md](xsnow-worm.md) |
 | xeactor | [xeactor.md](xeactor.md) |

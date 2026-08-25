@@ -2,6 +2,29 @@
 
 All notable changes to **aur-response-toolkit** are documented here.
 
+## Unreleased
+
+- Add package and timeline coverage for the August 2026 `xsnow` / `xsnow-bin`
+  worm incident.
+- Detect `systemmanager`, Tor onion references, and AUR propagation behavior in
+  package hooks and runtime/persistence surfaces.
+- Expand the July 29–August 2 validator campaign to its 202 confirmed package
+  corpus, preserving `openconnect-sso` as the initial separately reported case.
+- Add validator loader/agent hashes, characteristic ELF sizes, staging paths,
+  disguised Tor process, and hidden systemd persistence IOCs.
+- Centralize campaign routing metadata and version the shared IOC registry while
+  preserving existing CLI, counter, report, and exit-code names.
+- Require compound evidence for xsnow propagation and hidden-service findings;
+  characteristic loader sizes alone remain non-finding hash candidates.
+- Scan dot-prefixed `*.install` package scriptlets such as `.xsnow.install` and
+  record IOC/corpus provenance in JSON summaries.
+- Bound hostile text reads and artifact hashing, report incomplete scan coverage,
+  and return exit code 3 when files or required runtime adapters cannot be inspected.
+- Verify bundled IOC and campaign-list hashes with a versioned integrity manifest;
+  online refreshes retain the verified local corpus as a trusted baseline.
+- Report normalized provenance, incident windows, scan windows, and actual and
+  expected hashes for every campaign.
+
 ## 2.1.0
 
 - Add package and timeline coverage for the July 2026 `openconnect-sso`

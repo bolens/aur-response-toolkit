@@ -16,4 +16,5 @@
 # enable_shai_hulud = false
 # enable_openconnect_sso = false
 # enable_browsh_linux_utils = false
+# enable_xsnow_worm = false
 # enable_xeactor = false

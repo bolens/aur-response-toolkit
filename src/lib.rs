@@ -2,6 +2,8 @@ pub mod alpm;
 pub mod cli;
 pub mod config;
 pub mod engine;
+pub mod inspection;
+pub mod integrity;
 pub mod ioc;
 pub mod lists;
 pub mod model;

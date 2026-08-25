@@ -9,7 +9,9 @@ This file satisfies attribution for upstream threat intelligence and list data u
 | `data/lists/atomic-arch-pkgs.txt` | Arch HedgeDoc + CSCS paste (+ optional user URL) | Snapshot; refreshed on online fetch |
 | `data/lists/chaos-rat-pkgs.txt` | Arch aur-general advisory + lenucksi list | Snapshot; merged on fetch |
 | `data/lists/shai-hulud-pkgs.txt` | aur-general staff confirmation | Hand-maintained from public advisory |
+| `data/lists/openconnect-sso-pkgs.txt` | Arch aur-general + Firstp1ck static campaign review | Confirmed package names only; candidate/false-positive tables excluded |
 | `data/lists/xeactor-pkgs.txt` | BleepingComputer + public AUR post-mortems | Hand-maintained factual package names |
+| `data/lists/xsnow-worm-pkgs.txt` | Arch aur-general staff-confirmed incident | Hand-maintained factual package names |
 
 We **do not** ship third-party shell scripts (e.g. `aur_check-v2.sh`, CSCS paste) inside this repository.
 
