@@ -28,7 +28,7 @@ jobs:
       - name: Install compressed-log tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y xz-utils bzip2 zstd
+          sudo apt-get install -y xz-utils bzip2 zstd iproute2
       - run: cargo fmt --check
       - run: cargo clippy --all-targets --locked -- -D warnings
       - run: cargo test --locked
