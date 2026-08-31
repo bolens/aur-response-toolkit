@@ -436,7 +436,16 @@ impl Engine {
         }
         if path.is_file() {
             let previous = path.with_extension("previous.txt");
-            fs::copy(path, previous)?;
+            let contents = match inspection::read(path, inspection::MAX_TEXT_BYTES)? {
+                Bounded::Value(contents) => contents,
+                Bounded::Oversize => {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        "previous list exceeds inspection limit",
+                    ));
+                }
+            };
+            crate::config::atomic_write(&previous, &contents)?;
         }
         let contents = packages.iter().cloned().collect::<Vec<_>>().join("\n") + "\n";
         crate::config::atomic_write(path, contents.as_bytes())
@@ -776,6 +785,7 @@ impl Engine {
             for item in WalkDir::new(root)
                 .follow_links(false)
                 .max_depth(if quick { 6 } else { 12 })
+                .sort_by_file_name()
                 .into_iter()
             {
                 let entry = match item {
@@ -852,7 +862,10 @@ impl Engine {
         }
         if self.paths.pacman_local.is_dir() {
             self.state.counters.roots_scanned += 1;
-            for item in WalkDir::new(&self.paths.pacman_local).max_depth(3) {
+            for item in WalkDir::new(&self.paths.pacman_local)
+                .max_depth(3)
+                .sort_by_file_name()
+            {
                 let entry = match item {
                     Ok(entry) => entry,
                     Err(error) => {
@@ -963,6 +976,7 @@ impl Engine {
             for item in WalkDir::new(root)
                 .follow_links(false)
                 .max_depth(if quick { 5 } else { 10 })
+                .sort_by_file_name()
                 .into_iter()
             {
                 let entry = match item {
@@ -1181,6 +1195,7 @@ impl Engine {
         let mut found = 0;
         for entry in WalkDir::new(home.join(".ssh"))
             .max_depth(1)
+            .sort_by_file_name()
             .into_iter()
             .filter_map(Result::ok)
         {
@@ -1227,6 +1242,7 @@ impl Engine {
         for entry in WalkDir::new(dev_root)
             .max_depth(5)
             .follow_links(false)
+            .sort_by_file_name()
             .into_iter()
             .filter_map(Result::ok)
         {
@@ -1451,6 +1467,7 @@ impl Engine {
         if ssh.is_empty() {
             ssh = WalkDir::new(home.join(".ssh"))
                 .max_depth(1)
+                .sort_by_file_name()
                 .into_iter()
                 .filter_map(Result::ok)
                 .filter(|entry| {
