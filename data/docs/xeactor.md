@@ -1,6 +1,8 @@
 # xeactor list sources
 
-Opt-in campaign: orphaned-package takeover with **ptpb.pw** curl\|bash exfil scripts (**Jun 7 – Jul 10, 2018**). Bundled list via `aur_load_xeactor_list`. See also [sources.md](sources.md).
+This opt-in campaign covers orphaned-package takeovers that used `ptpb.pw`
+`curl | bash` exfiltration scripts from June 7 through July 10, 2018. See the
+[source index](sources.md).
 
 ## Package list sources
 
@@ -9,7 +11,8 @@ Opt-in campaign: orphaned-package takeover with **ptpb.pw** curl\|bash exfil scr
 | Bundled (default) | `data/lists/xeactor-pkgs.txt` | `AUR_XEACTOR_LIST_FILE` |
 | Optional remote | (user URL) | `AUR_XEACTOR_URL` |
 
-No public merged feed exists; list is hand-maintained from post-mortems and aur-general reports. Offline: `--local` + `--xeactor`.
+No public merged feed exists. Maintainers update the list from incident reports
+and aur-general posts. For an offline scan, use `--local --xeactor`.
 
 ## Confirmed packages
 
@@ -19,20 +22,21 @@ No public merged feed exists; list is hand-maintained from post-mortems and aur-
 | `balz` | 1.20-3 | xeactor | same pattern |
 | `minergate` | 8.1-2 | xeactor | same pattern |
 
-Malicious **acroread** commit: `b3fec9f2f16703c2dae9e793f75ad6e0d98509bc`.
+The malicious `acroread` commit is
+`b3fec9f2f16703c2dae9e793f75ad6e0d98509bc`.
 
 ## References
 
-### Official & community response
+### Official and community response
 
 | Source | URL | Notes |
 |--------|-----|-------|
-| aur-general — initial report (Queen Wenceslas) | https://lists.archlinux.org/pipermail/aur-general/2018-July/034151.html | curl\|bash line; commit link |
-| aur-general — Eli Schwartz revert + suspend | https://lists.archlinux.org/pipermail/aur-general/2018-July/034152.html | Account suspended same day |
-| aur-general — two additional packages fixed | https://lists.archlinux.org/pipermail/aur-general/2018-July/034153.html | `balz`, `minergate` |
-| AUR git — malicious acroread commit | https://aur.archlinux.org/cgit/aur.git/commit/?h=acroread&id=b3fec9f2f16703c2dae9e793f75ad6e0d98509bc | PKGBUILD curl to ptpb.pw |
+| aur-general: initial report (Queen Wenceslas) | https://lists.archlinux.org/pipermail/aur-general/2018-July/034151.html | curl\|bash line; commit link |
+| aur-general: Eli Schwartz revert + suspend | https://lists.archlinux.org/pipermail/aur-general/2018-July/034152.html | Account suspended same day |
+| aur-general: two additional packages fixed | https://lists.archlinux.org/pipermail/aur-general/2018-July/034153.html | `balz`, `minergate` |
+| AUR git: malicious acroread commit | https://aur.archlinux.org/cgit/aur.git/commit/?h=acroread&id=b3fec9f2f16703c2dae9e793f75ad6e0d98509bc | PKGBUILD curl to ptpb.pw |
 
-### Technical analysis & post-mortems
+### Technical analysis and incident reports
 
 | Source | URL | Notes |
 |--------|-----|-------|
@@ -44,11 +48,15 @@ Malicious **acroread** commit: `b3fec9f2f16703c2dae9e793f75ad6e0d98509bc`.
 
 ### Coverage context (AUR trust model)
 
-Giancarlo Razzolini (Arch) noted AUR users must inspect PKGBUILDs — helpers that auto-build without review increase risk. Cited in SecurityWeek / SecurityAffairs coverage above.
+Giancarlo Razzolini of Arch said that AUR users must inspect PKGBUILDs. Helpers
+that build without review increase the risk. SecurityWeek and SecurityAffairs
+include this statement in the coverage above.
 
 ## Attack window
 
-**Jun 7 – Jul 10, 2018** — first malicious `acroread` commit through staff revert (~Jul 8–10). Installs outside this window are LOW risk unless `--all-time`.
+The incident window starts with the first malicious `acroread` commit on June 7,
+2018, and ends with the staff response around July 8 through July 10. Installs
+outside this window have low risk unless you use `--all-time`.
 
 | Constant | Default |
 |----------|---------|
@@ -66,7 +74,8 @@ Giancarlo Razzolini (Arch) noted AUR users must inspect PKGBUILDs — helpers th
 
 ## Malware IOCs
 
-Recon-focused dropper; no dedicated hash constants in this toolkit (unlike Atomic Arch ELF IOCs).
+The dropper collected system information. This toolkit has no dedicated hash
+constants for it, unlike the Atomic Arch ELF IOCs.
 
 | Indicator | Details | Origin |
 |-----------|---------|--------|
@@ -76,7 +85,9 @@ Recon-focused dropper; no dedicated hash constants in this toolkit (unlike Atomi
 | Marker file | `compromised.txt` in `/` and home dirs (reported) | SecurityWeek, The Register |
 | Exfil | Pastebin API / paste upload function (broken in shipped scripts) | Eli Schwartz aur-general notes |
 
-**Toolkit scope:** installed-package check and pacman timeline only. Hunt ptpb.pw references in old AUR build trees manually if investigating historical builds.
+The toolkit checks installed packages and the pacman timeline. When you
+investigate historical builds, inspect old AUR build trees for `ptpb.pw`
+references.
 
 ## Not the same campaign
 
@@ -93,7 +104,7 @@ Recon-focused dropper; no dedicated hash constants in this toolkit (unlike Atomi
 |------|--------|------------------|
 | 1d | `aur-response scan packages xeactor` | `aur_load_xeactor_list`, `aur_classify_xeactor_pkg` |
 | 3d | `aur-response scan timeline xeactor` | `aur_collect_xeactor_window_alpm_events*` |
-| — | `aur-response recovery remove-packages` | `--list xeactor` |
+| Not applicable | `aur-response recovery remove-packages` | `--list xeactor` |
 
 | Piece | Location |
 |-------|----------|
@@ -101,18 +112,21 @@ Recon-focused dropper; no dedicated hash constants in this toolkit (unlike Atomi
 | JSON | `xeactor_*` in `src/report.rs` |
 | Exit policy | `--fail-on xeactor` |
 
-Legacy config aliases: `AUR_ENABLE_LEGACY_2018`, `AUR_LEGACY_2018_*` → xeactor names in `src/config.rs` and `src/engine.rs`.
+`src/config.rs` and `src/engine.rs` map the legacy aliases
+`AUR_ENABLE_LEGACY_2018` and `AUR_LEGACY_2018_*` to xeactor names.
 
 ## Integrity
 
-Bundled list only by default. Optional `AUR_XEACTOR_URL` fetch logs SHA256 via `aur_fetch_source_with_sha`. No Arch HedgeDoc merge.
+The toolkit uses only the bundled list by default. An optional
+`AUR_XEACTOR_URL` fetch records its SHA256 through
+`aur_fetch_source_with_sha`. The toolkit does not merge an Arch HedgeDoc list.
 
 ## Maintenance
 
 - Add packages only when public advisories confirm the same **xeactor** actor, **ptpb.pw** staging, and 2018 window.
 - Optional `AUR_XEACTOR_URL` if a community plain-text list appears.
 
-## License & attribution
+## License and attribution
 
 Factual package names and versions from public post-mortems (BleepingComputer, aur-general). No third-party list file fetched by default.
 

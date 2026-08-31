@@ -1,5 +1,5 @@
-name: Campaign / IOC update
-description: Propose a new AUR campaign or package-list / IOC change
+name: Campaign or IOC update
+description: Propose a new AUR campaign, package-list change, or IOC change
 title: "[Campaign]: "
 labels:
   - campaign
@@ -39,7 +39,7 @@ body:
     id: sources
     attributes:
       label: Upstream sources
-      description: URLs to advisories, IOC write-ups, list mirrors
+      description: URLs for advisories, IOC reports, and list mirrors
     validations:
       required: true
 
@@ -56,7 +56,7 @@ body:
     attributes:
       label: Should this run in the default `aur-response` scan?
       options:
-        - "Opt-in only (like chaos-rat / shai-hulud)"
+        - "Opt-in only, like chaos-rat and shai-hulud"
         - "Default scan (like atomic-arch)"
         - "Not sure"
     validations:

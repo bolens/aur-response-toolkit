@@ -101,12 +101,12 @@ Campaign names are `atomic-arch`, `chaos-rat`, `shai-hulud`,
 Reports, JSON summaries, findings, and scan state are written beneath
 `reports/` for a writable clone or `~/.local/share/aur-response/reports/` for
 system installs. Override this with `AUR_REPORTS_DIR` or `reports_dir` in TOML.
-JSON summaries include per-campaign source, retrieval date, incident and scan
-windows, and actual and expected list hashes. Coverage counters identify unreadable
-roots, oversized skipped files, and unavailable runtime adapters; an otherwise
-clean scan with incomplete coverage exits 3. Bundled IOC and campaign-list data is
-verified against `data/integrity.toml`, and online results are unioned with that
-trusted baseline.
+JSON summaries include each campaign's source, retrieval date, incident window,
+scan window, and actual and expected list hashes. Coverage counters identify
+unreadable roots, oversized skipped files, and unavailable runtime adapters. A
+scan with incomplete coverage exits 3 even when it finds no indicators. The
+engine checks bundled IOC and campaign-list data against `data/integrity.toml`.
+Online results retain that trusted baseline.
 
 ## Development
 
@@ -121,4 +121,7 @@ policy, report schemas, compressed ALPM logs, campaign package/timeline/window
 matching, list parsing and cache deltas, IOC scans, audit/hardening behavior,
 and guarded recovery operations.
 
-Threat-source attribution and incident notes are in [`data/docs/`](data/docs/).
+The Pages site contains the
+[non-technical user guide](https://bolens.github.io/aur-response-toolkit/).
+Threat-source attribution, implementation notes, and incident records remain in
+[`data/docs/`](data/docs/).

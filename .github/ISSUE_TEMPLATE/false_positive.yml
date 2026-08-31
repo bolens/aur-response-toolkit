@@ -16,7 +16,7 @@ body:
     id: why_benign
     attributes:
       label: Why is this benign?
-      description: PKGBUILD behavior, upstream project, install date outside window, etc.
+      description: Explain the PKGBUILD behavior, upstream project, or install date outside the incident window.
     validations:
       required: true
 
@@ -45,7 +45,7 @@ body:
   - type: input
     id: upstream
     attributes:
-      label: Upstream / AUR link (if applicable)
+      label: Upstream or AUR link, if applicable
       placeholder: "https://aur.archlinux.org/packages/..."
     validations:
       required: false

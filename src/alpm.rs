@@ -42,6 +42,7 @@ impl Read for ChildReader {
 impl Drop for ChildReader {
     fn drop(&mut self) {
         if !self.finished {
+            let _ = self.child.kill();
             let _ = self.child.wait();
         }
     }
@@ -209,6 +210,9 @@ pub fn timeline_hits(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::mpsc;
+    use std::thread;
+    use std::time::Duration;
 
     #[test]
     fn parses_install_and_upgrade_without_remove() {
@@ -219,5 +223,23 @@ mod tests {
             "beef"
         );
         assert!(re.captures("[x] [ALPM] removed beef (1-1)").is_none());
+    }
+
+    #[test]
+    fn abandoning_child_reader_does_not_wait_on_a_full_pipe() {
+        let (finished_tx, finished_rx) = mpsc::channel();
+        thread::spawn(move || {
+            let mut child = Command::new("yes").stdout(Stdio::piped()).spawn().unwrap();
+            let stdout = child.stdout.take().unwrap();
+            drop(ChildReader {
+                child,
+                stdout,
+                program: "yes",
+                finished: false,
+            });
+            finished_tx.send(()).unwrap();
+        });
+
+        assert!(finished_rx.recv_timeout(Duration::from_secs(2)).is_ok());
     }
 }

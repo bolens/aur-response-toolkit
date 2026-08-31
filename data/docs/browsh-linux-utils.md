@@ -1,4 +1,4 @@
-# browsh-bin / linux-utils incident
+# browsh-bin and linux-utils incident
 
 Opt-in campaign for the malicious `browsh-bin` update on **May 27, 2026**.
 
@@ -9,8 +9,8 @@ preinstall path executed an ELF blob embedded under `src/system/index.mjs`.
 Arch staff confirmed that the AUR commit was malicious, reverted it, and
 suspended the uploader.
 
-Primary source:
-[aur-general — Probably malicious update to browsh-bin](https://lists.archlinux.org/archives/list/aur-general@lists.archlinux.org/thread/D2SHEO53A7V334VKQZ2SCHS37MHSBNHU/).
+The primary source is the
+[aur-general report about the malicious browsh-bin update](https://lists.archlinux.org/archives/list/aur-general@lists.archlinux.org/thread/D2SHEO53A7V334VKQZ2SCHS37MHSBNHU/).
 
 ## Toolkit coverage
 
@@ -26,6 +26,6 @@ Primary source:
 
 ## Response
 
-Remove `browsh-bin`, preserve the helper and npm caches, identify whether npm
-lifecycle scripts ran, and treat any executed embedded ELF as compromise until
-analysis establishes otherwise.
+Preserve the helper and npm caches before removing `browsh-bin`. Determine
+whether npm lifecycle scripts ran. Treat an executed embedded ELF as evidence
+of compromise unless analysis disproves it.

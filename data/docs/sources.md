@@ -13,10 +13,10 @@
 | JSON and reports | `src/report.rs` |
 | User overrides | `config.toml.example` |
 
-Online list URLs are configured through TOML or documented `AUR_*` environment
-variables. The engine verifies bundled lists before use, retains them as the
-trusted baseline for online merges, and records actual and expected hashes in
-JSON reports.
+Configure online list URLs through TOML or the documented `AUR_*` environment
+variables. The engine checks bundled lists before use and retains them as the
+trusted baseline for online merges. JSON reports record the actual and expected
+hashes.
 
 ## Incident references
 

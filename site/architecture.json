@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "AUR Response Toolkit Architecture",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/bolens/aur-response-toolkit",
+      "revision": "56f828752bfa2bb3849db33e991bb9842b4543f9"
+    },
+    "views": [
+      {
+        "id": "scan-path",
+        "label": "Read-only scan path",
+        "focus": ["operator", "cli", "engine", "adapters", "inspection", "reports"],
+        "note": "Follow operator intent through bounded collection, analysis, and stable output."
+      },
+      {
+        "id": "trust-path",
+        "label": "Evidence trust path",
+        "focus": ["campaign-data", "integrity", "engine", "reports"],
+        "note": "See how bundled campaign data is authenticated before findings are reported."
+      },
+      {
+        "id": "recovery-gate",
+        "label": "Recovery gate",
+        "focus": ["operator", "cli", "engine", "adapters"],
+        "note": "Recovery commands remain behind explicit CLI intent and engine policy."
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "origin": [40, 70],
+    "cols": 5,
+    "gapX": 80,
+    "gapY": 68,
+    "cellW": 164,
+    "cellH": 72
+  },
+  "components": [
+    {
+      "id": "operator",
+      "type": "external",
+      "label": "Operator",
+      "sublabel": "Intent + scope",
+      "row": 1,
+      "col": 0,
+      "sources": [{"path": "src/cli.rs", "line": 29, "label": "CLI contract"}]
+    },
+    {
+      "id": "cli",
+      "type": "frontend",
+      "label": "CLI parser",
+      "sublabel": "Commands + exit codes",
+      "row": 1,
+      "col": 1,
+      "sources": [
+        {"path": "src/main.rs", "line": 8, "label": "Process entrypoint"},
+        {"path": "src/cli.rs", "line": 161, "label": "Argument parser"}
+      ]
+    },
+    {
+      "id": "engine",
+      "type": "backend",
+      "label": "Response engine",
+      "sublabel": "Scan + recovery gate",
+      "row": 1,
+      "col": 2,
+      "sources": [{"path": "src/engine.rs", "line": 1580, "label": "Command dispatch"}]
+    },
+    {
+      "id": "adapters",
+      "type": "external",
+      "label": "System adapters",
+      "sublabel": "pacman + runtime IOCs",
+      "row": 0,
+      "col": 4,
+      "sources": [
+        {"path": "src/alpm.rs", "line": 96, "label": "Package history"},
+        {"path": "src/ioc.rs", "line": 94, "label": "Runtime IOC adapter"}
+      ]
+    },
+    {
+      "id": "inspection",
+      "type": "security",
+      "label": "Bounded inspection",
+      "sublabel": "Bounded SHA-256 reads",
+      "row": 2,
+      "col": 4,
+      "sources": [{"path": "src/inspection.rs", "line": 15, "label": "Hostile-input reader"}]
+    },
+    {
+      "id": "campaign-data",
+      "type": "database",
+      "label": "Campaign corpus",
+      "sublabel": "Lists + IOC registry",
+      "row": 2,
+      "col": 0,
+      "sources": [
+        {"path": "data/integrity.toml", "line": 1, "label": "Integrity manifest"},
+        {"path": "data/lists/atomic-arch-pkgs.txt", "line": 1, "label": "Campaign list"}
+      ]
+    },
+    {
+      "id": "integrity",
+      "type": "security",
+      "label": "Integrity verifier",
+      "sublabel": "Registry + list hashes",
+      "row": 2,
+      "col": 1,
+      "sources": [{"path": "src/integrity.rs", "line": 25, "label": "Hash validation"}]
+    },
+    {
+      "id": "reports",
+      "type": "database",
+      "label": "Evidence output",
+      "sublabel": "JSON + state + exit",
+      "row": 1,
+      "col": 3,
+      "sources": [{"path": "src/report.rs", "line": 77, "label": "Summary writer"}]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "Read-only analysis boundary",
+      "wraps": ["engine", "adapters", "inspection", "campaign-data", "integrity"]
+    }
+  ],
+  "connections": [
+    {"id": "operator-cli", "from": "operator", "to": "cli", "label": "command + explicit scope", "variant": "emphasis"},
+    {"id": "cli-engine", "from": "cli", "to": "engine", "label": "Parsed + RunOptions", "variant": "emphasis"},
+    {"id": "engine-adapters", "from": "engine", "to": "adapters", "label": "collect host evidence", "fromSide": "top", "toSide": "left"},
+    {"id": "adapters-inspection", "from": "adapters", "to": "inspection", "label": "untrusted observations", "variant": "security", "fromSide": "bottom", "toSide": "top", "labelAt": [1140, 144]},
+    {"id": "campaign-integrity", "from": "campaign-data", "to": "integrity", "label": "corpus + SHA-256", "variant": "security"},
+    {"id": "integrity-engine", "from": "integrity", "to": "engine", "label": "verified campaign data", "variant": "security", "fromSide": "top", "toSide": "bottom"},
+    {"id": "inspection-engine", "from": "inspection", "to": "engine", "label": "bounded observations", "variant": "security", "fromSide": "left", "toSide": "bottom", "labelAt": [900, 330]},
+    {"id": "engine-reports", "from": "engine", "to": "reports", "label": "findings + counters + status", "variant": "emphasis", "labelAt": [710, 284]}
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Evidence before remediation",
+      "items": ["Bounded readers treat package material as hostile", "Integrity checks authenticate bundled campaign inputs"]
+    },
+    {
+      "dot": "emerald",
+      "title": "Stable contracts",
+      "items": ["CLI parsing owns command and flag behavior", "Reports preserve JSON, state, and exit-code semantics"]
+    },
+    {
+      "dot": "amber",
+      "title": "Explicit recovery",
+      "items": ["Destructive paths require operator-selected recovery commands", "The same engine owns scan, audit, recovery, and policy"]
+    }
+  ]
+}

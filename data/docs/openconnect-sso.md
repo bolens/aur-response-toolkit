@@ -10,8 +10,8 @@ An orphaned `openconnect-sso` package was adopted and changed to include a
 binary named `validator`, which the package build executed with `sudo`. The
 aur-general reports identify commit `9d10778...` as the suspicious change.
 
-Primary source:
-[aur-general — Suspicious package update: openconnect-sso](https://lists.archlinux.org/archives/list/aur-general@lists.archlinux.org/latest?count=25).
+The primary source is the
+[aur-general report about the suspicious openconnect-sso update](https://lists.archlinux.org/archives/list/aur-general@lists.archlinux.org/latest?count=25).
 
 ## Toolkit coverage
 
@@ -31,9 +31,9 @@ An install outside the bounded date is still reported at lower confidence. Use
 
 ## Response
 
-Remove the affected package, preserve its package/build cache for analysis,
-inspect privileged-execution logs, and rotate credentials available to the
-user or root process after establishing the exposure boundary.
+Preserve the package and build cache before removing the affected package.
+Inspect privileged-execution logs. After you determine which credentials were
+exposed to the user or root process, rotate those credentials.
 
 Technical sources reviewed without executing samples:
 

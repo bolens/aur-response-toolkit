@@ -1,5 +1,5 @@
 name: Bug report
-description: Something broke, wrong exit code, or crash in the toolkit
+description: Report a crash, wrong exit code, or other toolkit failure
 title: "[Bug]: "
 labels:
   - bug
@@ -21,7 +21,7 @@ body:
     id: distro
     attributes:
       label: Distribution
-      placeholder: "Arch Linux, CachyOS, Manjaro, …"
+      placeholder: "Arch Linux, CachyOS, or Manjaro"
     validations:
       required: true
 
@@ -29,7 +29,7 @@ body:
     id: rust_version
     attributes:
       label: Installation source
-      placeholder: "cargo build, Arch package, release binary, …"
+      placeholder: "cargo build, Arch package, or release binary"
     validations:
       required: true
 
@@ -67,6 +67,6 @@ body:
     id: logs
     attributes:
       label: Relevant output (sanitized)
-      description: Terminal output or excerpt from `reports/latest-summary.json` — no secrets
+      description: Sanitized terminal output or an excerpt from `reports/latest-summary.json`
     validations:
       required: false

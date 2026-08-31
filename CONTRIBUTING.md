@@ -22,7 +22,7 @@ container.
 
 1. Align `VERSION`, `Cargo.toml`, `Cargo.lock`, `PKGBUILD`, `.SRCINFO`, and the
    changelog release heading in the release PR. Set the release source checksum
-   to `SKIP` in both packaging files; never carry the previous tag's checksum
+   to `SKIP` in both packaging files. Never carry the previous tag's checksum
    into a new version.
 2. Run the required checks and a local release build. For a native packaging
    smoke test, stage `package()` against `target/release/aur-response`; the
@@ -31,16 +31,15 @@ container.
    campaign data.
 3. Merge the release PR only after all required GitHub checks pass.
 4. Tag the merged `main` commit as `vX.Y.Z` and push the tag.
-5. Wait for the Release workflow and verify the GitHub release contains the
-   native archive, its checksum, and the tagged source checksum.
-6. Download the tagged source archive, verify it matches the published source
-   checksum, then replace `SKIP` in `packaging/arch/PKGBUILD`.
-7. Run `makepkg --printsrcinfo > .SRCINFO`, build with `makepkg`, and confirm
-   the package contains no build-directory references. Publish through
-   `packaging/arch/publish-to-aur.sh`; the publisher intentionally refuses
-   `SKIP` checksums.
-8. Commit the post-release PKGBUILD and `.SRCINFO` checksum update to `main`
-   through a focused PR.
+5. Wait for the Release workflow. It verifies CI on the tagged commit, publishes
+   the native archive and checksums, then opens a PR with the tagged source hash.
+6. Confirm the packaging PR passes CI and merges. If automation fails, run
+   `python3 scripts/ci/update-release-packaging.py X.Y.Z SOURCE_SHA256`, then
+   submit the two Arch manifest changes through a focused PR.
+7. Download the tagged source archive and verify it matches the published source
+   checksum. Build with `makepkg` and confirm that the package contains no
+   build-directory references. Then publish through
+   `packaging/arch/publish-to-aur.sh`.
 
 ### CI infrastructure failures
 
@@ -48,13 +47,13 @@ Before changing code, inspect failed logs and distinguish project failures from
 runner setup failures. A check that fails before checkout with errors such as
 `Failed to resolve action download info: Service Unavailable` is a GitHub
 infrastructure failure. Retry the workflow when GitHub permits it. Some
-generated analysis checks cannot be rerun; in that case, push the next valid
+generated analysis checks cannot be rerun. In that case, push the next valid
 follow-up commit or close and reopen the PR to request a fresh check. Never
 merge by dismissing a required infrastructure-failed check.
 
 Check GitHub's official service status before repeatedly retrying zero-step
 failures. During a declared Actions outage, pause retries until the service
-recovers; webhook triggers may remain throttled briefly afterward. Once Actions
+recovers. Webhook triggers may remain throttled briefly afterward. Once Actions
 is operational, rerun failed jobs and use the next valid commit or one
 close/reopen cycle for non-rerunnable generated checks.
 
@@ -78,7 +77,7 @@ administrator merge.
 
 Keep external commands behind narrow adapters and use environment-injected
 fixtures in tests. Destructive recovery behavior requires an explicit apply or
-force flag and should always have dry-run coverage.
+force flag. Add dry-run coverage for every destructive recovery path.
 
 ## Adding a campaign
 

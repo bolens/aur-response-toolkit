@@ -1,6 +1,8 @@
 # Third-party notices
 
-This file satisfies attribution for upstream threat intelligence and list data used by **aur-response-toolkit** (MIT License, Copyright 2026 Michael Bolens).
+This file attributes the upstream threat intelligence and list data used by
+**aur-response-toolkit**. The toolkit is available under the MIT License and is
+Copyright 2026 Michael Bolens.
 
 ## What we redistribute
 
@@ -13,17 +15,20 @@ This file satisfies attribution for upstream threat intelligence and list data u
 | `data/lists/xeactor-pkgs.txt` | BleepingComputer + public AUR post-mortems | Hand-maintained factual package names |
 | `data/lists/xsnow-worm-pkgs.txt` | Arch aur-general staff-confirmed incident | Hand-maintained factual package names |
 
-We **do not** ship third-party shell scripts (e.g. `aur_check-v2.sh`, CSCS paste) inside this repository.
+This repository does not ship third-party shell scripts such as
+`aur_check-v2.sh` or the CSCS paste.
 
 ## What we reference at runtime
 
-Online scans may fetch current lists from URLs configured in `src/config.rs` and `src/engine.rs` / user `config.toml`. SHA256 checksums of fetched content are logged for verification.
+Online scans can fetch current lists from URLs configured in `src/config.rs`,
+`src/engine.rs`, or the user's `config.toml`. The toolkit logs SHA256 checksums
+of fetched content for verification.
 
 ## Per-source license status
 
 | Source | License / terms | Our use | Required action |
 |--------|-----------------|---------|-----------------|
-| **Michael Bolens / this repo** | [MIT](../LICENSE) | — | Include LICENSE in distributions |
+| **Michael Bolens and this repository** | [MIT](../../LICENSE) | Not applicable | Include LICENSE in distributions |
 | **Arch Linux** (news, aur-general, HedgeDoc) | Public incident data | Package names, advisory text | Link to official URLs in docs |
 | **cscs.pastes.sh** (`aurvulntest20260611.sh`) | No explicit license (community gist-style paste) | Parse package names on fetch | Attribution in atomic-arch.md |
 | **lenucksi/aur-malware-check** | No SPDX license; README: *"Community tools - no warranty"* | Fetch `chaos_rat_packages.txt`; IOC hash constants credited to ioctl.fail / `iocs.txt` lineage | Attribution; no implied endorsement |
@@ -37,12 +42,17 @@ Online scans may fetch current lists from URLs configured in `src/config.rs` and
 
 ## Facts vs. expression
 
-Package names, version numbers, file hashes, and security advisory facts are used as indicators of compromise. This is standard threat-intelligence practice and does not reproduce copyrightable expression from upstream detection scripts.
+The toolkit uses package names, version numbers, file hashes, and advisory facts
+as indicators of compromise. It does not copy source code or other protected
+expression from upstream detection scripts.
 
 ## Changes to upstream lists
 
-Bundled `.txt` files may lag live upstream feeds. Prefer `aur-response` (online fetch) for current Arch/CSCS merges, or refresh snapshots when advisories update.
+Bundled `.txt` files may lag behind upstream feeds. Use an online
+`aur-response` scan for current Arch and CSCS merges. Refresh bundled snapshots
+when advisories change.
 
 ## Contact
 
-To report attribution corrections, open an issue on the toolkit repository with the source URL and requested notice text.
+To correct an attribution, open an issue with the source URL and the requested
+notice text.

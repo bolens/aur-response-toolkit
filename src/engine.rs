@@ -438,10 +438,8 @@ impl Engine {
             let previous = path.with_extension("previous.txt");
             fs::copy(path, previous)?;
         }
-        let temporary = path.with_extension("tmp");
         let contents = packages.iter().cloned().collect::<Vec<_>>().join("\n") + "\n";
-        fs::write(&temporary, contents)?;
-        fs::rename(temporary, path)
+        crate::config::atomic_write(path, contents.as_bytes())
     }
 
     fn insufficient(&mut self, quiet: bool, reason: String) {

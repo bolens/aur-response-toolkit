@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::env;
-use std::fs;
-use std::io;
+use std::fs::{self, OpenOptions};
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::model::Campaign;
 
@@ -368,12 +369,61 @@ pub fn migrate(source: &Path, destination: &Path) -> Result<Vec<String>, String>
 }
 
 pub fn atomic_write(path: &Path, data: &[u8]) -> io::Result<()> {
+    static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
     let parent = path.parent().unwrap_or_else(|| Path::new("."));
-    let tmp = parent.join(format!(
-        ".{}.tmp-{}",
-        path.file_name().unwrap_or_default().to_string_lossy(),
-        std::process::id()
-    ));
-    fs::write(&tmp, data)?;
-    fs::rename(tmp, path)
+    let name = path.file_name().unwrap_or_default().to_string_lossy();
+    loop {
+        let sequence = TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        let tmp = parent.join(format!(".{name}.tmp-{}-{sequence}", std::process::id()));
+        let mut file = match OpenOptions::new().write(true).create_new(true).open(&tmp) {
+            Ok(file) => file,
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(error),
+        };
+        let result = file
+            .write_all(data)
+            .and_then(|()| file.sync_all())
+            .and_then(|()| fs::rename(&tmp, path));
+        if result.is_err() {
+            let _ = fs::remove_file(&tmp);
+        }
+        return result;
+    }
+}
+
+#[cfg(test)]
+mod atomic_write_tests {
+    use super::atomic_write;
+    use std::fs;
+    use std::sync::{Arc, Barrier};
+    use std::thread;
+
+    #[test]
+    fn concurrent_writers_publish_only_complete_values() {
+        let working = tempfile::tempdir().unwrap();
+        let destination = working.path().join("state");
+        let barrier = Arc::new(Barrier::new(9));
+        let mut writers = Vec::new();
+        let values = (0..8)
+            .map(|index| format!("writer-{index}\n").repeat(4096))
+            .collect::<Vec<_>>();
+
+        for value in values.clone() {
+            let destination = destination.clone();
+            let barrier = Arc::clone(&barrier);
+            writers.push(thread::spawn(move || {
+                barrier.wait();
+                atomic_write(&destination, value.as_bytes())
+            }));
+        }
+        barrier.wait();
+        for writer in writers {
+            writer.join().unwrap().unwrap();
+        }
+
+        let published = fs::read_to_string(destination).unwrap();
+        assert!(values.contains(&published));
+        assert_eq!(fs::read_dir(working.path()).unwrap().count(), 1);
+    }
 }

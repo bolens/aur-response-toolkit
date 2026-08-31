@@ -10,8 +10,8 @@ root. The scriptlets downloaded an executable named `systemmanager` over Tor
 and attempted to propagate by pushing malicious changes to other AUR package
 repositories accessible to the affected user.
 
-Primary source:
-[aur-general — Malicious package update - xsnow and xsnow-bin](https://lists.archlinux.org/archives/list/aur-general@lists.archlinux.org/thread/FPT525XVV2DL2P437KPHTADV3KJINORN/).
+The primary source is the
+[aur-general report about the malicious xsnow and xsnow-bin updates](https://lists.archlinux.org/archives/list/aur-general@lists.archlinux.org/thread/FPT525XVV2DL2P437KPHTADV3KJINORN/).
 Arch staff confirmed that both packages were reverted and the uploader was
 suspended. A follow-up scan of all AUR packages declaring `install=` found no
 additional instance resembling this worm as of August 24.

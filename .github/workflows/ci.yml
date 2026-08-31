@@ -15,6 +15,15 @@ concurrency:
   cancel-in-progress: ${{ github.event_name != 'schedule' }}
 
 jobs:
+  packaging:
+    name: packaging
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Check release packaging automation
+        run: bash scripts/ci/test-update-release-packaging.sh
+
   rust:
     name: rust
     runs-on: ubuntu-latest
