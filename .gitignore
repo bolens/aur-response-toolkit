@@ -16,7 +16,5 @@ data/lists/*.previous.txt
 *~
 .DS_Store
 
-# CI dev tools (cloned in GitHub Actions)
-
 # Rust build output
 /target/

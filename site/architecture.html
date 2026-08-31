@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Interactive architecture diagram for aur-response-toolkit.">
+  <link rel="canonical" href="https://bolens.github.io/aur-response-toolkit/architecture.html">
   <meta name="generator" content="archify 2.16.0">
   <title>AUR Response Toolkit Architecture Diagram</title>
   <script>
@@ -695,7 +697,7 @@
     }
 
     html[data-preset="editorial"] h1,
-    html[data-preset="editorial"] .card h3 {
+    html[data-preset="editorial"] .card h2 {
       font-family: Georgia, 'Times New Roman', 'Songti SC', STSong, serif;
       letter-spacing: -0.02em;
     }
@@ -2947,7 +2949,7 @@
     .card-dot.orange   { background: var(--messagebus-stroke); }
     .card-dot.slate    { background: var(--external-stroke); }
 
-    .card h3 { font-size: 0.875rem; font-weight: 600; color: var(--text); }
+    .card h2 { font-size: 0.875rem; font-weight: 600; color: var(--text); }
 
     .card ul {
       list-style: none;
@@ -4849,6 +4851,7 @@
   </style>
 </head>
 <body>
+  <main>
   <!-- Toolbar: theme, live visual style, trace motion, presentation stage, and export.
        Motion appears only for trace-enabled artifacts and has no shortcut;
        Keyboard: T toggles theme, S cycles style, F toggles the stage, E opens export. -->
@@ -5294,7 +5297,7 @@
             <div class="semantic-passport-evidence" id="focus-evidence" hidden aria-label="Verified source evidence">
               <div class="semantic-passport-evidence-head">
                 <span class="semantic-passport-evidence-status">Verified source</span>
-                <a class="semantic-passport-repository" id="focus-repository" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer"></a>
+                <a class="semantic-passport-repository" id="focus-repository" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" aria-label="Open the verified repository revision"></a>
               </div>
               <div class="semantic-passport-evidence-links" id="focus-evidence-links"></div>
             </div>
@@ -5393,7 +5396,7 @@
       <div class="card">
         <div class="card-header">
           <div class="card-dot cyan"></div>
-          <h3>Evidence before remediation</h3>
+          <h2>Evidence before remediation</h2>
         </div>
         <ul>
           <li>&bull; Bounded readers treat package material as hostile</li>
@@ -5404,7 +5407,7 @@
       <div class="card">
         <div class="card-header">
           <div class="card-dot emerald"></div>
-          <h3>Stable contracts</h3>
+          <h2>Stable contracts</h2>
         </div>
         <ul>
           <li>&bull; CLI parsing owns command and flag behavior</li>
@@ -5415,7 +5418,7 @@
       <div class="card">
         <div class="card-header">
           <div class="card-dot amber"></div>
-          <h3>Explicit recovery</h3>
+          <h2>Explicit recovery</h2>
         </div>
         <ul>
           <li>&bull; Destructive paths require operator-selected recovery commands</li>
@@ -5425,6 +5428,8 @@
     </div>
 
   </div>
+
+  </main>
 
   <script>
     var Archify = {};

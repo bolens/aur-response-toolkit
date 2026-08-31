@@ -1,6 +1,6 @@
 @font-face {
   font-family: "Toolkit Sans";
-  src: url("fonts/DejaVuSans.ttf") format("truetype");
+  src: url("fonts/ToolkitSans.woff2") format("woff2");
   font-style: normal;
   font-weight: 400 800;
   font-display: swap;
@@ -8,7 +8,7 @@
 
 @font-face {
   font-family: "Toolkit Mono";
-  src: url("fonts/DejaVuSansMono.ttf") format("truetype");
+  src: url("fonts/ToolkitMono.woff2") format("woff2");
   font-style: normal;
   font-weight: 400 800;
   font-display: swap;
@@ -73,6 +73,7 @@ h1 span { color: var(--signal); }
 .release-checks { display: grid; align-content: center; gap: 1.2rem; min-width: 0; }
 .release-checks > div > span { display: block; margin-bottom: 0.45rem; color: var(--muted); font-size: 0.72rem; letter-spacing: 0.07em; text-transform: uppercase; }
 .release-checks .code-row code { font-size: 0.7rem; }
+.checksum-note { margin: 0; color: var(--muted); font-family: "Toolkit Sans", sans-serif; font-size: 0.85rem; }
 .release-checks > a { justify-self: start; color: var(--muted); font-size: 0.8rem; text-underline-offset: 0.3rem; }
 .release-panel[data-release-state="error"] .release-checks { display: none; }
 .section { padding: clamp(4.5rem, 9vw, 7rem) 0; border-bottom: 1px solid var(--line); }
@@ -95,7 +96,8 @@ h1 span { color: var(--signal); }
 .command-grid article:hover { border-color: var(--signal); transform: translateY(-3px); }
 .code-row { display: flex; align-items: stretch; margin-top: auto; background: #040b08; border: 1px solid var(--line); }
 .code-row code { flex: 1; overflow-wrap: anywhere; padding: 0.85rem; color: var(--signal); font-size: 0.8rem; }
-.copy { min-width: 4.5rem; border: 0; border-left: 1px solid var(--line); background: var(--panel-2); color: var(--text); cursor: pointer; font: inherit; }
+.copy { display: none; min-width: 4.5rem; border: 0; border-left: 1px solid var(--line); background: var(--panel-2); color: var(--text); cursor: pointer; font: inherit; }
+.js .copy { display: block; }
 .copy { transition: background-color 160ms ease, color 160ms ease; }
 .copy:hover { background: var(--signal); color: var(--signal-dark); }
 .note { margin-top: 1.25rem; color: var(--muted); }
@@ -103,6 +105,11 @@ h1 span { color: var(--signal); }
 .result-list li { padding: 1.5rem; background: var(--panel); }
 .result-list h3 { margin: 0; font-size: 1.2rem; color: var(--signal); }
 .result-list p { margin: 0.65rem 0 0; color: var(--muted); font-family: "Toolkit Sans", sans-serif; }
+.decision-list { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; padding: 1px; background: var(--line); list-style: none; counter-reset: result; }
+.decision-list li { padding: 1.5rem; background: var(--panel); counter-increment: result; }
+.decision-list li > span { color: var(--signal); font-size: 0.76rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.decision-list h3 { margin: 1rem 0 0; font-size: 1.35rem; }
+.decision-list p { margin-bottom: 0; color: var(--muted); font-family: "Toolkit Sans", sans-serif; }
 .tag-list { display: flex; flex-wrap: wrap; gap: 0.65rem; padding: 0; list-style: none; }
 .tag-list li { padding: 0.65rem 0.85rem; border: 1px solid var(--line); background: var(--panel); }
 .architecture iframe { width: 100%; min-height: 48rem; border: 1px solid var(--line); background: #fff; }
@@ -139,7 +146,7 @@ footer p { margin: 0; }
   .desktop-nav { display: none; }
   .mobile-nav { display: block; }
   .release-panel { grid-template-columns: 1fr; padding: 2rem; }
-  .status-strip, .steps, .command-grid, .result-list { grid-template-columns: 1fr 1fr; }
+  .status-strip, .steps, .command-grid, .result-list, .decision-list { grid-template-columns: 1fr 1fr; }
   .status-strip li:nth-child(2) { border-right: 0; }
   .architecture iframe { display: none; }
   .diagram-link { margin-top: 0; }
@@ -158,7 +165,7 @@ footer p { margin: 0; }
   .status-strip li { min-width: 0; padding: 0.9rem; border-bottom: 1px solid var(--line); }
   .status-strip li:nth-child(odd) { border-right: 1px solid var(--line); }
   .status-strip strong { font-size: 0.86rem; overflow-wrap: anywhere; }
-  .steps, .command-grid, .result-list { grid-template-columns: 1fr; }
+  .steps, .command-grid, .result-list, .decision-list { grid-template-columns: 1fr; }
   .section { padding: 4.5rem 0; }
   .command-grid article { padding: 1.2rem; }
   .code-row { display: grid; }

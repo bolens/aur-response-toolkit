@@ -28,6 +28,7 @@ compare_image() {
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 baseline_dir="$root/tests/site-visual"
+site_dir="${SITE_DIR:-$root/site}"
 actual_dir="$(mktemp -d)"
 port="${SITE_VISUAL_PORT:-4174}"
 server_pid=""
@@ -38,7 +39,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-python3 -m http.server "$port" --bind 127.0.0.1 --directory "$root/site" \
+python3 -m http.server "$port" --bind 127.0.0.1 --directory "$site_dir" \
   >"$actual_dir/server.log" 2>&1 &
 server_pid="$!"
 for _ in {1..20}; do

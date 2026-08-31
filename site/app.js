@@ -1,3 +1,5 @@
+document.documentElement.classList.add("js");
+
 const copyStatus = document.querySelector("#copy-status");
 const resetTimers = new WeakMap();
 
@@ -46,8 +48,7 @@ fetch("release.json", { cache: "no-store" })
     releasePanel.dataset.releaseState = "ready";
   })
   .catch(() => {
-    document.querySelector("#release-version").textContent = "See GitHub releases";
-    releasePanel.dataset.releaseState = "error";
+    releasePanel.dataset.releaseState = "ready";
   });
 
 document.querySelectorAll(".copy").forEach((button) => {

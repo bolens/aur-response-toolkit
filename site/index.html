@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Documentation for aur-response-toolkit, a native incident-response toolkit for Arch User Repository supply-chain campaigns.">
     <meta name="theme-color" content="#07140f">
+    <link rel="canonical" href="https://bolens.github.io/aur-response-toolkit/">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://bolens.github.io/aur-response-toolkit/">
     <meta property="og:title" content="aur-response-toolkit">
@@ -69,21 +70,22 @@
 
       <section class="release-panel" id="release" aria-labelledby="release-title" data-release-state="loading">
         <div class="release-heading">
-          <p class="eyebrow">Verified download</p>
-          <h2 id="release-title">Current release <span id="release-version">Checking...</span></h2>
-          <p>The site reads the release version and checksums produced by the repository’s release workflow. Compare a downloaded archive before you run it.</p>
+          <p class="eyebrow">Check your download</p>
+          <h2 id="release-title">Current release <span id="release-version">Latest release</span></h2>
+          <p>This page displays the SHA-256 checksums published with the current GitHub release. Compare the archive's checksum before you run it.</p>
           <a class="button primary" id="release-download" href="https://github.com/bolens/aur-response-toolkit/releases/latest">Download the Linux archive</a>
         </div>
         <div class="release-checks" aria-live="polite">
           <div>
             <span>Linux archive SHA-256</span>
-            <div class="code-row"><code id="native-checksum" tabindex="-1">Loading...</code><button class="copy" type="button" aria-label="Copy Linux archive checksum">Copy</button></div>
+            <div class="code-row"><code id="native-checksum" tabindex="-1">Open the release to view this checksum</code><button class="copy" type="button" aria-label="Copy Linux archive checksum">Copy</button></div>
           </div>
           <div>
             <span>Tagged source SHA-256</span>
-            <div class="code-row"><code id="source-checksum" tabindex="-1">Loading...</code><button class="copy" type="button" aria-label="Copy tagged source checksum">Copy</button></div>
+            <div class="code-row"><code id="source-checksum" tabindex="-1">Open the release to view this checksum</code><button class="copy" type="button" aria-label="Copy tagged source checksum">Copy</button></div>
           </div>
-          <a id="checksum-file" href="https://github.com/bolens/aur-response-toolkit/releases/latest">Open the signed release files</a>
+          <p class="checksum-note">A matching checksum shows that your download is unchanged from the published file. It does not prove who created the release because GitHub publishes the archive and checksum together.</p>
+          <a id="checksum-file" href="https://github.com/bolens/aur-response-toolkit/releases/latest">Open the published checksum file</a>
         </div>
       </section>
 
@@ -128,6 +130,36 @@
           <li><h3>Warnings</h3><p>The scan found something that needs review but does not prove compromise.</p></li>
           <li><h3>Insufficient data</h3><p>The scan could not read a required file or system source. Fix the coverage gap before treating the result as clean.</p></li>
         </ul>
+      </section>
+
+      <section class="section decision" id="next-step" aria-labelledby="next-step-title">
+        <div class="section-heading">
+          <p class="eyebrow">Your next step</p>
+          <h2 id="next-step-title">Choose the next step from the result</h2>
+          <p>Read the final status in the report. Then follow only the matching guidance below.</p>
+        </div>
+        <ol class="decision-list">
+          <li>
+            <span>Clean</span>
+            <h3>Keep the report</h3>
+            <p>No known indicator was found, and every required check completed. Save the report with the date of the scan. Run a new scan when the project publishes updated campaign data.</p>
+          </li>
+          <li>
+            <span>Warning</span>
+            <h3>Review the named evidence</h3>
+            <p>A warning does not prove compromise. Preserve the report and inspect the file, package, or process named in the finding. Do not remove anything based on the warning alone.</p>
+          </li>
+          <li>
+            <span>Compromise indicators</span>
+            <h3>Stop sensitive work</h3>
+            <p>Keep the report and stop using this computer for passwords, banking, or administrative access. Use a known-clean device to read the campaign guidance and plan recovery.</p>
+          </li>
+          <li>
+            <span>Insufficient data</span>
+            <h3>Complete the missing checks</h3>
+            <p>The report names each source that the scan could not inspect. Fix those access or tool problems, then run the scan again. Do not treat this result as clean.</p>
+          </li>
+        </ol>
       </section>
 
       <section class="section command-section" id="respond" aria-labelledby="commands-title">

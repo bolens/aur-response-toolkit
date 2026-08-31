@@ -25,6 +25,10 @@ jobs:
         run: |
           bash scripts/ci/test-update-release-packaging.sh
           bash scripts/ci/test-build-site-release-metadata.sh
+          python3 -m py_compile \
+            scripts/ci/build-site-release-metadata.py \
+            scripts/ci/check-site-accessibility.py \
+            scripts/ci/check-site-links.py
 
   rust:
     name: rust
