@@ -24,9 +24,9 @@ assert metadata["source_sha256"] == "1" * 64
 assert metadata["native_url"].endswith("aur-response-toolkit-3.4.5-linux-x86_64.tar.gz")
 PY
 
-rg -F '<span id="release-version">v3.4.5</span>' "$root/index.html"
-rg -F "$(printf '0%.0s' {1..64})" "$root/index.html"
-rg -F 'data-release-state="ready"' "$root/index.html"
+grep -F '<span id="release-version">v3.4.5</span>' "$root/index.html"
+grep -F "$(printf '0%.0s' {1..64})" "$root/index.html"
+grep -F 'data-release-state="ready"' "$root/index.html"
 
 printf 'not-a-checksum\n' > "$root/native.sha256"
 if python3 scripts/ci/build-site-release-metadata.py \
