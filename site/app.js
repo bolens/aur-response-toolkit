@@ -1,6 +1,10 @@
 const copyStatus = document.querySelector("#copy-status");
 const resetTimers = new WeakMap();
 
+document.querySelectorAll(".mobile-nav a").forEach((link) => {
+  link.addEventListener("click", () => link.closest("details")?.removeAttribute("open"));
+});
+
 document.querySelectorAll(".copy").forEach((button) => {
   button.addEventListener("click", async () => {
     const code = button.previousElementSibling;

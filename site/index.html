@@ -16,13 +16,23 @@
       <a class="wordmark" href="#top" aria-label="aur-response-toolkit home">
         <span aria-hidden="true">[aur]</span> response toolkit
       </a>
-      <nav aria-label="Primary navigation">
+      <nav class="desktop-nav" aria-label="Primary navigation">
         <a href="#start">Start</a>
         <a href="#results">Results</a>
         <a href="#respond">Respond</a>
         <a href="#architecture">How it works</a>
         <a href="https://github.com/bolens/aur-response-toolkit">GitHub</a>
       </nav>
+      <details class="mobile-nav">
+        <summary>Menu</summary>
+        <nav aria-label="Mobile navigation">
+          <a href="#start">Start</a>
+          <a href="#results">Results</a>
+          <a href="#respond">Respond</a>
+          <a href="#architecture">How it works</a>
+          <a href="https://github.com/bolens/aur-response-toolkit">GitHub</a>
+        </nav>
+      </details>
     </header>
 
     <main id="main">
@@ -32,7 +42,7 @@
         <p class="lede">Scan installed packages, pacman history, cached build files, runtime state, and persistence points for known AUR supply-chain campaigns. Scans stay read-only. Recovery requires an explicit command.</p>
         <div class="actions">
           <a class="button primary" href="#start">Check this computer</a>
-          <a class="button secondary" href="https://github.com/bolens/aur-response-toolkit/releases/latest">Download the latest release</a>
+          <a class="button secondary" href="https://github.com/bolens/aur-response-toolkit/releases/latest">Download latest release</a>
         </div>
         <ul class="status-strip" aria-label="Project guarantees">
           <li><span>Default mode</span><strong>Read-only</strong></li>
@@ -129,7 +139,7 @@
           <p>The interactive diagram shows what the toolkit reads, how it checks campaign data, and where it writes reports.</p>
         </div>
         <iframe src="architecture.html" title="Interactive architecture diagram for aur-response-toolkit" loading="lazy"></iframe>
-        <p class="diagram-link"><a href="architecture.html">Open the architecture diagram as a full page</a></p>
+        <p class="diagram-link"><a href="architecture.html"><strong>Open the interactive architecture diagram</strong><span>Best for tablets, laptops, and desktop screens</span></a></p>
       </section>
     </main>
 
