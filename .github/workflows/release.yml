@@ -50,6 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
+      actions: write
       contents: write
     outputs:
       source_sha256: ${{ steps.source.outputs.sha256 }}
@@ -109,6 +110,11 @@ jobs:
             aur-response-toolkit-*-linux-x86_64.tar.gz
             aur-response-toolkit-*-linux-x86_64.tar.gz.sha256
             aur-response-toolkit-*-source.tar.gz.sha256
+
+      - name: Refresh user guide release data
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
 
   update-packaging:
     name: Open packaging update PR

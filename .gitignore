@@ -1,6 +1,7 @@
 # Generated scan output
 reports/*
 !reports/.gitkeep
+site/release.json
 
 # Runtime state (cached package list fetch)
 data/lists/*.previous.txt

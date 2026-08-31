@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - "site/**"
+      - "scripts/ci/build-site-release-metadata.py"
+      - "scripts/ci/check-site-visual.sh"
+      - "tests/site-visual/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -24,8 +27,33 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Build current release metadata
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="$(cat VERSION)"
+          mkdir -p "$RUNNER_TEMP/release"
+          gh release download "v$version" \
+            --pattern "aur-response-toolkit-$version-linux-x86_64.tar.gz.sha256" \
+            --pattern "aur-response-toolkit-$version-source.tar.gz.sha256" \
+            --dir "$RUNNER_TEMP/release"
+          python3 scripts/ci/build-site-release-metadata.py \
+            VERSION \
+            "$RUNNER_TEMP/release/aur-response-toolkit-$version-linux-x86_64.tar.gz.sha256" \
+            "$RUNNER_TEMP/release/aur-response-toolkit-$version-source.tar.gz.sha256" \
+            site/release.json
       - name: Validate site files
-        run: test -s site/index.html && test -s site/styles.css && test -s site/app.js
+        run: |
+          test -s site/index.html
+          test -s site/styles.css
+          test -s site/app.js
+          test -s site/release.json
+      - name: Install screenshot comparison tool
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+      - name: Check responsive screenshots
+        run: bash scripts/ci/check-site-visual.sh
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v4
         with:

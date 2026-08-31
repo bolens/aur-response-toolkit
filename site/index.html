@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Documentation for aur-response-toolkit, a native incident-response toolkit for Arch User Repository supply-chain campaigns.">
     <meta name="theme-color" content="#07140f">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://bolens.github.io/aur-response-toolkit/">
+    <meta property="og:title" content="aur-response-toolkit">
+    <meta property="og:description" content="Find evidence. Keep control. Read-only incident-response tools for known AUR supply-chain campaigns.">
+    <meta property="og:image" content="https://bolens.github.io/aur-response-toolkit/og.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="aur-response-toolkit. Find evidence. Keep control.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="aur-response-toolkit">
+    <meta name="twitter:description" content="Find evidence. Keep control. Read-only incident-response tools for known AUR supply-chain campaigns.">
+    <meta name="twitter:image" content="https://bolens.github.io/aur-response-toolkit/og.png">
     <title>aur-response-toolkit</title>
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="icon" href="favicon.png" type="image/png">
@@ -53,6 +65,26 @@
           <li><span>Offline data</span><strong>Integrity checked</strong></li>
           <li><span>Exit policy</span><strong>Stable codes 0–4</strong></li>
         </ul>
+      </section>
+
+      <section class="release-panel" id="release" aria-labelledby="release-title" data-release-state="loading">
+        <div class="release-heading">
+          <p class="eyebrow">Verified download</p>
+          <h2 id="release-title">Current release <span id="release-version">Checking...</span></h2>
+          <p>The site reads the release version and checksums produced by the repository’s release workflow. Compare a downloaded archive before you run it.</p>
+          <a class="button primary" id="release-download" href="https://github.com/bolens/aur-response-toolkit/releases/latest">Download the Linux archive</a>
+        </div>
+        <div class="release-checks" aria-live="polite">
+          <div>
+            <span>Linux archive SHA-256</span>
+            <div class="code-row"><code id="native-checksum" tabindex="-1">Loading...</code><button class="copy" type="button" aria-label="Copy Linux archive checksum">Copy</button></div>
+          </div>
+          <div>
+            <span>Tagged source SHA-256</span>
+            <div class="code-row"><code id="source-checksum" tabindex="-1">Loading...</code><button class="copy" type="button" aria-label="Copy tagged source checksum">Copy</button></div>
+          </div>
+          <a id="checksum-file" href="https://github.com/bolens/aur-response-toolkit/releases/latest">Open the signed release files</a>
+        </div>
       </section>
 
       <section class="section start" id="start" aria-labelledby="start-title">

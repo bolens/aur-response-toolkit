@@ -22,7 +22,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Check release packaging automation
-        run: bash scripts/ci/test-update-release-packaging.sh
+        run: |
+          bash scripts/ci/test-update-release-packaging.sh
+          bash scripts/ci/test-build-site-release-metadata.sh
 
   rust:
     name: rust

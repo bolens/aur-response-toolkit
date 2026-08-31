@@ -50,6 +50,15 @@ h1 span { color: var(--signal); }
 .status-strip li:last-child { border: 0; }
 .status-strip span { display: block; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; }
 .status-strip strong { display: block; margin-top: 0.25rem; }
+.release-panel { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(2rem, 6vw, 5rem); padding: clamp(3rem, 7vw, 5rem); border: 1px solid var(--line); background: linear-gradient(135deg, var(--panel), rgb(7 20 15 / 35%)); }
+.release-heading h2 { margin: 0; font-size: clamp(2.2rem, 5vw, 4rem); }
+.release-heading h2 span { display: block; color: var(--signal); }
+.release-heading > p:not(.eyebrow) { color: var(--muted); font-family: ui-sans-serif, system-ui, sans-serif; }
+.release-checks { display: grid; align-content: center; gap: 1.2rem; min-width: 0; }
+.release-checks > div > span { display: block; margin-bottom: 0.45rem; color: var(--muted); font-size: 0.72rem; letter-spacing: 0.07em; text-transform: uppercase; }
+.release-checks .code-row code { font-size: 0.7rem; }
+.release-checks > a { justify-self: start; color: var(--muted); font-size: 0.8rem; text-underline-offset: 0.3rem; }
+.release-panel[data-release-state="error"] .release-checks { display: none; }
 .section { padding: clamp(4.5rem, 9vw, 7rem) 0; border-bottom: 1px solid var(--line); }
 .section-heading { max-width: 52rem; margin-bottom: 3rem; }
 .section-heading h2 { margin: 0; font-size: clamp(2.3rem, 6vw, 4.5rem); }
@@ -113,6 +122,7 @@ footer p { margin: 0; }
 @media (max-width: 52rem) {
   .desktop-nav { display: none; }
   .mobile-nav { display: block; }
+  .release-panel { grid-template-columns: 1fr; padding: 2rem; }
   .status-strip, .steps, .command-grid, .result-list { grid-template-columns: 1fr 1fr; }
   .status-strip li:nth-child(2) { border-right: 0; }
   .architecture iframe { display: none; }
