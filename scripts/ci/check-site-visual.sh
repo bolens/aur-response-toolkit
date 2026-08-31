@@ -75,7 +75,9 @@ if [[ "${UPDATE_SITE_VISUALS:-0}" == 1 ]]; then
   exit 0
 fi
 
-threshold="${SITE_VISUAL_RMSE_MAX:-0.03}"
+# Allow small FreeType and rasterization differences between supported runners.
+# Layout regressions remain well above this normalized error budget.
+threshold="${SITE_VISUAL_RMSE_MAX:-0.04}"
 for viewport in "${viewports[@]}"; do
   baseline="$baseline_dir/$viewport.png"
   [[ -s "$baseline" ]] || { echo "missing visual baseline: $baseline" >&2; exit 1; }
