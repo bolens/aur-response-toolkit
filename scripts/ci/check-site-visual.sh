@@ -42,7 +42,7 @@ python3 -m http.server "$port" --bind 127.0.0.1 --directory "$root/site" \
   >"$actual_dir/server.log" 2>&1 &
 server_pid="$!"
 for _ in {1..20}; do
-  curl -fsS "http://127.0.0.1:$port/" >/dev/null && break
+  curl -fsS "http://127.0.0.1:$port/" >/dev/null 2>&1 && break
   sleep 0.25
 done
 curl -fsS "http://127.0.0.1:$port/" >/dev/null

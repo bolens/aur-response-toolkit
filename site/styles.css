@@ -1,3 +1,19 @@
+@font-face {
+  font-family: "Toolkit Sans";
+  src: url("fonts/DejaVuSans.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Toolkit Mono";
+  src: url("fonts/DejaVuSansMono.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+}
+
 :root {
   color-scheme: dark;
   --bg: #07140f;
@@ -14,7 +30,7 @@
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { margin: 0; background: radial-gradient(circle at 85% 4%, rgb(185 255 85 / 5%), transparent 25rem), var(--bg); color: var(--text); font: 1rem/1.6 ui-monospace, "SFMono-Regular", Consolas, monospace; }
+body { margin: 0; background: radial-gradient(circle at 85% 4%, rgb(185 255 85 / 5%), transparent 25rem), var(--bg); color: var(--text); font: 1rem/1.6 "Toolkit Mono", monospace; }
 a { color: inherit; }
 a:focus-visible, button:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
@@ -37,10 +53,10 @@ nav a:hover { text-decoration-color: var(--signal); }
 main, footer { width: min(var(--max), calc(100% - 2.5rem)); margin-inline: auto; }
 .hero { min-height: calc(100svh - 4rem); display: grid; align-content: center; padding: 5rem 0 3rem; }
 .eyebrow { margin: 0 0 1rem; color: var(--signal); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
-h1, h2, h3 { font-family: Inter, ui-sans-serif, system-ui, sans-serif; line-height: 1.05; letter-spacing: -0.045em; }
+h1, h2, h3 { font-family: "Toolkit Sans", sans-serif; line-height: 1.05; letter-spacing: -0.045em; }
 h1 { max-width: 12ch; margin: 0; font-size: clamp(3rem, 11vw, 8.4rem); text-wrap: balance; }
 h1 span { color: var(--signal); }
-.lede { max-width: 50rem; margin: 2rem 0; color: var(--muted); font: 1.15rem/1.7 ui-sans-serif, system-ui, sans-serif; }
+.lede { max-width: 50rem; margin: 2rem 0; color: var(--muted); font: 1.15rem/1.7 "Toolkit Sans", sans-serif; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.8rem; }
 .button { display: inline-block; padding: 0.8rem 1rem; border: 1px solid var(--line); text-decoration: none; font-weight: 800; transition: transform 160ms ease, border-color 160ms ease, background-color 160ms ease; }
 .button.primary { background: var(--signal); color: var(--signal-dark); border-color: var(--signal); }
@@ -53,7 +69,7 @@ h1 span { color: var(--signal); }
 .release-panel { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(2rem, 6vw, 5rem); padding: clamp(3rem, 7vw, 5rem); border: 1px solid var(--line); background: linear-gradient(135deg, var(--panel), rgb(7 20 15 / 35%)); }
 .release-heading h2 { margin: 0; font-size: clamp(2.2rem, 5vw, 4rem); }
 .release-heading h2 span { display: block; color: var(--signal); }
-.release-heading > p:not(.eyebrow) { color: var(--muted); font-family: ui-sans-serif, system-ui, sans-serif; }
+.release-heading > p:not(.eyebrow) { color: var(--muted); font-family: "Toolkit Sans", sans-serif; }
 .release-checks { display: grid; align-content: center; gap: 1.2rem; min-width: 0; }
 .release-checks > div > span { display: block; margin-bottom: 0.45rem; color: var(--muted); font-size: 0.72rem; letter-spacing: 0.07em; text-transform: uppercase; }
 .release-checks .code-row code { font-size: 0.7rem; }
@@ -62,18 +78,18 @@ h1 span { color: var(--signal); }
 .section { padding: clamp(4.5rem, 9vw, 7rem) 0; border-bottom: 1px solid var(--line); }
 .section-heading { max-width: 52rem; margin-bottom: 3rem; }
 .section-heading h2 { margin: 0; font-size: clamp(2.3rem, 6vw, 4.5rem); }
-.section-heading > p:last-child { color: var(--muted); font-family: ui-sans-serif, system-ui, sans-serif; }
+.section-heading > p:last-child { color: var(--muted); font-family: "Toolkit Sans", sans-serif; }
 .single-command { max-width: 46rem; }
 .single-command .code-row code { padding: 1.2rem; font-size: 1rem; }
 .warning { max-width: 52rem; margin-top: 2rem; padding: 1.5rem; border-left: 0.4rem solid var(--focus); background: #251f0d; }
 .warning h3 { margin-top: 0; color: var(--focus); }
-.warning p { margin-bottom: 0; font-family: ui-sans-serif, system-ui, sans-serif; }
+.warning p { margin-bottom: 0; font-family: "Toolkit Sans", sans-serif; }
 .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; padding: 1px; background: var(--line); list-style: none; }
 .steps li { min-height: 17rem; padding: 1.5rem; background: var(--panel); transition: background-color 180ms ease, transform 180ms ease; }
 .steps li:hover { background: var(--panel-2); transform: translateY(-3px); }
 .steps span { color: var(--signal); font-weight: 800; }
 .steps h3 { margin-top: 3rem; font-size: 1.35rem; }
-.steps p, article p { color: var(--muted); font-family: ui-sans-serif, system-ui, sans-serif; }
+.steps p, article p { color: var(--muted); font-family: "Toolkit Sans", sans-serif; }
 .command-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
 .command-grid article { display: flex; flex-direction: column; padding: 1.5rem; background: var(--panel); border: 1px solid var(--line); transition: border-color 180ms ease, transform 180ms ease; }
 .command-grid article:hover { border-color: var(--signal); transform: translateY(-3px); }
@@ -86,7 +102,7 @@ h1 span { color: var(--signal); }
 .result-list { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; padding: 1px; background: var(--line); list-style: none; }
 .result-list li { padding: 1.5rem; background: var(--panel); }
 .result-list h3 { margin: 0; font-size: 1.2rem; color: var(--signal); }
-.result-list p { margin: 0.65rem 0 0; color: var(--muted); font-family: ui-sans-serif, system-ui, sans-serif; }
+.result-list p { margin: 0.65rem 0 0; color: var(--muted); font-family: "Toolkit Sans", sans-serif; }
 .tag-list { display: flex; flex-wrap: wrap; gap: 0.65rem; padding: 0; list-style: none; }
 .tag-list li { padding: 0.65rem 0.85rem; border: 1px solid var(--line); background: var(--panel); }
 .architecture iframe { width: 100%; min-height: 48rem; border: 1px solid var(--line); background: #fff; }
