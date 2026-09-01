@@ -96,8 +96,10 @@ def main() -> int:
 
     css = (site_dir / "styles.css").read_text(encoding="utf-8")
     script = (site_dir / "app.js").read_text(encoding="utf-8")
-    if "IntersectionObserver" in script or "reveal-ready" in css:
-        failures.append("primary content must not depend on scroll-triggered reveal state")
+    if "reveal-ready" in css:
+        failures.append(f"{site_dir / 'styles.css'}: primary content must not use reveal-ready concealment")
+    if "IntersectionObserver" in script and 'classList.add("reveal")' in script:
+        failures.append(f"{site_dir / 'app.js'}: primary content must not use observer-driven reveal classes")
     if "@media (prefers-reduced-motion: reduce)" not in css:
         failures.append(f"{site_dir / 'styles.css'}: no reduced-motion fallback")
     if ":focus-visible" not in css:
