@@ -89,6 +89,9 @@ def main() -> int:
     site_dir = Path(os.environ.get("SITE_DIR", "site"))
     failures: list[str] = []
     pages = sorted(site_dir.glob("*.html"))
+    for asset in ("favicon.ico", "favicon.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png", "og.png", "site.webmanifest"):
+        if not (site_dir / asset).is_file():
+            failures.append(f"{site_dir / asset}: missing discovery asset")
     for path in pages:
         document = AccessibilityDocument()
         document.feed(path.read_text(encoding="utf-8"))
@@ -96,6 +99,10 @@ def main() -> int:
 
     css = (site_dir / "styles.css").read_text(encoding="utf-8")
     script = (site_dir / "app.js").read_text(encoding="utf-8")
+    home = (site_dir / "index.html").read_text(encoding="utf-8")
+    for contract in ('og:site_name', 'twitter:image:alt', 'rel="apple-touch-icon"', 'rel="manifest"'):
+        if contract not in home:
+            failures.append(f"{site_dir / 'index.html'}: missing discovery contract {contract}")
     if "reveal-ready" in css:
         failures.append(f"{site_dir / 'styles.css'}: primary content must not use reveal-ready concealment")
     if "IntersectionObserver" in script and 'classList.add("reveal")' in script:
