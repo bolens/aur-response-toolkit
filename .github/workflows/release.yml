@@ -124,6 +124,7 @@ jobs:
     name: Open packaging update PR
     needs: release
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: write
       pull-requests: write
