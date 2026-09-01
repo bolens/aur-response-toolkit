@@ -95,6 +95,9 @@ def main() -> int:
         failures.extend(f"{path}: {failure}" for failure in document.finish())
 
     css = (site_dir / "styles.css").read_text(encoding="utf-8")
+    script = (site_dir / "app.js").read_text(encoding="utf-8")
+    if "IntersectionObserver" in script or "reveal-ready" in css:
+        failures.append("primary content must not depend on scroll-triggered reveal state")
     if "@media (prefers-reduced-motion: reduce)" not in css:
         failures.append(f"{site_dir / 'styles.css'}: no reduced-motion fallback")
     if ":focus-visible" not in css:
