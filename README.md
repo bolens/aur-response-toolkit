@@ -1,5 +1,9 @@
 # aur-response-toolkit
 
+[User guide](https://bolens.github.io/aur-response-toolkit/) ·
+[Report a problem](https://github.com/bolens/aur-response-toolkit/issues/new/choose) ·
+[Security policy](SECURITY.md)
+
 Native Rust toolkit to detect, triage, and recover from Arch User Repository
 supply-chain incidents. It covers Atomic Arch, Chaos RAT, Mini Shai-Hulud, the
 OpenConnect SSO validator compromise, the browsh-bin/linux-utils compromise,

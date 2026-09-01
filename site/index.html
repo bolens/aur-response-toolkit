@@ -39,8 +39,8 @@
         <a href="#start">Start</a>
         <a href="#results">Results</a>
         <a href="#respond">Respond</a>
-        <a href="#architecture">How it works</a>
-        <a href="https://github.com/bolens/aur-response-toolkit">GitHub</a>
+        <a href="#architecture">Data handling</a>
+        <a href="https://github.com/bolens/aur-response-toolkit">Technical docs</a>
       </nav>
       <details class="mobile-nav">
         <summary>Menu</summary>
@@ -48,15 +48,15 @@
           <a href="#start">Start</a>
           <a href="#results">Results</a>
           <a href="#respond">Respond</a>
-          <a href="#architecture">How it works</a>
-          <a href="https://github.com/bolens/aur-response-toolkit">GitHub</a>
+          <a href="#architecture">Data handling</a>
+          <a href="https://github.com/bolens/aur-response-toolkit">Technical docs</a>
         </nav>
       </details>
     </header>
 
     <main id="main">
       <section class="hero" id="top" aria-labelledby="hero-title">
-        <div class="eyebrow hero-eyebrow">Native Rust tools for Arch Linux incidents</div>
+        <div class="eyebrow hero-eyebrow">Read-only checks for Arch Linux incidents</div>
         <h1 id="hero-title">Find evidence.<br><span>Keep control.</span></h1>
         <p class="lede hero-lede">Scan installed packages, pacman history, cached build files, runtime state, and persistence points for known AUR supply-chain campaigns. Scans stay read-only. Recovery requires an explicit command.</p>
         <div class="actions hero-actions">
@@ -205,8 +205,8 @@
       <section class="section architecture" id="architecture" aria-labelledby="architecture-title">
         <div class="section-heading">
           <p class="eyebrow">Optional deeper look</p>
-          <h2 id="architecture-title">How the scan handles your data</h2>
-          <p>The interactive diagram shows what the toolkit reads, how it checks campaign data, and where it writes reports.</p>
+          <h2 id="architecture-title">See what the scan reads and saves</h2>
+          <p>This optional diagram explains which parts of your computer the scan checks and where it saves the report. Implementation details remain in the repository.</p>
         </div>
         <iframe src="architecture.html" title="Interactive architecture diagram for aur-response-toolkit" loading="lazy"></iframe>
         <p class="diagram-link"><a href="architecture.html"><strong>Open the interactive architecture diagram</strong><span>Best for tablets, laptops, and desktop screens</span></a></p>
