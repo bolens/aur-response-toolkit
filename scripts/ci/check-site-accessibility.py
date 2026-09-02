@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import html
+import json
 import os
 import sys
 from html.parser import HTMLParser
@@ -88,6 +90,23 @@ class AccessibilityDocument(HTMLParser):
 def main() -> int:
     site_dir = Path(os.environ.get("SITE_DIR", "site"))
     failures: list[str] = []
+    source_path = site_dir / "architecture.json"
+    artifact_path = site_dir / "architecture.html"
+    try:
+        architecture = json.loads(source_path.read_text(encoding="utf-8"))
+        rendered = artifact_path.read_text(encoding="utf-8")
+        if architecture.get("diagram_type") != "architecture":
+            failures.append(f"{source_path}: diagram_type must be architecture")
+        if architecture.get("meta", {}).get("quality_profile") != "showcase":
+            failures.append(f"{source_path}: quality_profile must be showcase")
+        if 'name="generator" content="archify ' not in rendered:
+            failures.append(f"{artifact_path}: missing Archify generator metadata")
+        for component in architecture.get("components", []):
+            label = component.get("label")
+            if isinstance(label, str) and html.escape(label, quote=True) not in rendered:
+                failures.append(f"{artifact_path}: missing component label {label!r}")
+    except (OSError, json.JSONDecodeError) as error:
+        failures.append(f"{source_path}: {error}")
     pages = sorted(site_dir.glob("*.html"))
     for asset in ("theme.js", "theme-modes.css", "favicon.ico", "favicon.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png", "og.png", "site.webmanifest"):
         if not (site_dir / asset).is_file():
