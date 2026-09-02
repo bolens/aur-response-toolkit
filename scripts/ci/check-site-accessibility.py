@@ -89,7 +89,7 @@ def main() -> int:
     site_dir = Path(os.environ.get("SITE_DIR", "site"))
     failures: list[str] = []
     pages = sorted(site_dir.glob("*.html"))
-    for asset in ("favicon.ico", "favicon.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png", "og.png", "site.webmanifest"):
+    for asset in ("theme.js", "theme-modes.css", "favicon.ico", "favicon.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png", "og.png", "site.webmanifest"):
         if not (site_dir / asset).is_file():
             failures.append(f"{site_dir / asset}: missing discovery asset")
     for path in pages:
@@ -111,6 +111,11 @@ def main() -> int:
         failures.append(f"{site_dir / 'styles.css'}: no reduced-motion fallback")
     if ":focus-visible" not in css:
         failures.append(f"{site_dir / 'styles.css'}: no visible keyboard focus rule")
+    theme_source = (site_dir / "theme.js").read_text(encoding="utf-8")
+    for behavior in ("prefers-color-scheme: light", "prefers-color-scheme: dark", "new Date().getHours()", "return \"dark\"", "localStorage.setItem"):
+        if behavior not in theme_source:
+            failures.append(f"theme.js: missing {behavior} adaptive-theme behavior")
+
     if failures:
         print("\n".join(failures), file=sys.stderr)
         return 1
