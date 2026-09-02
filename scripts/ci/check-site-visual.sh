@@ -57,6 +57,8 @@ for viewport in "${viewports[@]}"; do
     --hide-scrollbars \
     --force-device-scale-factor=1 \
     --force-prefers-reduced-motion \
+    --run-all-compositor-stages-before-draw \
+    --virtual-time-budget=1000 \
     --font-render-hinting=none \
     --window-size="${viewport/x/,}" \
     --screenshot="$output" \
