@@ -1,0 +1,4 @@
+[data-color-scheme="light"]{color-scheme:light;--bg:#eef5ef;--panel:#fff;--panel-2:#e2ede4;--text:#102019;--muted:#4c6256;--line:#a9bcae;--signal:#397500;--signal-dark:#edf7df;--focus:#8a5900}
+[data-color-scheme="light"] .site-header{background:rgb(238 245 239 / 94%)}[data-color-scheme="light"] .warning{background:#fff2cf}[data-color-scheme="light"] .code-row{background:#102019;color:#f1f7f3}
+.color-mode-picker{display:inline-flex;align-items:center;gap:.4rem;color:var(--muted);font-size:.72rem}.color-mode-picker select{max-width:8rem;padding:.35rem .5rem;border:1px solid var(--line);background:var(--panel);color:var(--text);font:inherit}
+@media(max-width:760px){.site-header{flex-wrap:wrap}.color-mode-picker{flex:1 0 100%;width:100%;justify-content:flex-end}}
