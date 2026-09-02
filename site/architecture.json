@@ -27,6 +27,18 @@
         "label": "Recovery gate",
         "focus": ["operator", "cli", "engine", "adapters"],
         "note": "Recovery commands remain behind explicit CLI intent and engine policy."
+      },
+      {
+        "id": "coverage-verdict",
+        "label": "Coverage-aware verdict",
+        "focus": ["adapters", "inspection", "engine", "reports"],
+        "note": "Coverage counters keep unavailable or bounded evidence distinct from a clean scan result."
+      },
+      {
+        "id": "campaign-verification",
+        "label": "Campaign verification",
+        "focus": ["campaign-data", "integrity", "engine", "reports"],
+        "note": "Campaign lists enter detection only after registry and content hashes verify their provenance."
       }
     ]
   },
