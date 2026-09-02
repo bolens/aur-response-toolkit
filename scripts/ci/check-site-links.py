@@ -38,15 +38,15 @@ class Document(HTMLParser):
             if element_id in self.ids:
                 self.duplicates.add(element_id)
             self.ids.add(element_id)
+        link_rel = values.get("rel", "").split()
+        skip_link_reference = tag == "link" and (
+            "canonical" in link_rel
+            or values.get("rel") in {"preconnect", "dns-prefetch"}
+        )
         for attribute in ("href", "src"):
-            if values.get(attribute):
-                if tag == "link" and values.get("rel") in {
-                    "preconnect",
-                    "dns-prefetch",
-                }:
-                    continue
+            if values.get(attribute) and not skip_link_reference:
                 self.references.append((attribute, values[attribute]))
-        if tag == "link" and "canonical" in values.get("rel", "").split():
+        if tag == "link" and "canonical" in link_rel:
             self.canonicals.append(values.get("href", ""))
         for attribute in ("aria-controls", "aria-describedby", "aria-labelledby"):
             for target in values.get(attribute, "").split():
