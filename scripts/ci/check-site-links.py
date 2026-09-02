@@ -17,7 +17,9 @@ from pathlib import Path
 
 BASE_PATH = "/aur-response-toolkit/"
 PUBLIC_ROOT = "https://bolens.github.io/aur-response-toolkit/"
-VERSIONED_RELEASE = re.compile(r"github\.com/bolens/aur-response-toolkit/releases/(?:download|tag)/v\d")
+VERSIONED_RELEASE = re.compile(
+    r"github\.com/bolens/aur-response-toolkit/releases/(?:download|tag)/v\d"
+)
 
 
 class Document(HTMLParser):
@@ -38,7 +40,10 @@ class Document(HTMLParser):
             self.ids.add(element_id)
         for attribute in ("href", "src"):
             if values.get(attribute):
-                if tag == "link" and values.get("rel") in {"preconnect", "dns-prefetch"}:
+                if tag == "link" and values.get("rel") in {
+                    "preconnect",
+                    "dns-prefetch",
+                }:
                     continue
                 self.references.append((attribute, values[attribute]))
         if tag == "link" and "canonical" in values.get("rel", "").split():
@@ -104,7 +109,7 @@ def main() -> int:
     documents: dict[Path, Document] = {}
     external_urls: set[str] = set()
 
-    for path in sorted(site_dir.glob("*.html")):
+    for path in sorted(site_dir.rglob("*.html")):
         document = parse_document(path)
         documents[path.resolve()] = document
         for duplicate in sorted(document.duplicates):
@@ -112,10 +117,15 @@ def main() -> int:
         for attribute, target in document.aria_references:
             if target not in document.ids:
                 failures.append(f"{path}: {attribute} points to missing #{target}")
-        if path.name == "index.html":
+        relative = path.relative_to(site_dir)
+        if relative == Path("index.html"):
             if document.canonicals != [PUBLIC_ROOT]:
                 failures.append(f"{path}: canonical URL must be {PUBLIC_ROOT}")
-        elif path.name == "architecture.html":
+        elif relative == Path("changelog/index.html"):
+            expected = f"{PUBLIC_ROOT}changelog/"
+            if document.canonicals != [expected]:
+                failures.append(f"{path}: canonical URL must be {expected}")
+        elif relative == Path("architecture.html"):
             expected = f"{PUBLIC_ROOT}architecture.html"
             if document.canonicals != [expected]:
                 failures.append(f"{path}: canonical URL must be {expected}")
@@ -140,10 +150,14 @@ def main() -> int:
                 target_document = documents.get(target) or parse_document(target)
                 documents[target] = target_document
                 if fragment not in target_document.ids:
-                    failures.append(f"{path}: {attribute}={value!r} has a missing anchor")
+                    failures.append(
+                        f"{path}: {attribute}={value!r} has a missing anchor"
+                    )
 
     for css_path in sorted(site_dir.glob("*.css")):
-        for value in re.findall(r'url\(["\']?([^"\')]+)', css_path.read_text(encoding="utf-8")):
+        for value in re.findall(
+            r'url\(["\']?([^"\')]+)', css_path.read_text(encoding="utf-8")
+        ):
             try:
                 resolved = local_target(site_dir, css_path, value)
             except ValueError as error:
@@ -152,7 +166,7 @@ def main() -> int:
             if resolved and not resolved[0].is_file():
                 failures.append(f"{css_path}: url({value!r}) is missing")
 
-    for path in sorted(source_site_dir.glob("*.html")):
+    for path in sorted(source_site_dir.rglob("*.html")):
         if VERSIONED_RELEASE.search(path.read_text(encoding="utf-8")):
             failures.append(f"{path}: source HTML hardcodes a release version")
 
@@ -172,9 +186,14 @@ def main() -> int:
     try:
         namespace = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
         locations = {
-            node.text for node in ET.parse(sitemap_path).findall("s:url/s:loc", namespace)
+            node.text
+            for node in ET.parse(sitemap_path).findall("s:url/s:loc", namespace)
         }
-        expected_locations = {PUBLIC_ROOT, f"{PUBLIC_ROOT}architecture.html"}
+        expected_locations = {
+            PUBLIC_ROOT,
+            f"{PUBLIC_ROOT}architecture.html",
+            f"{PUBLIC_ROOT}changelog/",
+        }
         if locations != expected_locations:
             failures.append(f"{sitemap_path}: URLs do not match public HTML documents")
     except (OSError, ET.ParseError) as error:
