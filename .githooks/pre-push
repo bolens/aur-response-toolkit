@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+cargo fmt --check
+cargo clippy --all-targets --locked -- -D warnings
+cargo test --locked
+cargo build --release --locked
+bash scripts/ci/test-build-site-release-metadata.sh
+python3 scripts/ci/check-site-accessibility.py
+actionlint
+zizmor --offline --min-severity medium --min-confidence medium .github
