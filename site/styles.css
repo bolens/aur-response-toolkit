@@ -51,7 +51,7 @@ nav a:hover { text-decoration-color: var(--signal); }
 .mobile-nav nav a { min-height: 2.9rem; padding: 0.65rem 0.8rem; border-bottom: 1px solid var(--line); }
 .mobile-nav nav a:last-child { border-bottom: 0; }
 main, footer { width: min(var(--max), calc(100% - 2.5rem)); margin-inline: auto; }
-.hero { min-height: calc(100svh - 4rem); display: grid; align-content: center; padding: 5rem 0 3rem; }
+.hero { min-height: min(52rem, calc(100svh - 4rem)); display: grid; align-content: center; padding: 5rem 0 3rem; }
 .eyebrow { margin: 0 0 1rem; color: var(--signal); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
 h1, h2, h3 { font-family: "Toolkit Sans", sans-serif; line-height: 1.05; letter-spacing: -0.045em; }
 h1 { max-width: 12ch; margin: 0; font-size: clamp(3rem, 11vw, 8.4rem); text-wrap: balance; }
@@ -61,6 +61,12 @@ h1 span { color: var(--signal); }
 .button { display: inline-block; padding: 0.8rem 1rem; border: 1px solid var(--line); text-decoration: none; font-weight: 800; transition: transform 160ms ease, border-color 160ms ease, background-color 160ms ease; }
 .button.primary { background: var(--signal); color: var(--signal-dark); border-color: var(--signal); }
 .button:hover { transform: translateY(-2px); border-color: var(--signal); }
+.evidence-signal { width: 100%; height: 3.25rem; margin: -.75rem 0 .75rem; overflow: visible; }
+.evidence-track { fill: none; stroke: var(--line); stroke-width: 2; stroke-dasharray: .035 .025; animation: evidence-track 5.4s linear infinite; }
+.evidence-stops circle { fill: var(--panel); stroke: var(--muted); stroke-width: 2; }
+.evidence-pulse { fill: var(--signal); filter: drop-shadow(0 0 7px color-mix(in srgb, var(--signal) 65%, transparent)); animation: evidence-pulse 5.4s cubic-bezier(.45, 0, .2, 1) infinite; }
+@keyframes evidence-track { to { stroke-dashoffset: -1; } }
+@keyframes evidence-pulse { 0%, 7% { transform: translateX(0); } 29% { transform: translateX(274px); } 55% { transform: translateX(550px); } 82%, 100% { transform: translateX(824px); } }
 .status-strip { display: grid; grid-template-columns: repeat(4, 1fr); margin: 3.5rem 0 0; padding: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); list-style: none; }
 .status-strip li { padding: 1.1rem; border-right: 1px solid var(--line); }
 .status-strip li:last-child { border: 0; }
@@ -174,9 +180,17 @@ footer p { margin: 0; }
   .copy { min-height: 2.75rem; border-left: 0; border-top: 1px solid var(--line); }
 }
 
+@media (orientation: landscape) and (max-height: 560px) {
+  .hero { min-height: auto; padding: 1.25rem 0 2rem; }
+  .hero h1 { font-size: clamp(2.75rem, 7vw, 3.5rem); }
+  .hero-lede { margin-block: .65rem; line-height: 1.45; }
+  .hero-status { margin-top: 1.5rem; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+  .evidence-pulse { transform: translateX(824px); }
 }
 
 /* Incident-field-manual signature: evidence is visually separated from action. */
