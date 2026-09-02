@@ -43,16 +43,17 @@ python3 -m http.server "$port" --bind 127.0.0.1 --directory "$site_dir" \
   >"$actual_dir/server.log" 2>&1 &
 server_pid="$!"
 for _ in {1..20}; do
-  curl -fsS "http://127.0.0.1:$port/" >/dev/null 2>&1 && break
+  curl -fsS "http://127.0.0.1:$port/?theme=dark" >/dev/null 2>&1 && break
   sleep 0.25
 done
-curl -fsS "http://127.0.0.1:$port/" >/dev/null
+curl -fsS "http://127.0.0.1:$port/?theme=dark" >/dev/null
 
 viewports=(1440x1100 900x1100 390x844 320x800)
 for viewport in "${viewports[@]}"; do
   output="$actual_dir/$viewport.png"
   "$browser" \
     --headless \
+    --user-data-dir="/profile-" \
     --disable-gpu \
     --hide-scrollbars \
     --force-device-scale-factor=1 \
@@ -62,7 +63,7 @@ for viewport in "${viewports[@]}"; do
     --font-render-hinting=none \
     --window-size="${viewport/x/,}" \
     --screenshot="$output" \
-    "http://127.0.0.1:$port/" >/dev/null 2>&1
+    "http://127.0.0.1:$port/?theme=dark" >/dev/null 2>&1
 
   dimensions="$(identify_image -format '%wx%h' "$output")"
   [[ "$dimensions" == "$viewport" ]] || {
