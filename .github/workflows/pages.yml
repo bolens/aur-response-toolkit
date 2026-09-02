@@ -1,6 +1,8 @@
 name: Pages
 
 on:
+  release:
+    types: [published]
   push:
     branches:
       - main
@@ -41,16 +43,20 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          version="$(cat VERSION)"
+          tag="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)"
+          [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          version="${tag#v}"
+          version_file="$RUNNER_TEMP/VERSION"
+          printf '%s\n' "$version" > "$version_file"
           site_output="$RUNNER_TEMP/site"
           cp -R site "$site_output"
           mkdir -p "$RUNNER_TEMP/release"
-          gh release download "v$version" \
+          gh release download "$tag" \
             --pattern "aur-response-toolkit-$version-linux-x86_64.tar.gz.sha256" \
             --pattern "aur-response-toolkit-$version-source.tar.gz.sha256" \
             --dir "$RUNNER_TEMP/release"
           python3 scripts/ci/build-site-release-metadata.py \
-            VERSION \
+            "$version_file" \
             "$RUNNER_TEMP/release/aur-response-toolkit-$version-linux-x86_64.tar.gz.sha256" \
             "$RUNNER_TEMP/release/aur-response-toolkit-$version-source.tar.gz.sha256" \
             "$site_output/release.json" \
