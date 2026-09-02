@@ -134,6 +134,16 @@ footer p { margin: 0; }
   }
 }
 
+@media (min-width: 100rem) {
+  :root { --max: 96rem; }
+  .hero { min-height: min(54rem, calc(100svh - 4rem)); }
+  .hero > .lede { max-width: 58rem; }
+  .section-heading { max-width: 60rem; }
+  .release-panel { grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr); }
+  .steps li { min-height: 15rem; }
+  .architecture iframe { min-height: 56rem; }
+}
+
 @media (max-width: 52rem) {
   .desktop-nav { display: none; }
   .mobile-nav { display: block; }
@@ -168,3 +178,6 @@ footer p { margin: 0; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* Incident-field-manual signature: evidence is visually separated from action. */
+::selection{background:var(--signal);color:var(--signal-dark)}h1,h2{text-wrap:balance}p{text-wrap:pretty}.release-panel{position:relative;border-left:.45rem solid var(--signal)}.release-panel::before{content:"";position:absolute;inset:0 0 auto;height:.35rem;background:repeating-linear-gradient(135deg,var(--signal) 0 .65rem,transparent .65rem 1.3rem);opacity:.55;pointer-events:none}
