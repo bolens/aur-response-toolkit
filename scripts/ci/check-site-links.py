@@ -207,6 +207,15 @@ def main() -> int:
     except OSError as error:
         failures.append(f"{robots_path}: cannot read robots file: {error}")
 
+    llms_path = site_dir / "llms.txt"
+    try:
+        llms = llms_path.read_text(encoding="utf-8")
+        for url in (PUBLIC_ROOT, f"{PUBLIC_ROOT}architecture.html", f"{PUBLIC_ROOT}changelog/", "https://github.com/bolens/aur-response-toolkit"):
+            if url not in llms:
+                failures.append(f"{llms_path}: missing {url}")
+    except OSError as error:
+        failures.append(f"{llms_path}: cannot read llms.txt: {error}")
+
     if os.environ.get("CHECK_EXTERNAL_LINKS") == "1":
         for url in sorted(external_urls):
             failure = check_external(url)
