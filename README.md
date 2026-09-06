@@ -129,3 +129,7 @@ The Pages site contains the
 [non-technical user guide](https://bolens.github.io/aur-response-toolkit/).
 Threat-source attribution, implementation notes, and incident records remain in
 [`data/docs/`](data/docs/).
+
+## Development environment
+
+See [development environments](docs/development-environments.md) for locked Rust validation and local Docker, Podman, and Apple container tooling.

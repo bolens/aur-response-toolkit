@@ -18,5 +18,9 @@
   "notes": "Complements native repository checks. Managed Spec Kit files retain their dedicated integrity gate; imported snapshots and generated/native-checked surfaces are scoped separately. Malicious shell fixtures are parser inputs, never executable scripts; Rust fixture tests validate them.",
   "exclude": [
     "tests/fixtures/*"
+  ],
+  "markdown": [
+    "docs/development-environments.md",
+    "specs/002-development-environments/*.md"
   ]
 }
