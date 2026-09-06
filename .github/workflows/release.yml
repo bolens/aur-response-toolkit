@@ -76,7 +76,7 @@ jobs:
           bundle="aur-response-toolkit-${version}-linux-x86_64"
           mkdir "$bundle"
           install -Dm755 target/release/aur-response "$bundle/aur-response"
-          install -Dm644 README.md config.toml.example LICENSE "$bundle/"
+          install -Dm644 README.md config.toml.example LICENSE THIRD_PARTY_LICENSES.txt THIRD_PARTY_NOTICES.md "$bundle/"
           cp -R data "$bundle/data"
           tar -czf "$bundle.tar.gz" "$bundle"
           sha256sum "$bundle.tar.gz" > "$bundle.tar.gz.sha256"

@@ -42,6 +42,11 @@ package() {
 
   install -Dm644 VERSION "$root/VERSION"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  for notice in THIRD_PARTY_LICENSES.txt THIRD_PARTY_NOTICES.md; do
+    if [[ -f "$notice" ]]; then
+      install -Dm644 "$notice" "$pkgdir/usr/share/licenses/$pkgname/$notice"
+    fi
+  done
   install -Dm644 README.md "$root/README.md"
   install -Dm644 config.toml.example "$root/config.toml.example"
   install -Dm755 target/release/aur-response "$pkgdir/usr/bin/aur-response"
