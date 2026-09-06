@@ -1,0 +1,7 @@
+# Normalize detected text while preserving binary contents.
+* text=auto eol=lf
+
+*.gz binary
+*.ico binary
+*.png binary
+*.woff2 binary
