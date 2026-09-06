@@ -18,3 +18,8 @@ data/lists/*.previous.txt
 
 # Rust build output
 /target/
+
+# Local tooling and runtime artifacts
+__pycache__/
+*.py[cod]
+.ruff_cache/
