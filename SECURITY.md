@@ -1,5 +1,7 @@
 # Security policy
 
+[Documentation](docs/README.md)
+
 ## Reporting vulnerabilities in this toolkit
 
 If you find a security issue in **aur-response-toolkit** itself, report it

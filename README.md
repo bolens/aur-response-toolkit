@@ -1,5 +1,7 @@
 # aur-response-toolkit
 
+[Documentation](docs/README.md)
+
 [User guide](https://bolens.github.io/aur-response-toolkit/) ·
 [Report a problem](https://github.com/bolens/aur-response-toolkit/issues/new/choose) ·
 [Security policy](SECURITY.md)
