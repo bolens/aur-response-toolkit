@@ -11,7 +11,7 @@ use crate::{EXIT_CLEAN, EXIT_COMPROMISE, EXIT_INSUFFICIENT, EXIT_WARN};
 use chrono::Local;
 use regex::Regex;
 use sha2::Digest;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
@@ -168,6 +168,7 @@ pub struct Engine {
     pub paths: Paths,
     pub state: ScanState,
     local_mode: bool,
+    used_list_paths: BTreeMap<&'static str, PathBuf>,
 }
 
 impl Engine {
@@ -229,6 +230,7 @@ impl Engine {
             paths,
             state,
             local_mode: true,
+            used_list_paths: BTreeMap::new(),
         }
     }
 
@@ -265,6 +267,7 @@ impl Engine {
                     );
                     None
                 } else {
+                    self.used_list_paths.insert(campaign.slug(), path);
                     Some(packages)
                 }
             }
@@ -412,7 +415,20 @@ impl Engine {
         }
 
         let path = self.paths.list(campaign, &self.config);
-        let old = inspection::read_text(&path)
+        let cache_path = if path == bundled {
+            self.paths
+                .reports
+                .join("lists")
+                .join(format!("{}-pkgs.txt", campaign.slug()))
+        } else {
+            path.clone()
+        };
+        let previous_path = if cache_path.is_file() {
+            &cache_path
+        } else {
+            &path
+        };
+        let old = inspection::read_text(previous_path)
             .ok()
             .and_then(|input| match input {
                 Bounded::Value(input) => Some(lists::plain(&input)),
@@ -422,12 +438,14 @@ impl Engine {
             self.state.counters.list_added += merged.difference(old).count() as u64;
             self.state.counters.list_removed += old.difference(&merged).count() as u64;
         }
-        if let Err(error) = Self::cache_list(&path, &merged) {
-            self.state.log(
+        if let Err(error) = Self::cache_list(&cache_path, &merged) {
+            self.insufficient(
                 quiet,
-                format!("WARN: cannot cache {} list: {error}", campaign.slug()),
+                format!("cannot cache {} list: {error}", campaign.slug()),
             );
+            return None;
         }
+        self.used_list_paths.insert(campaign.slug(), cache_path);
         self.state.log(
             quiet,
             format!(
@@ -1632,6 +1650,13 @@ impl Engine {
         }
     }
 
+    fn summary_list_path(&self, campaign: Campaign) -> PathBuf {
+        self.used_list_paths
+            .get(campaign.slug())
+            .cloned()
+            .unwrap_or_else(|| self.paths.list(campaign, &self.config))
+    }
+
     fn final_exit(&self, fail_on: FailOn) -> i32 {
         if self.state.insufficient && matches!(fail_on, FailOn::All | FailOn::Compromise) {
             return EXIT_INSUFFICIENT;
@@ -1663,6 +1688,7 @@ impl Engine {
             return crate::EXIT_INVALID;
         }
         self.local_mode = o.local;
+        self.used_list_paths.clear();
         if matches!(parsed.kind, CommandKind::Full) {
             self.state = ScanState::default();
         }
@@ -1783,14 +1809,15 @@ impl Engine {
             }
             report::write_state(&self.paths.reports, &self.state)?;
             report::write_findings(&self.paths.reports, &self.state.findings)?;
-            let atomic = self.paths.list(Campaign::AtomicArch, &self.config);
-            let chaos = self.paths.list(Campaign::ChaosRat, &self.config);
-            let shai = self.paths.list(Campaign::ShaiHulud, &self.config);
-            let openconnect = self.paths.list(Campaign::OpenconnectSso, &self.config);
-            let browsh = self.paths.list(Campaign::BrowshLinuxUtils, &self.config);
-            let xsnow = self.paths.list(Campaign::XsnowWorm, &self.config);
-            let xeactor = self.paths.list(Campaign::Xeactor, &self.config);
-            let path = report::write_summary(
+            let atomic = self.summary_list_path(Campaign::AtomicArch);
+            let chaos = self.summary_list_path(Campaign::ChaosRat);
+            let shai = self.summary_list_path(Campaign::ShaiHulud);
+            let openconnect = self.summary_list_path(Campaign::OpenconnectSso);
+            let browsh = self.summary_list_path(Campaign::BrowshLinuxUtils);
+            let xsnow = self.summary_list_path(Campaign::XsnowWorm);
+            let xeactor = self.summary_list_path(Campaign::Xeactor);
+            let manifest = integrity::load(&self.paths.root.join("data/integrity.toml")).ok();
+            let path = report::write_summary_with_manifest(
                 &self.paths.reports,
                 &self.state,
                 code,
@@ -1803,6 +1830,7 @@ impl Engine {
                     (Campaign::XsnowWorm, xsnow.as_path()),
                     (Campaign::Xeactor, xeactor.as_path()),
                 ],
+                manifest.as_ref(),
             )?;
             if o.json {
                 let json = fs::read_to_string(path)?;

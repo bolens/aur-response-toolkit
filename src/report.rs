@@ -80,6 +80,20 @@ pub fn write_summary(
     exit_code: i32,
     lists: &[(Campaign, &Path)],
 ) -> io::Result<PathBuf> {
+    let manifest = lists
+        .iter()
+        .find_map(|(_, path)| path.parent()?.parent())
+        .and_then(|data| integrity::load(&data.join("integrity.toml")).ok());
+    write_summary_with_manifest(reports_dir, state, exit_code, lists, manifest.as_ref())
+}
+
+pub fn write_summary_with_manifest(
+    reports_dir: &Path,
+    state: &ScanState,
+    exit_code: i32,
+    lists: &[(Campaign, &Path)],
+    manifest: Option<&integrity::Manifest>,
+) -> io::Result<PathBuf> {
     fs::create_dir_all(reports_dir)?;
     let findings = state
         .findings
@@ -92,10 +106,6 @@ pub fn write_summary(
             .find(|(candidate, _)| *candidate == campaign)
             .and_then(|(_, path)| sha256(path))
     };
-    let manifest = lists
-        .iter()
-        .find_map(|(_, path)| path.parent()?.parent())
-        .and_then(|data| integrity::load(&data.join("integrity.toml")).ok());
     let campaigns = Campaign::ALL
         .into_iter()
         .map(|campaign| {

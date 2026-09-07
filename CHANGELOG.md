@@ -4,6 +4,8 @@ All notable changes to **aur-response-toolkit** are documented here.
 
 ## Unreleased
 
+- Preserve bundled integrity data during online scans, cache fetched lists
+  separately, and report the digest of the list actually scanned.
 - Compare fresh package names without replacing local lists, report installed
   stale misses, and mark unavailable online evidence as incomplete.
 - Verify explicit removal targets against installed packages instead of reporting

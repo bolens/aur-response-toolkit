@@ -295,6 +295,7 @@ fn remote_refresh_preserves_verified_bundled_baseline() {
     .unwrap();
     let bundled = lists.join("atomic-arch-pkgs.txt");
     fs::copy(upstream.join("data/lists/atomic-arch-pkgs.txt"), &bundled).unwrap();
+    let before = fs::read(&bundled).unwrap();
     let empty = home.path().join("empty.txt");
     let extra = home.path().join("extra.txt");
     let foreign = home.path().join("foreign.txt");
@@ -304,17 +305,20 @@ fn remote_refresh_preserves_verified_bundled_baseline() {
     fs::write(&extra, "remote-only-package\n").unwrap();
     fs::write(&foreign, "").unwrap();
 
-    let output = Command::new(binary())
-        .env("HOME", home.path())
-        .env("AUR_RESPONSE_DIR", home.path())
-        .env("AUR_LIST_URL_ARCH", format!("file://{}", empty.display()))
-        .env("AUR_LIST_URL_CSCS", format!("file://{}", empty.display()))
-        .env("AUR_LIST_URL_EXTRA", format!("file://{}", extra.display()))
-        .env("AUR_TEST_FOREIGN_LIST", foreign)
-        .env("AUR_TEST_PACMAN_LOG_DIR", logs)
-        .args(["scan", "packages", "atomic-arch"])
-        .output()
-        .unwrap();
+    let run_online = || {
+        Command::new(binary())
+            .env("HOME", home.path())
+            .env("AUR_RESPONSE_DIR", home.path())
+            .env("AUR_LIST_URL_ARCH", format!("file://{}", empty.display()))
+            .env("AUR_LIST_URL_CSCS", format!("file://{}", empty.display()))
+            .env("AUR_LIST_URL_EXTRA", format!("file://{}", extra.display()))
+            .env("AUR_TEST_FOREIGN_LIST", &foreign)
+            .env("AUR_TEST_PACMAN_LOG_DIR", &logs)
+            .args(["scan", "packages", "atomic-arch", "--json"])
+            .output()
+            .unwrap()
+    };
+    let output = run_online();
 
     assert_eq!(
         output.status.code(),
@@ -323,9 +327,63 @@ fn remote_refresh_preserves_verified_bundled_baseline() {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
-    let refreshed = fs::read_to_string(bundled).unwrap();
+    assert_eq!(fs::read(&bundled).unwrap(), before);
+    assert!(!bundled.with_extension("previous.txt").exists());
+    let cache = home.path().join("reports/lists/atomic-arch-pkgs.txt");
+    let refreshed = fs::read_to_string(&cache).unwrap();
     assert!(refreshed.lines().any(|line| line == "123pan-bin"));
     assert!(refreshed.lines().any(|line| line == "remote-only-package"));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let json: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
+    assert_eq!(
+        json["list_sha256"],
+        aur_response::report::sha256(&cache).unwrap()
+    );
+    assert_eq!(
+        json["campaigns"][0]["expected_list_sha256"],
+        aur_response::report::sha256(&bundled).unwrap()
+    );
+    let repeated = run_online();
+    assert_eq!(repeated.status.code(), Some(0));
+    let stdout = String::from_utf8(repeated.stdout).unwrap();
+    let json: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
+    assert_eq!(json["list_added"], 0);
+    assert_eq!(json["list_removed"], 0);
+    let blocked_backup = cache.with_extension("previous.txt");
+    fs::remove_file(&blocked_backup).unwrap();
+    fs::create_dir(&blocked_backup).unwrap();
+    let failed = run_online();
+    assert_eq!(failed.status.code(), Some(3));
+    let stdout = String::from_utf8(failed.stdout).unwrap();
+    assert!(stdout.contains("cannot cache atomic-arch list"));
+    let json: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
+    assert_eq!(json["coverage_complete"], false);
+    assert_eq!(
+        json["list_sha256"],
+        aur_response::report::sha256(&bundled).unwrap()
+    );
+    fs::remove_dir(blocked_backup).unwrap();
+    fs::write(&cache, "corrupted-cache\n").unwrap();
+    let local = Command::new(binary())
+        .env("HOME", home.path())
+        .env("AUR_RESPONSE_DIR", home.path())
+        .env("AUR_TEST_FOREIGN_LIST", &foreign)
+        .env("AUR_TEST_PACMAN_LOG_DIR", &logs)
+        .args(["scan", "packages", "atomic-arch", "--local", "--json"])
+        .output()
+        .unwrap();
+    assert_eq!(
+        local.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&local.stdout)
+    );
+    let stdout = String::from_utf8(local.stdout).unwrap();
+    let json: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
+    assert_eq!(
+        json["list_sha256"],
+        aur_response::report::sha256(&bundled).unwrap()
+    );
 }
 
 #[test]

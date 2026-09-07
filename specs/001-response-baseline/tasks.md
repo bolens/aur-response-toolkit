@@ -15,3 +15,5 @@ Hosted checks and merge evidence belong to the delivery PR. Follow RELEASING.md.
 - [ ] T008 Deliver through a passing PR and verify the merge commit.
 
 - [x] T009 Reproduce and correct FR-016 freshness comparison without local-list replacement.
+
+- [x] T010 Reproduce and correct FR-017 canonical list preservation and evidence hashes.
