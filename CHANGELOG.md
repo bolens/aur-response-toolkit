@@ -4,6 +4,24 @@ All notable changes to **aur-response-toolkit** are documented here.
 
 ## Unreleased
 
+- Preserve bundled integrity data during online scans, cache fetched lists
+  separately, and report the digest of the list actually scanned.
+- Compare fresh package names without replacing local lists, report installed
+  stale misses, and mark unavailable online evidence as incomplete.
+- Verify explicit removal targets against installed packages instead of reporting
+  already absent packages as still installed.
+- Keep existing npm configuration lines intact when applying hardening to a file
+  without a final newline.
+- Reject FIFO evidence without waiting for a writer, preserving bounded reads
+  and Linux symlink protection.
+- Mark insufficient evidence and unreadable cron text as incomplete coverage.
+- Detect suspicious package hooks even when a separate maintainer comment matches
+  an excluded false positive.
+- Report failed report/state publication with a diagnostic and exit code 3.
+- Reject prune-day values that overflow before changing report files.
+- Preserve private file permissions when replacing history or state, and create
+  new atomic-output files with owner-only read/write permissions on Unix.
+
 ## 2.2.0
 
 - Add package and timeline coverage for the August 2026 `xsnow` / `xsnow-bin`

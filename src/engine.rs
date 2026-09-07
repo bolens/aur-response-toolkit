@@ -11,7 +11,7 @@ use crate::{EXIT_CLEAN, EXIT_COMPROMISE, EXIT_INSUFFICIENT, EXIT_WARN};
 use chrono::Local;
 use regex::Regex;
 use sha2::Digest;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
@@ -168,6 +168,7 @@ pub struct Engine {
     pub paths: Paths,
     pub state: ScanState,
     local_mode: bool,
+    used_list_paths: BTreeMap<&'static str, PathBuf>,
 }
 
 impl Engine {
@@ -229,16 +230,21 @@ impl Engine {
             paths,
             state,
             local_mode: true,
+            used_list_paths: BTreeMap::new(),
         }
     }
 
     fn read_list(&mut self, campaign: Campaign, quiet: bool) -> Option<BTreeSet<String>> {
-        let path = self.paths.list(campaign, &self.config);
         if !self.local_mode {
             if let Some(fetched) = self.fetch_list(campaign, quiet) {
                 return Some(fetched);
             }
         }
+        self.read_local_list(campaign, quiet)
+    }
+
+    fn read_local_list(&mut self, campaign: Campaign, quiet: bool) -> Option<BTreeSet<String>> {
+        let path = self.paths.list(campaign, &self.config);
         if !self.validate_bundled_list(campaign, &path, quiet) {
             return None;
         }
@@ -261,6 +267,7 @@ impl Engine {
                     );
                     None
                 } else {
+                    self.used_list_paths.insert(campaign.slug(), path);
                     Some(packages)
                 }
             }
@@ -282,7 +289,7 @@ impl Engine {
         }
     }
 
-    fn fetch_list(&mut self, campaign: Campaign, quiet: bool) -> Option<BTreeSet<String>> {
+    fn fetch_remote_list(&self, campaign: Campaign) -> BTreeSet<String> {
         type Parser = fn(&str) -> BTreeSet<String>;
         let sources: Vec<(String, Parser)> = match campaign {
             Campaign::AtomicArch => vec![
@@ -373,6 +380,11 @@ impl Engine {
             let input = String::from_utf8_lossy(&output.stdout);
             merged.extend(parser(&input));
         }
+        merged
+    }
+
+    fn fetch_list(&mut self, campaign: Campaign, quiet: bool) -> Option<BTreeSet<String>> {
+        let mut merged = self.fetch_remote_list(campaign);
         let bundled = self
             .paths
             .data_lists
@@ -403,7 +415,20 @@ impl Engine {
         }
 
         let path = self.paths.list(campaign, &self.config);
-        let old = inspection::read_text(&path)
+        let cache_path = if path == bundled {
+            self.paths
+                .reports
+                .join("lists")
+                .join(format!("{}-pkgs.txt", campaign.slug()))
+        } else {
+            path.clone()
+        };
+        let previous_path = if cache_path.is_file() {
+            &cache_path
+        } else {
+            &path
+        };
+        let old = inspection::read_text(previous_path)
             .ok()
             .and_then(|input| match input {
                 Bounded::Value(input) => Some(lists::plain(&input)),
@@ -413,12 +438,14 @@ impl Engine {
             self.state.counters.list_added += merged.difference(old).count() as u64;
             self.state.counters.list_removed += old.difference(&merged).count() as u64;
         }
-        if let Err(error) = Self::cache_list(&path, &merged) {
-            self.state.log(
+        if let Err(error) = Self::cache_list(&cache_path, &merged) {
+            self.insufficient(
                 quiet,
-                format!("WARN: cannot cache {} list: {error}", campaign.slug()),
+                format!("cannot cache {} list: {error}", campaign.slug()),
             );
+            return None;
         }
+        self.used_list_paths.insert(campaign.slug(), cache_path);
         self.state.log(
             quiet,
             format!(
@@ -428,6 +455,57 @@ impl Engine {
             ),
         );
         Some(merged)
+    }
+
+    fn check_list_freshness(&mut self, quiet: bool) {
+        let Some(bundled) = self.read_local_list(Campaign::AtomicArch, quiet) else {
+            return;
+        };
+        if self.local_mode {
+            self.insufficient(
+                quiet,
+                "online freshness is unavailable in --local mode".into(),
+            );
+            return;
+        }
+        let fresh = self.fetch_remote_list(Campaign::AtomicArch);
+        if fresh.is_empty() {
+            self.insufficient(quiet, "fresh package list is empty or unavailable".into());
+            return;
+        }
+        let added: BTreeSet<_> = fresh.difference(&bundled).cloned().collect();
+        let removed: BTreeSet<_> = bundled.difference(&fresh).cloned().collect();
+        self.state.counters.list_added += added.len() as u64;
+        self.state.counters.list_removed += removed.len() as u64;
+        self.state.log(
+            quiet,
+            format!(
+                "Delta vs local snapshot: +{} added, -{} removed (local list unchanged)",
+                added.len(),
+                removed.len()
+            ),
+        );
+        for package in &added {
+            self.state.finding("list_freshness_added", package);
+        }
+        for package in &removed {
+            self.state.finding("list_freshness_removed", package);
+        }
+        let installed = match alpm::installed_packages() {
+            Ok(packages) => packages,
+            Err(error) => {
+                self.insufficient(
+                    quiet,
+                    format!("could not query installed foreign packages: {error}"),
+                );
+                return;
+            }
+        };
+        for package in installed.intersection(&added) {
+            self.state.compromise = true;
+            self.state.finding("list_staleness_installed", package);
+            self.state.log(quiet, format!("[STALE-MISS] {package}"));
+        }
     }
 
     fn cache_list(path: &Path, packages: &BTreeSet<String>) -> std::io::Result<()> {
@@ -1004,14 +1082,17 @@ impl Engine {
                         continue;
                     }
                 };
-                let evidence = re.is_match(&input)
+                let inspected = input
+                    .split_inclusive('\n')
+                    .filter(|line| {
+                        !(line.starts_with("# Maintainer:") && line.contains("base64 -d"))
+                    })
+                    .collect::<String>();
+                let evidence = re.is_match(&inspected)
                     || (configured_pattern.is_none()
-                        && (xsnow_hook_evidence(&input) || validator_loader_evidence(&input)));
-                if evidence
-                    && !input
-                        .lines()
-                        .any(|v| v.starts_with("# Maintainer:") && v.contains("base64 -d"))
-                {
+                        && (xsnow_hook_evidence(&inspected)
+                            || validator_loader_evidence(&inspected)));
+                if evidence {
                     let item = entry.path().display().to_string();
                     self.state.finding("artifacts", &item);
                     self.state.counters.artifact_critical += 1;
@@ -1329,6 +1410,7 @@ impl Engine {
         };
         let label = campaign.display_name();
         if verify {
+            let packages = packages.intersection(&installed).collect::<BTreeSet<_>>();
             if packages.is_empty() {
                 println!("VERIFY OK: no {label} packages remain installed.");
                 return EXIT_CLEAN;
@@ -1568,6 +1650,13 @@ impl Engine {
         }
     }
 
+    fn summary_list_path(&self, campaign: Campaign) -> PathBuf {
+        self.used_list_paths
+            .get(campaign.slug())
+            .cloned()
+            .unwrap_or_else(|| self.paths.list(campaign, &self.config))
+    }
+
     fn final_exit(&self, fail_on: FailOn) -> i32 {
         if self.state.insufficient && matches!(fail_on, FailOn::All | FailOn::Compromise) {
             return EXIT_INSUFFICIENT;
@@ -1599,6 +1688,7 @@ impl Engine {
             return crate::EXIT_INVALID;
         }
         self.local_mode = o.local;
+        self.used_list_paths.clear();
         if matches!(parsed.kind, CommandKind::Full) {
             self.state = ScanState::default();
         }
@@ -1649,11 +1739,7 @@ impl Engine {
             CommandKind::AurWindow => self.scan_aur_window(o.quiet),
             CommandKind::Hardening => self.scan_hardening(o.quiet),
             CommandKind::Audit => self.audit(o.quiet, o.if_compromised),
-            CommandKind::ListFreshness => {
-                if self.read_list(Campaign::AtomicArch, o.quiet).is_none() {
-                    self.state.insufficient = true;
-                }
-            }
+            CommandKind::ListFreshness => self.check_list_freshness(o.quiet),
             CommandKind::RotateHints => self.rotate_hints(o.quiet),
             CommandKind::ApplyHardening => {
                 let apply = parsed.positionals.iter().any(|v| v == "--apply");
@@ -1662,8 +1748,13 @@ impl Engine {
                     .unwrap_or_default()
                     .join(".npmrc");
                 if apply {
-                    let already_applied = fs::read_to_string(&path)
+                    let input = fs::read_to_string(&path);
+                    let already_applied = input
+                        .as_ref()
                         .is_ok_and(|input| input.lines().any(|line| line == "ignore-scripts=true"));
+                    let needs_newline = input
+                        .as_ref()
+                        .is_ok_and(|input| !input.is_empty() && !input.ends_with('\n'));
                     let result = if already_applied {
                         Ok(())
                     } else {
@@ -1671,7 +1762,12 @@ impl Engine {
                             .create(true)
                             .append(true)
                             .open(&path)
-                            .and_then(|mut f| writeln!(f, "ignore-scripts=true"))
+                            .and_then(|mut f| {
+                                if needs_newline {
+                                    writeln!(f)?;
+                                }
+                                writeln!(f, "ignore-scripts=true")
+                            })
                     };
                     if let Err(e) = result {
                         self.insufficient(
@@ -1699,7 +1795,8 @@ impl Engine {
             CommandKind::ConfigMigrate => unreachable!(),
         }
         let code = self.final_exit(o.fail_on);
-        if fs::create_dir_all(&self.paths.reports).is_ok() {
+        let publication = (|| -> io::Result<()> {
+            fs::create_dir_all(&self.paths.reports)?;
             if let Some(path) = &self.state.report_file {
                 let mut contents = format!(
                     "=== AUR malware response report ===\nToolkit version: {}\nStarted: {}\n\n",
@@ -1708,18 +1805,19 @@ impl Engine {
                 );
                 contents.push_str(&self.state.log.join("\n"));
                 contents.push('\n');
-                let _ = crate::config::atomic_write(path, contents.as_bytes());
+                crate::config::atomic_write(path, contents.as_bytes())?;
             }
-            let _ = report::write_state(&self.paths.reports, &self.state);
-            let _ = report::write_findings(&self.paths.reports, &self.state.findings);
-            let atomic = self.paths.list(Campaign::AtomicArch, &self.config);
-            let chaos = self.paths.list(Campaign::ChaosRat, &self.config);
-            let shai = self.paths.list(Campaign::ShaiHulud, &self.config);
-            let openconnect = self.paths.list(Campaign::OpenconnectSso, &self.config);
-            let browsh = self.paths.list(Campaign::BrowshLinuxUtils, &self.config);
-            let xsnow = self.paths.list(Campaign::XsnowWorm, &self.config);
-            let xeactor = self.paths.list(Campaign::Xeactor, &self.config);
-            if let Ok(path) = report::write_summary(
+            report::write_state(&self.paths.reports, &self.state)?;
+            report::write_findings(&self.paths.reports, &self.state.findings)?;
+            let atomic = self.summary_list_path(Campaign::AtomicArch);
+            let chaos = self.summary_list_path(Campaign::ChaosRat);
+            let shai = self.summary_list_path(Campaign::ShaiHulud);
+            let openconnect = self.summary_list_path(Campaign::OpenconnectSso);
+            let browsh = self.summary_list_path(Campaign::BrowshLinuxUtils);
+            let xsnow = self.summary_list_path(Campaign::XsnowWorm);
+            let xeactor = self.summary_list_path(Campaign::Xeactor);
+            let manifest = integrity::load(&self.paths.root.join("data/integrity.toml")).ok();
+            let path = report::write_summary_with_manifest(
                 &self.paths.reports,
                 &self.state,
                 code,
@@ -1732,29 +1830,35 @@ impl Engine {
                     (Campaign::XsnowWorm, xsnow.as_path()),
                     (Campaign::Xeactor, xeactor.as_path()),
                 ],
-            ) {
-                if o.json {
-                    if let Ok(json) = fs::read_to_string(path) {
-                        println!("{json}");
-                    }
-                }
+                manifest.as_ref(),
+            )?;
+            if o.json {
+                let json = fs::read_to_string(path)?;
+                println!("{json}");
             }
-            if o.prune_days > 0 {
-                let cutoff = std::time::SystemTime::now()
-                    .checked_sub(std::time::Duration::from_secs(o.prune_days * 86_400));
-                if let (Some(cutoff), Ok(entries)) = (cutoff, fs::read_dir(&self.paths.reports)) {
-                    for entry in entries.flatten() {
-                        let path = entry.path();
-                        let pruneable = path.extension().and_then(|v| v.to_str()) == Some("log")
-                            || path.file_name().and_then(|v| v.to_str())
-                                == Some("latest-summary.json");
-                        if pruneable
-                            && fs::metadata(&path)
-                                .and_then(|m| m.modified())
-                                .is_ok_and(|mtime| mtime <= cutoff)
-                        {
-                            let _ = fs::remove_file(path);
-                        }
+            Ok(())
+        })();
+        if let Err(error) = publication {
+            eprintln!(
+                "ERROR: cannot publish report in {}: {error}",
+                self.paths.reports.display()
+            );
+            return EXIT_INSUFFICIENT;
+        }
+        if o.prune_days > 0 {
+            let cutoff = std::time::SystemTime::now()
+                .checked_sub(std::time::Duration::from_secs(o.prune_days * 86_400));
+            if let (Some(cutoff), Ok(entries)) = (cutoff, fs::read_dir(&self.paths.reports)) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    let pruneable = path.extension().and_then(|v| v.to_str()) == Some("log")
+                        || path.file_name().and_then(|v| v.to_str()) == Some("latest-summary.json");
+                    if pruneable
+                        && fs::metadata(&path)
+                            .and_then(|m| m.modified())
+                            .is_ok_and(|mtime| mtime <= cutoff)
+                    {
+                        let _ = fs::remove_file(path);
                     }
                 }
             }

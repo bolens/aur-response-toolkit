@@ -151,13 +151,12 @@ pub fn runtime_iocs(home: &Path) -> ScanResult {
                 }
             };
             if entry.file_type().is_file()
-                && matches!(inspection::read_text(entry.path()), Ok(Bounded::Value(text)) if pattern.is_match(&text))
+                && inspected_text(entry.path(), &mut result)
+                    .is_some_and(|text| pattern.is_match(&text))
             {
                 result
                     .hits
                     .insert(format!("cron:{}", entry.path().display()));
-            } else if matches!(inspection::read_text(entry.path()), Ok(Bounded::Oversize)) {
-                result.files_skipped_oversize += 1;
             }
         }
     }

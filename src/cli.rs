@@ -250,6 +250,12 @@ pub fn parse(_argv0: &str, args: &[String]) -> Result<Parsed, (i32, String)> {
         }
         i += 1;
     }
+    if options.prune_days.checked_mul(86_400).is_none() {
+        return Err((
+            EXIT_INVALID,
+            "--prune-days exceeds the supported range\n".into(),
+        ));
+    }
     Ok(Parsed {
         kind,
         options,
