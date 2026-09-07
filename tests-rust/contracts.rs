@@ -288,3 +288,41 @@ fn compressed_log_errors_are_reported_instead_of_truncated() {
         alpm::events(dir.path(), aur_response::model::Campaign::AtomicArch, false).unwrap_err();
     assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
 }
+
+#[test]
+fn insufficient_evidence_never_claims_complete_summary_coverage() {
+    let dir = tempdir().unwrap();
+    for exit_code in [0, 3] {
+        let state = ScanState {
+            insufficient: true,
+            ..ScanState::default()
+        };
+        let path = report::write_summary(dir.path(), &state, exit_code, &[]).unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+        assert_eq!(json["coverage_complete"], false);
+        assert_eq!(json["exit_code"], exit_code);
+    }
+}
+
+#[test]
+fn prune_days_rejects_overflow_for_both_argument_forms() {
+    for args in [
+        vec!["--prune-days".to_owned(), u64::MAX.to_string()],
+        vec![format!("--prune-days={}", u64::MAX)],
+    ] {
+        assert_eq!(
+            cli::parse("aur-response", &args).unwrap_err().0,
+            EXIT_INVALID
+        );
+    }
+    for value in ["0", "30"] {
+        let args = vec!["--prune-days".to_owned(), value.to_owned()];
+        assert_eq!(
+            cli::parse("aur-response", &args)
+                .unwrap()
+                .options
+                .prune_days,
+            value.parse::<u64>().unwrap()
+        );
+    }
+}
