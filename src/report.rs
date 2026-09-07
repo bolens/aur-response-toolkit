@@ -125,7 +125,9 @@ pub fn write_summary(
         severity: severity(exit_code),
         ioc_registry_version: ioc::IOC_REGISTRY_VERSION,
         ioc_registry_sha256: ioc::registry_sha256(),
-        coverage_complete: state.counters.roots_unreadable == 0
+        coverage_complete: !state.insufficient
+            && state.counters.insufficient_data == 0
+            && state.counters.roots_unreadable == 0
             && state.counters.files_skipped_oversize == 0
             && state.counters.runtime_adapters_unavailable == 0,
         counters: &state.counters,

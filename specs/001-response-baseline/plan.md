@@ -39,3 +39,7 @@ Run checks in an isolated checkout. Commands are instructions, not evidence of
 a pass. Record results in `coverage.md`, keep incomplete work in `tasks.md`, and
 follow `RELEASING.md` for reviewed delivery. No live operation is required solely
 to create this retrospective baseline.
+
+## Exhaustive retrofit continuation
+
+Maintain the concrete [native legacy contracts](legacy-native-contracts.md), reproduce each supported gap before correcting it, and retain the historical receipt separately from this pass. Extend review to site, packaging, services, and development/delivery tooling. Use disposable fixtures for all recovery paths.

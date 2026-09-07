@@ -8,6 +8,8 @@ use std::os::unix::fs::OpenOptionsExt;
 
 #[cfg(target_os = "linux")]
 const O_NOFOLLOW: i32 = 0x20_000;
+#[cfg(target_os = "linux")]
+const O_NONBLOCK: i32 = 0x800;
 
 pub const MAX_TEXT_BYTES: u64 = 1_048_576;
 pub const MAX_ARTIFACT_BYTES: u64 = 16_777_216;
@@ -22,8 +24,15 @@ fn open_readonly(path: &Path) -> io::Result<File> {
     let mut options = OpenOptions::new();
     options.read(true);
     #[cfg(target_os = "linux")]
-    options.custom_flags(O_NOFOLLOW);
-    options.open(path)
+    options.custom_flags(O_NOFOLLOW | O_NONBLOCK);
+    let file = options.open(path)?;
+    if !file.metadata()?.is_file() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "evidence must be a regular file",
+        ));
+    }
+    Ok(file)
 }
 
 pub fn read(path: &Path, limit: u64) -> io::Result<Bounded<Vec<u8>>> {
@@ -105,5 +114,51 @@ mod tests {
 
         assert!(read(&link, MAX_TEXT_BYTES).is_err());
         assert!(sha256(&link, MAX_ARTIFACT_BYTES).is_err());
+    }
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn rejects_fifo_without_waiting_for_a_writer() {
+        use std::process::{Command, Stdio};
+        use std::time::{Duration, Instant};
+        const CHILD_PATH: &str = "AUR_INSPECTION_FIFO_FIXTURE";
+        if let Some(path) = std::env::var_os(CHILD_PATH) {
+            let path = Path::new(&path);
+            assert!(read(path, MAX_TEXT_BYTES).is_err());
+            assert!(sha256(path, MAX_ARTIFACT_BYTES).is_err());
+            return;
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("evidence.fifo");
+        assert!(Command::new("mkfifo")
+            .arg(&path)
+            .status()
+            .unwrap()
+            .success());
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "inspection::tests::rejects_fifo_without_waiting_for_a_writer",
+            ])
+            .env(CHILD_PATH, &path)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap();
+        let deadline = Instant::now() + Duration::from_secs(3);
+        loop {
+            if let Some(status) = child.try_wait().unwrap() {
+                assert!(
+                    status.success(),
+                    "FIFO inspection did not reject the special file"
+                );
+                break;
+            }
+            if Instant::now() >= deadline {
+                child.kill().unwrap();
+                child.wait().unwrap();
+                panic!("inspection blocked waiting for a FIFO writer");
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
     }
 }

@@ -1004,14 +1004,18 @@ impl Engine {
                         continue;
                     }
                 };
-                let evidence = re.is_match(&input)
+                let inspected = input
+                    .lines()
+                    .filter(|line| {
+                        !(line.starts_with("# Maintainer:") && line.contains("base64 -d"))
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                let evidence = re.is_match(&inspected)
                     || (configured_pattern.is_none()
-                        && (xsnow_hook_evidence(&input) || validator_loader_evidence(&input)));
-                if evidence
-                    && !input
-                        .lines()
-                        .any(|v| v.starts_with("# Maintainer:") && v.contains("base64 -d"))
-                {
+                        && (xsnow_hook_evidence(&inspected)
+                            || validator_loader_evidence(&inspected)));
+                if evidence {
                     let item = entry.path().display().to_string();
                     self.state.finding("artifacts", &item);
                     self.state.counters.artifact_critical += 1;
@@ -1329,6 +1333,7 @@ impl Engine {
         };
         let label = campaign.display_name();
         if verify {
+            let packages = packages.intersection(&installed).collect::<BTreeSet<_>>();
             if packages.is_empty() {
                 println!("VERIFY OK: no {label} packages remain installed.");
                 return EXIT_CLEAN;
@@ -1662,8 +1667,13 @@ impl Engine {
                     .unwrap_or_default()
                     .join(".npmrc");
                 if apply {
-                    let already_applied = fs::read_to_string(&path)
+                    let input = fs::read_to_string(&path);
+                    let already_applied = input
+                        .as_ref()
                         .is_ok_and(|input| input.lines().any(|line| line == "ignore-scripts=true"));
+                    let needs_newline = input
+                        .as_ref()
+                        .is_ok_and(|input| !input.is_empty() && !input.ends_with('\n'));
                     let result = if already_applied {
                         Ok(())
                     } else {
@@ -1671,7 +1681,12 @@ impl Engine {
                             .create(true)
                             .append(true)
                             .open(&path)
-                            .and_then(|mut f| writeln!(f, "ignore-scripts=true"))
+                            .and_then(|mut f| {
+                                if needs_newline {
+                                    writeln!(f)?;
+                                }
+                                writeln!(f, "ignore-scripts=true")
+                            })
                     };
                     if let Err(e) = result {
                         self.insufficient(
@@ -1699,7 +1714,8 @@ impl Engine {
             CommandKind::ConfigMigrate => unreachable!(),
         }
         let code = self.final_exit(o.fail_on);
-        if fs::create_dir_all(&self.paths.reports).is_ok() {
+        let publication = (|| -> io::Result<()> {
+            fs::create_dir_all(&self.paths.reports)?;
             if let Some(path) = &self.state.report_file {
                 let mut contents = format!(
                     "=== AUR malware response report ===\nToolkit version: {}\nStarted: {}\n\n",
@@ -1708,10 +1724,10 @@ impl Engine {
                 );
                 contents.push_str(&self.state.log.join("\n"));
                 contents.push('\n');
-                let _ = crate::config::atomic_write(path, contents.as_bytes());
+                crate::config::atomic_write(path, contents.as_bytes())?;
             }
-            let _ = report::write_state(&self.paths.reports, &self.state);
-            let _ = report::write_findings(&self.paths.reports, &self.state.findings);
+            report::write_state(&self.paths.reports, &self.state)?;
+            report::write_findings(&self.paths.reports, &self.state.findings)?;
             let atomic = self.paths.list(Campaign::AtomicArch, &self.config);
             let chaos = self.paths.list(Campaign::ChaosRat, &self.config);
             let shai = self.paths.list(Campaign::ShaiHulud, &self.config);
@@ -1719,7 +1735,7 @@ impl Engine {
             let browsh = self.paths.list(Campaign::BrowshLinuxUtils, &self.config);
             let xsnow = self.paths.list(Campaign::XsnowWorm, &self.config);
             let xeactor = self.paths.list(Campaign::Xeactor, &self.config);
-            if let Ok(path) = report::write_summary(
+            let path = report::write_summary(
                 &self.paths.reports,
                 &self.state,
                 code,
@@ -1732,29 +1748,34 @@ impl Engine {
                     (Campaign::XsnowWorm, xsnow.as_path()),
                     (Campaign::Xeactor, xeactor.as_path()),
                 ],
-            ) {
-                if o.json {
-                    if let Ok(json) = fs::read_to_string(path) {
-                        println!("{json}");
-                    }
-                }
+            )?;
+            if o.json {
+                let json = fs::read_to_string(path)?;
+                println!("{json}");
             }
-            if o.prune_days > 0 {
-                let cutoff = std::time::SystemTime::now()
-                    .checked_sub(std::time::Duration::from_secs(o.prune_days * 86_400));
-                if let (Some(cutoff), Ok(entries)) = (cutoff, fs::read_dir(&self.paths.reports)) {
-                    for entry in entries.flatten() {
-                        let path = entry.path();
-                        let pruneable = path.extension().and_then(|v| v.to_str()) == Some("log")
-                            || path.file_name().and_then(|v| v.to_str())
-                                == Some("latest-summary.json");
-                        if pruneable
-                            && fs::metadata(&path)
-                                .and_then(|m| m.modified())
-                                .is_ok_and(|mtime| mtime <= cutoff)
-                        {
-                            let _ = fs::remove_file(path);
-                        }
+            Ok(())
+        })();
+        if let Err(error) = publication {
+            eprintln!(
+                "ERROR: cannot publish report in {}: {error}",
+                self.paths.reports.display()
+            );
+            return EXIT_INSUFFICIENT;
+        }
+        if o.prune_days > 0 {
+            let cutoff = std::time::SystemTime::now()
+                .checked_sub(std::time::Duration::from_secs(o.prune_days * 86_400));
+            if let (Some(cutoff), Ok(entries)) = (cutoff, fs::read_dir(&self.paths.reports)) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    let pruneable = path.extension().and_then(|v| v.to_str()) == Some("log")
+                        || path.file_name().and_then(|v| v.to_str()) == Some("latest-summary.json");
+                    if pruneable
+                        && fs::metadata(&path)
+                            .and_then(|m| m.modified())
+                            .is_ok_and(|mtime| mtime <= cutoff)
+                    {
+                        let _ = fs::remove_file(path);
                     }
                 }
             }

@@ -3,6 +3,8 @@ use std::collections::BTreeMap;
 use std::env;
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
+#[cfg(unix)]
+use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -371,18 +373,37 @@ pub fn migrate(source: &Path, destination: &Path) -> Result<Vec<String>, String>
 pub fn atomic_write(path: &Path, data: &[u8]) -> io::Result<()> {
     static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
+    let permissions = match fs::metadata(path) {
+        Ok(metadata) if metadata.is_file() => Some(metadata.permissions()),
+        Ok(_) => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "atomic destination must be a regular file",
+            ))
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => None,
+        Err(error) => return Err(error),
+    };
     let parent = path.parent().unwrap_or_else(|| Path::new("."));
     let name = path.file_name().unwrap_or_default().to_string_lossy();
     loop {
         let sequence = TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed);
         let tmp = parent.join(format!(".{name}.tmp-{}-{sequence}", std::process::id()));
-        let mut file = match OpenOptions::new().write(true).create_new(true).open(&tmp) {
+        let mut options = OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        options.mode(0o600);
+        let mut file = match options.open(&tmp) {
             Ok(file) => file,
             Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
             Err(error) => return Err(error),
         };
         let result = file
             .write_all(data)
+            .and_then(|()| match &permissions {
+                Some(permissions) => file.set_permissions(permissions.clone()),
+                None => Ok(()),
+            })
             .and_then(|()| file.sync_all())
             .and_then(|()| fs::rename(&tmp, path));
         if result.is_err() {
@@ -425,5 +446,25 @@ mod atomic_write_tests {
         let published = fs::read_to_string(destination).unwrap();
         assert!(values.contains(&published));
         assert_eq!(fs::read_dir(working.path()).unwrap().count(), 1);
+    }
+    #[cfg(unix)]
+    #[test]
+    fn atomic_replacement_preserves_private_file_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("history");
+        fs::write(&path, "old").unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
+        atomic_write(&path, b"redacted").unwrap();
+        assert_eq!(
+            fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+        let new_path = dir.path().join("new-state");
+        atomic_write(&new_path, b"private").unwrap();
+        assert_eq!(
+            fs::metadata(&new_path).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
     }
 }
