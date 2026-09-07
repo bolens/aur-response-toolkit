@@ -6,3 +6,14 @@
 - [x] T004 Separately review the complete candidate against its requirements.
 
 Hosted checks and merge evidence belong to the delivery PR. Follow RELEASING.md.
+
+## Exhaustive retrofit pass (2026-09-06)
+
+- [ ] T005 Audit all maintained CLI, configuration, evidence, recovery, site, packaging, and delivery surfaces and record concrete legacy contracts.
+- [x] T006 Reproduce and correct FR-007 through FR-015 using disposable inventories, files, and bounded child processes.
+- [ ] T007 Complete native gates and a separate candidate review with publication scans.
+- [ ] T008 Deliver through a passing PR and verify the merge commit.
+
+- [x] T009 Reproduce and correct FR-016 freshness comparison without local-list replacement.
+
+- [x] T010 Reproduce and correct FR-017 canonical list preservation and evidence hashes.

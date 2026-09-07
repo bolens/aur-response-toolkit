@@ -80,6 +80,20 @@ pub fn write_summary(
     exit_code: i32,
     lists: &[(Campaign, &Path)],
 ) -> io::Result<PathBuf> {
+    let manifest = lists
+        .iter()
+        .find_map(|(_, path)| path.parent()?.parent())
+        .and_then(|data| integrity::load(&data.join("integrity.toml")).ok());
+    write_summary_with_manifest(reports_dir, state, exit_code, lists, manifest.as_ref())
+}
+
+pub fn write_summary_with_manifest(
+    reports_dir: &Path,
+    state: &ScanState,
+    exit_code: i32,
+    lists: &[(Campaign, &Path)],
+    manifest: Option<&integrity::Manifest>,
+) -> io::Result<PathBuf> {
     fs::create_dir_all(reports_dir)?;
     let findings = state
         .findings
@@ -92,10 +106,6 @@ pub fn write_summary(
             .find(|(candidate, _)| *candidate == campaign)
             .and_then(|(_, path)| sha256(path))
     };
-    let manifest = lists
-        .iter()
-        .find_map(|(_, path)| path.parent()?.parent())
-        .and_then(|data| integrity::load(&data.join("integrity.toml")).ok());
     let campaigns = Campaign::ALL
         .into_iter()
         .map(|campaign| {
@@ -125,7 +135,9 @@ pub fn write_summary(
         severity: severity(exit_code),
         ioc_registry_version: ioc::IOC_REGISTRY_VERSION,
         ioc_registry_sha256: ioc::registry_sha256(),
-        coverage_complete: state.counters.roots_unreadable == 0
+        coverage_complete: !state.insufficient
+            && state.counters.insufficient_data == 0
+            && state.counters.roots_unreadable == 0
             && state.counters.files_skipped_oversize == 0
             && state.counters.runtime_adapters_unavailable == 0,
         counters: &state.counters,

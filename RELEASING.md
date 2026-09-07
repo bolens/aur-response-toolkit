@@ -1,5 +1,7 @@
 # Release playbook
 
+[Documentation](docs/README.md)
+
 AUR Response Toolkit publishes Semantic Versioning releases from signed
 `vX.Y.Z` tags. `VERSION` and `Cargo.toml` must agree. The Release workflow gates
 on CI, builds the locked Rust binary, publishes its archive, and updates Arch
@@ -15,7 +17,10 @@ section, and update security or recovery guidance when behavior changed.
 cargo fmt --check
 cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked
-python3 scripts/check-changelog.py
+python3 scripts/render-changelog.py --name "AUR Response Toolkit" \
+  --base-url https://bolens.github.io/aur-response-toolkit/ \
+  --accent "#f4bf75" --social-image og.png --favicon favicon.png \
+  --output site/changelog/index.html --check
 ```
 
 Run repository contract checks documented in `CONTRIBUTING.md`. Tests and
