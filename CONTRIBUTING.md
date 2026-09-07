@@ -95,3 +95,8 @@ feat(scan): add campaign package classifier
 fix(recovery): preserve dry-run history
 test(cli): cover invalid campaign
 ```
+
+## Devcontainer
+
+See [the devcontainer guide](.devcontainer/README.md) for the repository toolchain,
+setup, checks and platform limits.
