@@ -1,5 +1,7 @@
 # Contributing
 
+[Documentation](docs/README.md)
+
 ## Setup
 
 ```console
