@@ -1,5 +1,7 @@
 # aur-response-toolkit Spec Kit project guide
 
+[Documentation](../../docs/README.md)
+
 A Rust toolkit for evidence-based AUR supply-chain detection, triage, and scoped
 recovery.
 
