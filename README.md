@@ -135,3 +135,10 @@ Threat-source attribution, implementation notes, and incident records remain in
 ## Development environment
 
 See [development environments](docs/development-environments.md) for locked Rust validation and local Docker, Podman, and Apple container tooling.
+
+## License scope and attribution
+
+See [third-party notices](THIRD_PARTY_NOTICES.md) for the project license scope,
+retained upstream notices, and dependency or asset exceptions.
+
+Full [dependency license texts](THIRD_PARTY_LICENSES.txt) accompany this source.
