@@ -1005,12 +1005,11 @@ impl Engine {
                     }
                 };
                 let inspected = input
-                    .lines()
+                    .split_inclusive('\n')
                     .filter(|line| {
                         !(line.starts_with("# Maintainer:") && line.contains("base64 -d"))
                     })
-                    .collect::<Vec<_>>()
-                    .join("\n");
+                    .collect::<String>();
                 let evidence = re.is_match(&inspected)
                     || (configured_pattern.is_none()
                         && (xsnow_hook_evidence(&inspected)

@@ -1081,3 +1081,20 @@ fn report_publication_failure_is_not_silent_success() {
         }
     }
 }
+
+#[test]
+fn heuristic_comment_filter_preserves_custom_pattern_line_endings() {
+    let home = tempdir().unwrap();
+    let cache = home.path().join("cache/package");
+    fs::create_dir_all(&cache).unwrap();
+    fs::write(cache.join("PKGBUILD"), "payload\n").unwrap();
+    let output = Command::new(binary())
+        .env("HOME", home.path())
+        .env("AUR_RESPONSE_DIR", home.path())
+        .env("AUR_DEPS_SEARCH_PATHS", home.path().join("cache"))
+        .env("AUR_SIMILAR_HEURISTICS_PATTERN", "(?s)payload\n$")
+        .args(["scan", "similar-heuristics", "--local"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1), "{output:?}");
+}
