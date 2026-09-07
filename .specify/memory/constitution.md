@@ -1,5 +1,7 @@
 # AUR Response Toolkit Constitution
 
+[Documentation](../../docs/README.md)
+
 ## Core Principles
 
 ### I. Evidence Before Remediation
