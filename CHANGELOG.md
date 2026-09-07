@@ -4,6 +4,8 @@ All notable changes to **aur-response-toolkit** are documented here.
 
 ## Unreleased
 
+- Compare fresh package names without replacing local lists, report installed
+  stale misses, and mark unavailable online evidence as incomplete.
 - Verify explicit removal targets against installed packages instead of reporting
   already absent packages as still installed.
 - Keep existing npm configuration lines intact when applying hardening to a file

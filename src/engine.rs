@@ -233,12 +233,16 @@ impl Engine {
     }
 
     fn read_list(&mut self, campaign: Campaign, quiet: bool) -> Option<BTreeSet<String>> {
-        let path = self.paths.list(campaign, &self.config);
         if !self.local_mode {
             if let Some(fetched) = self.fetch_list(campaign, quiet) {
                 return Some(fetched);
             }
         }
+        self.read_local_list(campaign, quiet)
+    }
+
+    fn read_local_list(&mut self, campaign: Campaign, quiet: bool) -> Option<BTreeSet<String>> {
+        let path = self.paths.list(campaign, &self.config);
         if !self.validate_bundled_list(campaign, &path, quiet) {
             return None;
         }
@@ -282,7 +286,7 @@ impl Engine {
         }
     }
 
-    fn fetch_list(&mut self, campaign: Campaign, quiet: bool) -> Option<BTreeSet<String>> {
+    fn fetch_remote_list(&self, campaign: Campaign) -> BTreeSet<String> {
         type Parser = fn(&str) -> BTreeSet<String>;
         let sources: Vec<(String, Parser)> = match campaign {
             Campaign::AtomicArch => vec![
@@ -373,6 +377,11 @@ impl Engine {
             let input = String::from_utf8_lossy(&output.stdout);
             merged.extend(parser(&input));
         }
+        merged
+    }
+
+    fn fetch_list(&mut self, campaign: Campaign, quiet: bool) -> Option<BTreeSet<String>> {
+        let mut merged = self.fetch_remote_list(campaign);
         let bundled = self
             .paths
             .data_lists
@@ -428,6 +437,57 @@ impl Engine {
             ),
         );
         Some(merged)
+    }
+
+    fn check_list_freshness(&mut self, quiet: bool) {
+        let Some(bundled) = self.read_local_list(Campaign::AtomicArch, quiet) else {
+            return;
+        };
+        if self.local_mode {
+            self.insufficient(
+                quiet,
+                "online freshness is unavailable in --local mode".into(),
+            );
+            return;
+        }
+        let fresh = self.fetch_remote_list(Campaign::AtomicArch);
+        if fresh.is_empty() {
+            self.insufficient(quiet, "fresh package list is empty or unavailable".into());
+            return;
+        }
+        let added: BTreeSet<_> = fresh.difference(&bundled).cloned().collect();
+        let removed: BTreeSet<_> = bundled.difference(&fresh).cloned().collect();
+        self.state.counters.list_added += added.len() as u64;
+        self.state.counters.list_removed += removed.len() as u64;
+        self.state.log(
+            quiet,
+            format!(
+                "Delta vs local snapshot: +{} added, -{} removed (local list unchanged)",
+                added.len(),
+                removed.len()
+            ),
+        );
+        for package in &added {
+            self.state.finding("list_freshness_added", package);
+        }
+        for package in &removed {
+            self.state.finding("list_freshness_removed", package);
+        }
+        let installed = match alpm::installed_packages() {
+            Ok(packages) => packages,
+            Err(error) => {
+                self.insufficient(
+                    quiet,
+                    format!("could not query installed foreign packages: {error}"),
+                );
+                return;
+            }
+        };
+        for package in installed.intersection(&added) {
+            self.state.compromise = true;
+            self.state.finding("list_staleness_installed", package);
+            self.state.log(quiet, format!("[STALE-MISS] {package}"));
+        }
     }
 
     fn cache_list(path: &Path, packages: &BTreeSet<String>) -> std::io::Result<()> {
@@ -1653,11 +1713,7 @@ impl Engine {
             CommandKind::AurWindow => self.scan_aur_window(o.quiet),
             CommandKind::Hardening => self.scan_hardening(o.quiet),
             CommandKind::Audit => self.audit(o.quiet, o.if_compromised),
-            CommandKind::ListFreshness => {
-                if self.read_list(Campaign::AtomicArch, o.quiet).is_none() {
-                    self.state.insufficient = true;
-                }
-            }
+            CommandKind::ListFreshness => self.check_list_freshness(o.quiet),
             CommandKind::RotateHints => self.rotate_hints(o.quiet),
             CommandKind::ApplyHardening => {
                 let apply = parsed.positionals.iter().any(|v| v == "--apply");

@@ -73,3 +73,5 @@ The following requirements were identified while inspecting revision
 - **FR-014**: Both `--prune-days N` and `--prune-days=N` MUST reject values whose conversion to seconds would overflow, before engine construction or report mutation. Zero continues to disable pruning.
 
 - **FR-015**: Atomic replacement MUST preserve an existing destination’s file permissions. Scrubbing a private shell history MUST NOT make it readable by additional users. New Unix atomic-output files MUST start with owner-only read/write permissions.
+
+- **FR-016**: `check list-freshness` MUST compare a validated local list with freshly fetched package names without replacing the local list or its backup. It MUST report added/removed names and installed packages found only in the fresh set as `STALE-MISS` compromise indicators. Missing or empty fresh evidence and unavailable installed inventory MUST produce incomplete coverage. `--local` MUST prevent fetching and explicitly report that online freshness cannot be established. Existing `--fail-on` policy continues to control evidence exit status.

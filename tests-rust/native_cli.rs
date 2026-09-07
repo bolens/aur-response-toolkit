@@ -1098,3 +1098,110 @@ fn heuristic_comment_filter_preserves_custom_pattern_line_endings() {
         .unwrap();
     assert_eq!(output.status.code(), Some(1), "{output:?}");
 }
+
+#[test]
+fn freshness_preserves_bundle_and_reports_installed_stale_misses() {
+    for (installed, expected) in [("fresh-package\n", 1), ("", 0)] {
+        let home = tempdir().unwrap();
+        let list = home.path().join("list.txt");
+        let remote = home.path().join("remote.txt");
+        let empty = home.path().join("empty.txt");
+        let foreign = home.path().join("foreign.txt");
+        fs::write(&list, "old-package\n").unwrap();
+        fs::write(&remote, "fresh-package\n").unwrap();
+        fs::write(&empty, "").unwrap();
+        fs::write(&foreign, installed).unwrap();
+        let output = Command::new(binary())
+            .env("HOME", home.path())
+            .env("AUR_RESPONSE_DIR", home.path())
+            .env("AUR_TEST_LIST_FILE", &list)
+            .env("AUR_LIST_URL_ARCH", format!("file://{}", empty.display()))
+            .env("AUR_LIST_URL_CSCS", format!("file://{}", empty.display()))
+            .env("AUR_LIST_URL_EXTRA", format!("file://{}", remote.display()))
+            .env("AUR_TEST_FOREIGN_LIST", &foreign)
+            .args(["check", "list-freshness", "--json"])
+            .output()
+            .unwrap();
+        assert_eq!(
+            output.status.code(),
+            Some(expected),
+            "{}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+        assert_eq!(fs::read_to_string(&list).unwrap(), "old-package\n");
+        assert!(!list.with_extension("previous.txt").exists());
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        assert_eq!(stdout.contains("[STALE-MISS] fresh-package"), expected == 1);
+        let json: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
+        assert_eq!(json["list_added"], 1);
+        assert_eq!(json["list_removed"], 1);
+        assert_eq!(json["coverage_complete"], true);
+        assert_eq!(json["findings"]["list_freshness_added"][0], "fresh-package");
+    }
+}
+
+#[test]
+fn freshness_requires_online_evidence_and_never_fetches_in_local_mode() {
+    let home = tempdir().unwrap();
+    let list = home.path().join("list.txt");
+    let empty = home.path().join("empty.txt");
+    let foreign = home.path().join("foreign.txt");
+    fs::write(&list, "old-package\n").unwrap();
+    fs::write(&empty, "").unwrap();
+    fs::write(&foreign, "").unwrap();
+    for local in [false, true] {
+        let mut command = Command::new(binary());
+        command
+            .env("HOME", home.path())
+            .env("AUR_RESPONSE_DIR", home.path())
+            .env("AUR_TEST_LIST_FILE", &list)
+            .env("AUR_LIST_URL_ARCH", format!("file://{}", empty.display()))
+            .env("AUR_LIST_URL_CSCS", format!("file://{}", empty.display()))
+            .env("AUR_LIST_URL_EXTRA", format!("file://{}", empty.display()))
+            .env("AUR_TEST_FOREIGN_LIST", &foreign)
+            .args(["check", "list-freshness", "--json"]);
+        if local {
+            command.arg("--local").env("PATH", home.path());
+        }
+        let output = command.output().unwrap();
+        assert_eq!(output.status.code(), Some(3));
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        assert!(stdout.contains(if local {
+            "online freshness is unavailable in --local mode"
+        } else {
+            "fresh package list is empty or unavailable"
+        }));
+        let json: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
+        assert_eq!(json["coverage_complete"], false);
+        assert_eq!(fs::read_to_string(&list).unwrap(), "old-package\n");
+    }
+}
+
+#[test]
+fn freshness_missing_inventory_reports_incomplete_coverage() {
+    let home = tempdir().unwrap();
+    let list = home.path().join("list.txt");
+    let remote = home.path().join("remote.txt");
+    fs::write(&list, "old-package\n").unwrap();
+    fs::write(&remote, "fresh-package\n").unwrap();
+    let output = Command::new(binary())
+        .env("HOME", home.path())
+        .env("AUR_RESPONSE_DIR", home.path())
+        .env("AUR_TEST_LIST_FILE", &list)
+        .env("AUR_LIST_URL_ARCH", format!("file://{}", remote.display()))
+        .env("AUR_LIST_URL_CSCS", format!("file://{}", remote.display()))
+        .env("AUR_LIST_URL_EXTRA", format!("file://{}", remote.display()))
+        .env(
+            "AUR_TEST_FOREIGN_LIST",
+            home.path().join("absent-inventory"),
+        )
+        .args(["check", "list-freshness", "--json"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(3));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(stdout.contains("could not query installed foreign packages"));
+    let json: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
+    assert_eq!(json["coverage_complete"], false);
+    assert_eq!(fs::read_to_string(list).unwrap(), "old-package\n");
+}

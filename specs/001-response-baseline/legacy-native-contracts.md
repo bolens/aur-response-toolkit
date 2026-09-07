@@ -20,7 +20,7 @@ Explicit migration parses `set -g NAME VALUE` as data, rejects unsupported unquo
 
 `src/integrity.rs` checks manifest version, registry digest, and canonical campaign-list digests. The registry digest covers the registry version, malware hashes, and provenance strings. Explicit alternate list paths do not receive the canonical bundled-list digest check. Text inspection is limited to 1 MiB and artifact hashing to 16 MiB. Linux inspection rejects symlinks and, under FR-009, non-regular file descriptors without waiting for FIFO writers.
 
-`src/lists.rs` parses plain package lines, stripped HTML lines, the named community-script array, and advisory separators without executing source text. Online refresh uses curl with a 20-second timeout and 1 MiB download limit per source; successful source sets are merged with a verified bundled list when available. Failure can fall back to the local list. Cache replacement retains a previous-list file and records added/removed counts. Canonical-cache and freshness behavior have open findings below.
+`src/lists.rs` parses plain package lines, stripped HTML lines, the named community-script array, and advisory separators without executing source text. Online refresh uses curl with a 20-second timeout and 1 MiB download limit per source; successful source sets are merged with a verified bundled list when available. Failure can fall back to the local list. Cache replacement retains a previous-list file and records added/removed counts. FR-016 separates freshness comparison from cache mutation: it validates the selected local list, compares fresh remote names, records added/removed names and installed stale misses, and preserves local bytes. Empty fresh evidence or unavailable installed inventory marks coverage incomplete. Local-only mode performs no fetch and cannot establish online freshness. Ordinary scan cache behavior remains open below.
 
 ## Installed packages and timelines
 
@@ -58,7 +58,7 @@ History scrubbing targets Fish by default and includes Bash/Zsh with `--all-shel
 
 These are observed gaps or candidates requiring further reproduction and correction; they are not accepted completion exceptions:
 
-- `check list-freshness` currently reads a list but does not use `list_max_age_days` to evaluate age.
+- `check list-freshness` now compares remote and local names, but `list_max_age_days` still has no age-warning consumer. Individual upstream failures can be hidden when another source returns names; per-source coverage needs further correction.
 - Online refresh can replace a canonical bundled list with a merged list while leaving its expected integrity digest unchanged; a subsequent local check needs regression coverage.
 - Missing install epochs can be labeled outside a campaign window rather than unknown.
 - Some parsed migration/configuration fields have no active consumer, including makepkg/pamac search additions and the noise-pattern setting. Migration field loss and environment parity need explicit decisions in code/specs.
