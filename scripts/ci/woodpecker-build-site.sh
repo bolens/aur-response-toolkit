@@ -5,6 +5,8 @@ mkdir -p .woodpecker-out
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 git archive HEAD | tar -x -C "$work"
+# Source policy must inspect the untouched snapshot, not rendered release links.
+cp -R "$work/site" "$work/source-site"
 python3 scripts/ci/public-release-metadata.py "$work/latest-release.json"
 (cd "$work" && python3 scripts/render-changelog.py --name "AUR Response Toolkit" --base-url https://bolens.github.io/aur-response-toolkit/ --accent "#f4bf75" --social-image og.png --favicon favicon.png --output site/changelog/index.html
 python3 - <<'METADATA'
@@ -27,7 +29,7 @@ METADATA
 version=$(cat site-version)
 python3 scripts/ci/build-site-release-metadata.py site-version "aur-response-toolkit-$version-linux-x86_64.tar.gz.sha256" "aur-response-toolkit-$version-source.tar.gz.sha256" site/release.json site/index.html
 SITE_DIR="$PWD/site" python3 scripts/ci/check-site-accessibility.py
-CHECK_EXTERNAL_LINKS=1 SITE_DIR="$PWD/site" python3 scripts/ci/check-site-links.py
+CHECK_EXTERNAL_LINKS=1 SOURCE_SITE_DIR="$PWD/source-site" SITE_DIR="$PWD/site" python3 scripts/ci/check-site-links.py
 # Chromium is confined to this unprivileged Docker job; no host sandbox/socket access.
 mkdir -p browser-bin
 printf '#!/bin/sh\nexec /usr/bin/chromium --no-sandbox "$@"\n' > browser-bin/google-chrome
