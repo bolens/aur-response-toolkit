@@ -23,7 +23,7 @@ Rules and remediations MUST have deterministic fixtures and regression tests. Re
 
 Security claims require evidence and review. Any exception that increases execution or remediation risk must be explicit, documented, and versioned.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-15 | **Last Amended**: 2026-08-15
+**Version**: 1.1.0 | **Ratified**: 2026-08-15 | **Last Amended**: 2026-11-04
 
 ### CI publisher authority
 

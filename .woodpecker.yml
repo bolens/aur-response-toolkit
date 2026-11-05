@@ -76,8 +76,8 @@ steps:
     event: tag
     evaluate: CI_FORGE_TYPE == "github" && CI_REPO == "bolens/aur-response-toolkit"
   environment:
-    GH_TOKEN:
-      from_secret: github_publish_token
+    PUBLISHER_LEASE:
+      from_secret: github_publish_lease
   commands:
   - |-
     export DEBIAN_FRONTEND=noninteractive
@@ -92,8 +92,8 @@ steps:
     branch: main
     evaluate: CI_FORGE_TYPE == "github" && CI_REPO == "bolens/aur-response-toolkit"
   environment:
-    GH_TOKEN:
-      from_secret: github_publish_token
+    PUBLISHER_LEASE:
+      from_secret: github_publish_lease
   commands:
   - |-
     export DEBIAN_FRONTEND=noninteractive
