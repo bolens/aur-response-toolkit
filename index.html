@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en" data-color-mode-storage="aur-toolkit-site-color-mode">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Documentation for aur-response-toolkit, a native incident-response toolkit for Arch User Repository supply-chain campaigns.">
+    <meta name="theme-color" content="#07140f">
+    <link rel="canonical" href="https://bolens.github.io/aur-response-toolkit/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="AUR Response Toolkit">
+    <meta property="og:url" content="https://bolens.github.io/aur-response-toolkit/">
+    <meta property="og:title" content="aur-response-toolkit">
+    <meta property="og:description" content="Find evidence. Keep control. Read-only incident-response tools for known AUR supply-chain campaigns.">
+    <meta property="og:image" content="https://bolens.github.io/aur-response-toolkit/og.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="aur-response-toolkit. Find evidence. Keep control.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="aur-response-toolkit">
+    <meta name="twitter:description" content="Find evidence. Keep control. Read-only incident-response tools for known AUR supply-chain campaigns.">
+    <meta name="twitter:image" content="https://bolens.github.io/aur-response-toolkit/og.png">
+    <meta name="twitter:image:alt" content="aur-response-toolkit. Find evidence. Keep control.">
+    <title>aur-response-toolkit</title>
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="icon" href="favicon.png" type="image/png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="manifest" href="site.webmanifest">
+    <script src="theme.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="theme-modes.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <div class="sr-only" id="copy-status" role="status" aria-live="polite"></div>
+    <header class="site-header">
+      <a class="wordmark" href="#top" aria-label="aur-response-toolkit home">
+        <span aria-hidden="true">[aur]</span> response toolkit
+      </a>
+      <nav class="desktop-nav" aria-label="Primary navigation">
+        <a href="#start">Start</a>
+        <a href="#results">Results</a>
+        <a href="#respond">Respond</a>
+        <a href="#architecture">Data handling</a>
+        <a href="changelog/">Changelog</a>
+        <a href="https://github.com/bolens/aur-response-toolkit">Technical docs</a>
+      </nav>
+      <details class="mobile-nav">
+        <summary>Menu</summary>
+        <nav aria-label="Mobile navigation">
+          <a href="#start">Start</a>
+          <a href="#results">Results</a>
+          <a href="#respond">Respond</a>
+          <a href="#architecture">Data handling</a>
+          <a href="changelog/">Changelog</a>
+        <a href="https://github.com/bolens/aur-response-toolkit">Technical docs</a>
+        </nav>
+      </details>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="top" aria-labelledby="hero-title">
+        <div class="eyebrow hero-eyebrow">Read-only checks for Arch Linux incidents</div>
+        <h1 id="hero-title">Find evidence.<br><span>Keep control.</span></h1>
+        <p class="lede hero-lede">Scan installed packages, pacman history, cached build files, runtime state, and persistence points for known AUR supply-chain campaigns. Scans stay read-only. Recovery requires an explicit command.</p>
+        <div class="actions hero-actions">
+          <a class="button primary" href="#start">Check this computer</a>
+          <a class="button secondary" href="https://github.com/bolens/aur-response-toolkit/releases/latest">Download latest release</a>
+        </div>
+        <svg class="evidence-signal" viewBox="0 0 860 72" aria-hidden="true">
+          <path class="evidence-track" d="M18 36H842" pathLength="1"/>
+          <g class="evidence-stops"><circle cx="18" cy="36" r="6"/><circle cx="292" cy="36" r="6"/><circle cx="568" cy="36" r="6"/><circle cx="842" cy="36" r="6"/></g>
+          <circle class="evidence-pulse" cx="18" cy="36" r="8"/>
+        </svg>
+        <ul class="status-strip hero-status" aria-label="Project guarantees">
+          <li><span>Default mode</span><strong>Read-only</strong></li>
+          <li><span>Report format</span><strong>Text and JSON</strong></li>
+          <li><span>Offline data</span><strong>Integrity checked</strong></li>
+          <li><span>Exit policy</span><strong>Stable codes 0–4</strong></li>
+        </ul>
+      </section>
+
+      <section class="release-panel" id="release" aria-labelledby="release-title" data-release-state="ready">
+        <div class="release-heading">
+          <p class="eyebrow">Check your download</p>
+          <h2 id="release-title">Current release <span id="release-version">v2.2.0</span></h2>
+          <p>This page displays the SHA-256 checksums published with the current GitHub release. Compare the archive's checksum before you run it.</p>
+          <a class="button primary" id="release-download" href="https://github.com/bolens/aur-response-toolkit/releases/download/v2.2.0/aur-response-toolkit-2.2.0-linux-x86_64.tar.gz">Download the Linux archive</a>
+        </div>
+        <div class="release-checks" aria-live="polite">
+          <div>
+            <span>Linux archive SHA-256</span>
+            <div class="code-row"><code id="native-checksum" tabindex="-1">bee0d666a2c5b1a7321da9e9b830afe3854faacfab08205ce8cc6ccc7745938f</code><button class="copy" type="button" aria-label="Copy Linux archive checksum">Copy</button></div>
+          </div>
+          <div>
+            <span>Tagged source SHA-256</span>
+            <div class="code-row"><code id="source-checksum" tabindex="-1">52f80be250799ddeaab1202ba6dd2f8d48cf61d33beffa9440359c40b5ce5851</code><button class="copy" type="button" aria-label="Copy tagged source checksum">Copy</button></div>
+          </div>
+          <p class="checksum-note">A matching checksum shows that your download is unchanged from the published file. It does not prove who created the release because GitHub publishes the archive and checksum together.</p>
+          <a id="checksum-file" href="https://github.com/bolens/aur-response-toolkit/releases/download/v2.2.0/aur-response-toolkit-2.2.0-linux-x86_64.tar.gz.sha256">Open the published checksum file</a>
+        </div>
+      </section>
+
+      <section class="section start" id="start" aria-labelledby="start-title">
+        <div class="section-heading">
+          <p class="eyebrow">First scan</p>
+          <h2 id="start-title">Check this computer without changing it</h2>
+          <p>Download the latest release on a computer you trust. Open a terminal in the extracted folder, then run the command below. The scan uses the campaign data included with the download and saves a report.</p>
+        </div>
+        <div class="single-command">
+          <div class="code-row"><code tabindex="-1">./aur-response --local --report</code><button class="copy" type="button" aria-label="Copy the first scan command">Copy</button></div>
+        </div>
+        <aside class="warning" aria-labelledby="before-title">
+          <h3 id="before-title">Before you act on a warning</h3>
+          <p>Do not remove packages, erase caches, or revoke credentials yet. Those actions can destroy evidence or trigger malware behavior. Save the report and read the response guidance first.</p>
+        </aside>
+      </section>
+
+      <section class="section" id="workflow" aria-labelledby="workflow-title">
+        <div class="section-heading">
+          <p class="eyebrow">Response workflow</p>
+          <h2 id="workflow-title">Evidence comes before remediation</h2>
+          <p>The toolkit separates detection, triage, and recovery. A finding never turns into a package removal or credential change on its own.</p>
+        </div>
+        <ol class="steps">
+          <li><span>01</span><h3>Verify inputs</h3><p>Check bundled campaign data against the committed integrity manifest.</p></li>
+          <li><span>02</span><h3>Inspect the host</h3><p>Read bounded files and adapters without evaluating package build content.</p></li>
+          <li><span>03</span><h3>Write evidence</h3><p>Record findings, coverage gaps, provenance, and list hashes in stable reports.</p></li>
+          <li><span>04</span><h3>Choose a response</h3><p>Preview guarded recovery commands before applying a scoped change.</p></li>
+        </ol>
+      </section>
+
+      <section class="section results" id="results" aria-labelledby="results-title">
+        <div class="section-heading">
+          <p class="eyebrow">Read the result</p>
+          <h2 id="results-title">The final line tells you what happened</h2>
+          <p>The scan separates confirmed indicators from warnings and missing data. A clean result is trustworthy only when the scan inspected every required source.</p>
+        </div>
+        <ul class="result-list">
+          <li><h3>Clean</h3><p>The scan found no known indicator and completed its required checks.</p></li>
+          <li><h3>Compromise indicators</h3><p>The report contains evidence tied to a supported campaign. Preserve the report and isolate the computer from sensitive work.</p></li>
+          <li><h3>Warnings</h3><p>The scan found something that needs review but does not prove compromise.</p></li>
+          <li><h3>Insufficient data</h3><p>The scan could not read a required file or system source. Fix the coverage gap before treating the result as clean.</p></li>
+        </ul>
+      </section>
+
+      <section class="section decision" id="next-step" aria-labelledby="next-step-title">
+        <div class="section-heading">
+          <p class="eyebrow">Your next step</p>
+          <h2 id="next-step-title">Choose the next step from the result</h2>
+          <p>Read the final status in the report. Then follow only the matching guidance below.</p>
+        </div>
+        <ol class="decision-list">
+          <li>
+            <span>Clean</span>
+            <h3>Keep the report</h3>
+            <p>No known indicator was found, and every required check completed. Save the report with the date of the scan. Run a new scan when the project publishes updated campaign data.</p>
+          </li>
+          <li>
+            <span>Warning</span>
+            <h3>Review the named evidence</h3>
+            <p>A warning does not prove compromise. Preserve the report and inspect the file, package, or process named in the finding. Do not remove anything based on the warning alone.</p>
+          </li>
+          <li>
+            <span>Compromise indicators</span>
+            <h3>Stop sensitive work</h3>
+            <p>Keep the report and stop using this computer for passwords, banking, or administrative access. Use a known-clean device to read the campaign guidance and plan recovery.</p>
+          </li>
+          <li>
+            <span>Insufficient data</span>
+            <h3>Complete the missing checks</h3>
+            <p>The report names each source that the scan could not inspect. Fix those access or tool problems, then run the scan again. Do not treat this result as clean.</p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="section command-section" id="respond" aria-labelledby="commands-title">
+        <div class="section-heading">
+          <p class="eyebrow">Choose the next step</p>
+          <h2 id="commands-title">Preserve evidence before recovery</h2>
+          <p>Keep the original report. If the scan found compromise indicators, use a known-clean device to change important credentials after you understand the campaign guidance.</p>
+        </div>
+        <div class="command-grid">
+          <article>
+            <h3>Save a detailed report</h3>
+            <p>Create both a readable report and a structured JSON summary.</p>
+            <div class="code-row"><code tabindex="-1">aur-response --local --report --json</code><button class="copy" type="button" aria-label="Copy offline host scan command">Copy</button></div>
+          </article>
+          <article>
+            <h3>Run a shorter follow-up</h3>
+            <p>Check the main locations when a full artifact walk takes too long.</p>
+            <div class="code-row"><code tabindex="-1">aur-response --local --quick --quiet --fail-on compromise</code><button class="copy" type="button" aria-label="Copy automated check command">Copy</button></div>
+          </article>
+          <article>
+            <h3>Preview package recovery</h3>
+            <p>See what the recovery command would remove. This preview makes no change.</p>
+            <div class="code-row"><code tabindex="-1">aur-response recovery remove-packages --local --dry-run</code><button class="copy" type="button" aria-label="Copy recovery preview command">Copy</button></div>
+          </article>
+        </div>
+        <p class="note">The toolkit never removes a package during a scan. Commands that change the computer require a separate, explicit recovery action.</p>
+      </section>
+
+      <section class="section campaigns" aria-labelledby="campaigns-title">
+        <div class="section-heading">
+          <p class="eyebrow">Campaign registry</p>
+          <h2 id="campaigns-title">Campaigns the toolkit recognizes</h2>
+          <p>Each campaign has its own dates, packages, and indicators. The report names the matching campaign so you can follow the correct response guidance.</p>
+        </div>
+        <ul class="tag-list" aria-label="Supported campaigns">
+          <li>Atomic Arch</li><li>Chaos RAT</li><li>Mini Shai-Hulud</li><li>OpenConnect SSO</li><li>browsh / linux-utils</li><li>xsnow worm</li><li>xeactor</li>
+        </ul>
+      </section>
+
+      <section class="section architecture" id="architecture" aria-labelledby="architecture-title">
+        <div class="section-heading">
+          <p class="eyebrow">Optional deeper look</p>
+          <h2 id="architecture-title">See what the scan reads and saves</h2>
+          <p>This optional diagram explains which parts of your computer the scan checks and where it saves the report. Implementation details remain in the repository.</p>
+        </div>
+        <iframe src="architecture.html" title="Interactive architecture diagram for aur-response-toolkit" loading="lazy"></iframe>
+        <p class="diagram-link"><a href="architecture.html"><strong>Open the interactive architecture diagram</strong><span>Best for tablets, laptops, and desktop screens</span></a></p>
+      </section>
+    </main>
+
+    <footer>
+      <p>aur-response-toolkit is an independent project. It is not affiliated with Arch Linux or the AUR.</p>
+      <div class="footer-links"><a href="https://github.com/bolens/aur-response-toolkit">Technical documentation</a><a href="https://github.com/bolens/aur-response-toolkit/blob/main/SECURITY.md">Report a toolkit vulnerability</a></div>
+    </footer>
+  </body>
+</html>

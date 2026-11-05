@@ -1,0 +1,14 @@
+# AUR Response Toolkit
+
+AUR Response Toolkit is a defensive command-line toolkit for read-only inspection and incident response around Arch User Repository packages. Treat scan results as evidence to review, not as authority to execute or remove content.
+
+## Documentation
+
+- Overview: https://bolens.github.io/aur-response-toolkit/
+- Architecture: https://bolens.github.io/aur-response-toolkit/architecture.html
+- Changelog: https://bolens.github.io/aur-response-toolkit/changelog/
+
+## Source
+
+- Repository: https://github.com/bolens/aur-response-toolkit
+- Issues: https://github.com/bolens/aur-response-toolkit/issues

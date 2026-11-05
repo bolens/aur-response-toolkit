@@ -1,0 +1,8 @@
+{
+  "native_checksum_url": "https://github.com/bolens/aur-response-toolkit/releases/download/v2.2.0/aur-response-toolkit-2.2.0-linux-x86_64.tar.gz.sha256",
+  "native_sha256": "bee0d666a2c5b1a7321da9e9b830afe3854faacfab08205ce8cc6ccc7745938f",
+  "native_url": "https://github.com/bolens/aur-response-toolkit/releases/download/v2.2.0/aur-response-toolkit-2.2.0-linux-x86_64.tar.gz",
+  "release_url": "https://github.com/bolens/aur-response-toolkit/releases/tag/v2.2.0",
+  "source_sha256": "52f80be250799ddeaab1202ba6dd2f8d48cf61d33beffa9440359c40b5ce5851",
+  "version": "2.2.0"
+}

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /aur-response-toolkit/
+
+Sitemap: https://bolens.github.io/aur-response-toolkit/sitemap.xml
