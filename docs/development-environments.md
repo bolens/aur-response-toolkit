@@ -52,3 +52,12 @@ credentials. The hosted Linux copy stays enabled until exact native PR and
 genuine merged-main proof, followed by the separate `WOODPECKER_NIX_CI=true`
 operator cutover. Native macOS and actual Docker development and editor-image checks
 remain in GitHub Actions; Linux Nix validation does not require that builder.
+
+The retained Docker export/load test reserves scratch space before installing Nix
+on GitHub-hosted Linux. Its guarded helper removes only the unused
+`/usr/local/lib/android` cache after rejecting symlink paths, separate filesystems
+and mounts, and records `du`/`df` evidence. It requires at least 24 GiB free before
+the build; the full export, Docker load and runtime tests still determine whether
+the image works. The helper defaults to a read-only plan and refuses macOS,
+self-hosted runners and containers. It never prunes Docker, Nix, tool caches or
+checkout files. Local and self-hosted development commands do not invoke it.
