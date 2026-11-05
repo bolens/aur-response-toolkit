@@ -2,6 +2,17 @@
 
 [Documentation](README.md) · [Release playbook](../RELEASING.md) · [Contributing](../CONTRIBUTING.md)
 
+Native push validation runs only on `main`; feature branches use their pull-request
+pipeline. Existing manual, tag and cron triggers remain available.
+
+AUR title/body/label metadata changes run Woodpecker's policy and commit checks,
+while Rust, Arch and Pages source validation retain their prior source-head result.
+The small GitHub `conventional-commits` job remains active for opened, edited,
+synchronized and reopened PRs. Its required context covers title edits after
+cutover: Woodpecker reports `pull_request_metadata` under a distinct context, so
+that result must never replace the required `pull_request` source-validation
+context. Keep both source validation and `conventional-commits` required.
+
 ## Authority and migration
 
 GitHub `bolens/aur-response-toolkit` is the canonical release source. The direct GitHub forge

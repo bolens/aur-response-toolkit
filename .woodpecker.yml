@@ -8,8 +8,9 @@ clone:
     settings:
       depth: 0
 when:
+- event: push
+  branch: main
 - event:
-  - push
   - pull_request
   - pull_request_metadata
   - manual
@@ -17,6 +18,8 @@ when:
   - cron
 steps:
 - name: verify
+  when:
+    evaluate: CI_PIPELINE_EVENT != "pull_request_metadata"
   image: rust:1-bookworm@sha256:c9155318d07341301a78b45ecdd81af2e43b8b297d64e8fd4c5e80d7735607c3
   environment:
     CARGO_BUILD_JOBS: '2'
@@ -43,6 +46,8 @@ steps:
   - python3 -m unittest discover -s scripts/ci -p test_woodpecker_commitlint.py
   - python3 scripts/ci/woodpecker-commitlint.py
 - name: arch
+  when:
+    evaluate: CI_PIPELINE_EVENT != "pull_request_metadata"
   image: archlinux:latest@sha256:82b1b08faae9d61e3e7e13d562f4d09114d939105b0d59ff34140f3bd418593a
   commands:
   - pacman -Sy --noconfirm archlinux-keyring
@@ -51,6 +56,8 @@ steps:
   - pacman -Sy --noconfirm rust cargo curl git iproute2 procps-ng zstd
   - cargo test --locked
 - name: pages-build
+  when:
+    evaluate: CI_PIPELINE_EVENT != "pull_request_metadata"
   image: node:26-trixie@sha256:6d2c7d5d074bf72f81ddc252b4fbb5d625bc028eeda49cb4b8c2ff8eda1ee617
   commands:
   - |-
