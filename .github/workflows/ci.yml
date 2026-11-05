@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   workflow-security:
-    if: vars.WOODPECKER_LINUX_CI != 'true'
+    if: (vars.WOODPECKER_LINUX_CI != 'true' || vars.WOODPECKER_PUBLISHING != 'true')
     name: Workflow security
     permissions:
       contents: read
@@ -25,7 +25,7 @@ jobs:
       security-audit: true
 
   packaging:
-    if: vars.WOODPECKER_LINUX_CI != 'true'
+    if: (vars.WOODPECKER_LINUX_CI != 'true' || vars.WOODPECKER_PUBLISHING != 'true')
     name: packaging
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -43,7 +43,7 @@ jobs:
             scripts/ci/check-site-links.py
 
   rust:
-    if: vars.WOODPECKER_LINUX_CI != 'true'
+    if: (vars.WOODPECKER_LINUX_CI != 'true' || vars.WOODPECKER_PUBLISHING != 'true')
     name: rust
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -64,7 +64,7 @@ jobs:
       - run: cargo test --locked
 
   arch:
-    if: vars.WOODPECKER_LINUX_CI != 'true'
+    if: (vars.WOODPECKER_LINUX_CI != 'true' || vars.WOODPECKER_PUBLISHING != 'true')
     name: arch
     runs-on: ubuntu-latest
     timeout-minutes: 25
