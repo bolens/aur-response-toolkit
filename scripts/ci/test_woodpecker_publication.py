@@ -3,8 +3,8 @@
 
 import importlib.util
 import os
-from pathlib import Path
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location(
@@ -553,6 +553,7 @@ class PublisherLeaseTests(unittest.TestCase):
         self.assertEqual(
             request.full_url, "https://woodpecker.bolens.dev/publisher/credentials"
         )
+        self.assertEqual(request.get_header("User-agent"), "woodpecker-publisher/1")
         body = json.loads(request.data)
         self.assertEqual(
             {key: body[key] for key in ["lease", "repository", "commit", "purpose"]},

@@ -7,10 +7,10 @@ import argparse
 import hashlib
 import json
 import os
-from pathlib import Path
 import re
 import subprocess
 import time
+from pathlib import Path
 
 REPOSITORY = "bolens/aur-response-toolkit"
 OUTPUT = Path(".woodpecker-out")
@@ -118,9 +118,9 @@ def credentials(minimum=120):
     """Redeem the pipeline-bound lease; keep short-lived App tokens only in memory."""
     if _coordinator_token is not None:
         return _coordinator_token
-    from datetime import datetime, timezone
     import secrets
     import urllib.request
+    from datetime import datetime, timezone
 
     global _cached_token, _cached_expiration, _mints
     now = datetime.now(timezone.utc)
@@ -151,7 +151,7 @@ def credentials(minimum=120):
                 "request_id": secrets.token_hex(16),
             }
         ).encode(),
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", "User-Agent": "woodpecker-publisher/1"},
     )
     _mints += 1
     try:
@@ -562,9 +562,9 @@ def packaging():
     )
     if len(prior) > 1:
         raise ValueError("ambiguous packaging PR history; inspect before recovery")
+    import shutil
     import tempfile
     import urllib.request
-    import shutil
 
     with tempfile.TemporaryDirectory() as directory:
         archive = Path(directory) / "source.tar.gz"
