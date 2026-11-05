@@ -15,6 +15,7 @@ concurrency:
 
 jobs:
   await-ci:
+    if: vars.WOODPECKER_PUBLISHING != 'true' && github.event_name == 'push'
     name: Await CI
     runs-on: ubuntu-latest
     timeout-minutes: 45

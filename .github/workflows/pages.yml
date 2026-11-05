@@ -27,6 +27,7 @@ concurrency:
 
 jobs:
   build:
+    if: vars.WOODPECKER_PUBLISHING != 'true'
     permissions:
       contents: read
       pages: write
@@ -90,6 +91,7 @@ jobs:
           path: ${{ runner.temp }}/site
 
   deploy:
+    if: vars.WOODPECKER_PUBLISHING != 'true'
     permissions:
       id-token: write
       pages: write
