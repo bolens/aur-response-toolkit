@@ -7,6 +7,15 @@ AUR Response Toolkit publishes Semantic Versioning releases from signed
 on CI, builds the locked Rust binary, publishes its archive, and updates Arch
 packaging through a squash-merged pull request.
 
+## Woodpecker migration
+
+[The delivery contract](docs/woodpecker-publishing.md) defines the phased native
+publisher and host cutover flags. Until cutover, use the Actions procedure below.
+After cutover, preserve the same reviewed signed-tag release procedure, follow
+the native pipeline, verify published assets and packaging PRs, and retain the
+platform exceptions documented there. Gitea reconciliation does not publish.
+AUR SSH publication remains manual. Never enable duplicate publishers.
+
 ## Prepare and validate
 
 Create `release/vX.Y.Z` from current `origin/main`. Update versions with the
@@ -58,3 +67,7 @@ with the same tooling revision pinned in
 [the workflow](.github/workflows/source-lint.yml). Review exclusions when adding
 source files; generated and imported files retain their native validation.
 Require the new check to pass on the current PR head before merging.
+
+Native publisher enablement and rollback coordinate the GitHub flag with the
+Woodpecker `config_file` profile. Follow the [profile and drain sequence](docs/woodpecker-publishing.md#validation-only-and-publishing-profiles);
+the publishing flag alone is not a complete rollback.

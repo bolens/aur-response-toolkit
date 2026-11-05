@@ -1,26 +1,113 @@
-# Portable validation on Gitea-connected Woodpecker runners. No publication credentials.
+# Linux validation and staged GitHub publication. See docs/woodpecker-publishing.md.
 labels:
   platform: linux/amd64
   backend: docker
+clone:
+  git:
+    image: woodpeckerci/plugin-git:2.6.4@sha256:d619f364acd546134a9ba06d29a9cb55156eddfc21f60307f1fdcf4e0b2aafa6
+    settings:
+      depth: 0
+      partial: false
 when:
-  - event:
-      - push
-      - pull_request
-      - manual
+- event: push
+  branch: main
+- event:
+  - pull_request
+  - pull_request_metadata
+  - manual
+  - tag
+  - cron
 steps:
-  - name: verify
-    image: rust:1-bookworm@sha256:c9155318d07341301a78b45ecdd81af2e43b8b297d64e8fd4c5e80d7735607c3
-    environment:
-      CI: 'true'
-      CARGO_BUILD_JOBS: '2'
-    commands:
-      - |-
-        export DEBIAN_FRONTEND=noninteractive
-        apt-get update
-        apt-get install -y --no-install-recommends python3 xz-utils bzip2 zstd iproute2
-      - rustup component add rustfmt clippy
-      - cargo fmt --check
-      - cargo clippy --all-targets --locked -- -D warnings
-      - cargo test --locked
-      - bash scripts/ci/test-update-release-packaging.sh
-      - bash scripts/ci/test-build-site-release-metadata.sh
+- name: verify
+  when:
+    evaluate: CI_PIPELINE_EVENT != "pull_request_metadata"
+  image: rust:1-bookworm@sha256:c9155318d07341301a78b45ecdd81af2e43b8b297d64e8fd4c5e80d7735607c3
+  environment:
+    CARGO_BUILD_JOBS: '2'
+  commands:
+  - |-
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y --no-install-recommends make python3 jq curl git xz-utils bzip2 zstd iproute2
+  - rustup component add rustfmt clippy
+  - cargo fmt --check
+  - cargo clippy --all-targets --locked -- -D warnings
+  - cargo test --locked
+  - bash scripts/ci/test-update-release-packaging.sh
+  - bash scripts/ci/test-build-site-release-metadata.sh
+  - python3 -m unittest discover -s tests -p test_development_container.py
+- name: source-and-workflow-policy
+  image: node:26-trixie@sha256:6d2c7d5d074bf72f81ddc252b4fbb5d625bc028eeda49cb4b8c2ff8eda1ee617
+  commands:
+  - |-
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y --no-install-recommends python3 python3-venv git curl shellcheck ca-certificates
+  - bash scripts/ci/woodpecker-lint.sh
+  - python3 -m unittest discover -s scripts/ci -p test_woodpecker_commitlint.py
+  - python3 scripts/ci/woodpecker-commitlint.py
+- name: arch
+  when:
+    evaluate: CI_PIPELINE_EVENT != "pull_request_metadata"
+  image: archlinux:latest@sha256:82b1b08faae9d61e3e7e13d562f4d09114d939105b0d59ff34140f3bd418593a
+  commands:
+  - pacman -Sy --noconfirm archlinux-keyring
+  - pacman-key --init
+  - pacman-key --populate archlinux
+  - pacman -Sy --noconfirm rust cargo curl git iproute2 procps-ng zstd
+  - cargo test --locked
+- name: pages-build
+  when:
+    evaluate: CI_PIPELINE_EVENT != "pull_request_metadata"
+  image: node:26-trixie@sha256:6d2c7d5d074bf72f81ddc252b4fbb5d625bc028eeda49cb4b8c2ff8eda1ee617
+  commands:
+  - |-
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y --no-install-recommends python3 git curl chromium imagemagick fonts-liberation ca-certificates
+  - python3 -m unittest discover -s scripts/ci -p test_public_release_metadata.py
+  - bash scripts/ci/woodpecker-build-site.sh
+- name: release-build
+  image: rust:1-bookworm@sha256:c9155318d07341301a78b45ecdd81af2e43b8b297d64e8fd4c5e80d7735607c3
+  environment:
+    CARGO_BUILD_JOBS: '2'
+  when:
+    event: tag
+    evaluate: CI_FORGE_TYPE == "github" && CI_REPO == "bolens/aur-response-toolkit"
+  commands:
+  - |-
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y --no-install-recommends python3 curl git make
+  - bash scripts/ci/woodpecker-build-release.sh
+# Generated validation profile ends here; protected-ref publishers follow.
+- name: release-publish
+  image: rust:1-bookworm@sha256:c9155318d07341301a78b45ecdd81af2e43b8b297d64e8fd4c5e80d7735607c3
+  when:
+    event: tag
+    evaluate: CI_FORGE_TYPE == "github" && CI_REPO == "bolens/aur-response-toolkit"
+  environment:
+    PUBLISHER_LEASE:
+      from_secret: github_publish_lease
+  commands:
+  - |-
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y --no-install-recommends python3 git gh
+  - python3 scripts/ci/woodpecker-publish.py publish
+  - python3 scripts/ci/woodpecker-publish.py packaging
+- name: pages-publish
+  image: node:26-trixie@sha256:6d2c7d5d074bf72f81ddc252b4fbb5d625bc028eeda49cb4b8c2ff8eda1ee617
+  when:
+    event: push
+    branch: main
+    evaluate: CI_FORGE_TYPE == "github" && CI_REPO == "bolens/aur-response-toolkit"
+  environment:
+    PUBLISHER_LEASE:
+      from_secret: github_publish_lease
+  commands:
+  - |-
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y --no-install-recommends python3 git gh
+  - python3 scripts/ci/woodpecker-publish.py pages --site .woodpecker-out/site
