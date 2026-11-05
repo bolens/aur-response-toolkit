@@ -7,6 +7,7 @@ clone:
     image: woodpeckerci/plugin-git:2.6.4@sha256:d619f364acd546134a9ba06d29a9cb55156eddfc21f60307f1fdcf4e0b2aafa6
     settings:
       depth: 0
+      partial: false
 when:
 - event: push
   branch: main
