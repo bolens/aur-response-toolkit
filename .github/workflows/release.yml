@@ -1,6 +1,29 @@
 name: Release
 
 on:
+  workflow_dispatch:
+    inputs:
+      woodpecker_finalize:
+        description: Verify and finish the native packaging PR
+        required: false
+        type: boolean
+        default: false
+      packaging_pr:
+        description: Native packaging PR number
+        required: false
+        type: string
+      packaging_head:
+        description: Exact verified PR head SHA
+        required: false
+        type: string
+      packaging_base:
+        description: Exact verified main base SHA
+        required: false
+        type: string
+      packaging_tree:
+        description: Exact generated packaging tree
+        required: false
+        type: string
   push:
     tags:
       - "v*"
@@ -190,3 +213,36 @@ jobs:
           [[ -n "$run_id" ]] || { echo "CI run was not scheduled" >&2; exit 1; }
           gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --exit-status
           gh pr merge "$PR" --repo "$GITHUB_REPOSITORY" --squash --delete-branch
+
+  woodpecker-packaging:
+    name: Coordinate verified native packaging merge
+    if: vars.WOODPECKER_PUBLISHING == 'true' && github.event_name == 'workflow_dispatch' && inputs.woodpecker_finalize && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: read
+      statuses: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Verify immutable native intent and coordinate protected squash merge
+        env:
+          GITHUB_COORDINATOR_TOKEN: ${{ github.token }}
+          WOODPECKER_PUBLISHING: ${{ vars.WOODPECKER_PUBLISHING }}
+          WOODPECKER_PUBLISHER_ID: ${{ vars.WOODPECKER_PUBLISHER_ID }}
+          PACKAGING_PR: ${{ inputs.packaging_pr }}
+          PACKAGING_HEAD: ${{ inputs.packaging_head }}
+          PACKAGING_BASE: ${{ inputs.packaging_base }}
+          PACKAGING_TREE: ${{ inputs.packaging_tree }}
+        run: python3 scripts/ci/woodpecker-publish.py finalize-packaging
+      - name: Retain verified completion or failure receipt
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: native-packaging-merge-receipt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .woodpecker-out/packaging-receipt.json
+          if-no-files-found: error

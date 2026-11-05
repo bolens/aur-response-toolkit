@@ -40,6 +40,7 @@ steps:
     apt-get update
     apt-get install -y --no-install-recommends python3 python3-venv git curl shellcheck ca-certificates
   - bash scripts/ci/woodpecker-lint.sh
+  - python3 -m unittest discover -s scripts/ci -p test_woodpecker_commitlint.py
   - python3 scripts/ci/woodpecker-commitlint.py
 - name: arch
   image: archlinux:latest@sha256:82b1b08faae9d61e3e7e13d562f4d09114d939105b0d59ff34140f3bd418593a
@@ -56,6 +57,7 @@ steps:
     export DEBIAN_FRONTEND=noninteractive
     apt-get update
     apt-get install -y --no-install-recommends python3 git curl chromium imagemagick fonts-liberation ca-certificates
+  - python3 -m unittest discover -s scripts/ci -p test_public_release_metadata.py
   - bash scripts/ci/woodpecker-build-site.sh
 - name: release-build
   image: rust:1-bookworm@sha256:c9155318d07341301a78b45ecdd81af2e43b8b297d64e8fd4c5e80d7735607c3

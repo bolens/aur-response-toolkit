@@ -5,26 +5,24 @@ mkdir -p .woodpecker-out
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 git archive HEAD | tar -x -C "$work"
-python3 - "$work" <<'LATEST'
-import json, sys, urllib.request
-from pathlib import Path
-with urllib.request.urlopen('https://api.github.com/repos/bolens/aur-response-toolkit/releases/latest', timeout=30) as response:
-    release = json.load(response)
-(Path(sys.argv[1]) / 'latest-release.json').write_text(json.dumps(release))
-LATEST
+python3 scripts/ci/public-release-metadata.py "$work/latest-release.json"
 (cd "$work" && python3 scripts/render-changelog.py --name "AUR Response Toolkit" --base-url https://bolens.github.io/aur-response-toolkit/ --accent "#f4bf75" --social-image og.png --favicon favicon.png --output site/changelog/index.html
 python3 - <<'METADATA'
 import json, re, urllib.request
 from pathlib import Path
 release=json.loads(Path('latest-release.json').read_text())
-tag=release['tag_name']
+tag=release['tag']
 assert re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+',tag)
 version=tag[1:]
 Path('site-version').write_text(version+'\n')
 names=[f'aur-response-toolkit-{version}-linux-x86_64.tar.gz.sha256', f'aur-response-toolkit-{version}-source.tar.gz.sha256']
 for name in names:
-    asset=next(a for a in release['assets'] if a['name']==name)
-    urllib.request.urlretrieve(asset['browser_download_url'], name)
+    url=f'https://github.com/bolens/aur-response-toolkit/releases/download/{tag}/{name}'
+    with urllib.request.urlopen(url, timeout=30) as response:
+        data=response.read(65537)
+    if len(data)>65536:
+        raise ValueError('oversized public checksum asset')
+    Path(name).write_bytes(data)
 METADATA
 version=$(cat site-version)
 python3 scripts/ci/build-site-release-metadata.py site-version "aur-response-toolkit-$version-linux-x86_64.tar.gz.sha256" "aur-response-toolkit-$version-source.tar.gz.sha256" site/release.json site/index.html
@@ -37,3 +35,5 @@ chmod +x browser-bin/google-chrome
 PATH="$PWD/browser-bin:$PATH" SITE_DIR="$PWD/site" bash scripts/ci/check-site-visual.sh)
 rm -rf .woodpecker-out/site
 cp -R "$work/site" .woodpecker-out/site
+
+cp "$work/latest-release.json" .woodpecker-out/site-release.json
