@@ -1,0 +1,23 @@
+# Portable validation on Gitea-connected Woodpecker runners. No publication credentials.
+when:
+  - event:
+      - push
+      - pull_request
+      - manual
+steps:
+  - name: verify
+    image: rust:1-bookworm@sha256:c9155318d07341301a78b45ecdd81af2e43b8b297d64e8fd4c5e80d7735607c3
+    environment:
+      CI: 'true'
+      CARGO_BUILD_JOBS: '2'
+    commands:
+      - |-
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update
+        apt-get install -y --no-install-recommends python3 xz-utils bzip2 zstd iproute2
+      - rustup component add rustfmt clippy
+      - cargo fmt --check
+      - cargo clippy --all-targets --locked -- -D warnings
+      - cargo test --locked
+      - bash scripts/ci/test-update-release-packaging.sh
+      - bash scripts/ci/test-build-site-release-metadata.sh
