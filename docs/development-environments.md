@@ -43,3 +43,11 @@ python3 scripts/development-container.py run apple -- bash scripts/check-develop
 The helper exports an OCI archive and uses `container image load`. Native ARM Macs target `aarch64-linux`; x86 Linux builds target `x86_64-linux`. [Building Linux images from macOS requires a Linux builder](https://devenv.sh/containers/). This workflow does not assume Apple container implements Docker Compose or Docker's daemon API.
 
 Apple execution is not verified by Linux tests. Native macOS CI checks the Rust toolchain and fixtures; operational package-manager integration remains Arch-specific. Follow [the release playbook](../RELEASING.md) for product release and separate recovery authorization.
+
+## Continuous integration
+
+Woodpecker runs the locked Linux `devenv test` gate in its existing source
+validation workflow without a Docker socket, host mounts or publication
+credentials. The hosted Linux copy stays enabled until the native candidate
+passes. Native macOS and actual Docker development and editor-image checks
+remain in GitHub Actions; Linux Nix validation does not require that builder.
