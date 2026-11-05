@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       environment: ${{ steps.paths.outputs.environment }}
+      devcontainer: ${{ steps.paths.outputs.devcontainer }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -53,6 +54,10 @@ jobs:
               - 'scripts/**'
               - 'tests/**'
 
+            devcontainer:
+              - '.devcontainer/**'
+              - '.github/workflows/devenv.yml'
+
   validate:
     name: devenv (${{ matrix.os }})
     needs: changes
@@ -67,7 +72,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24
+      - uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702
         with:
           extra_nix_config: |
             extra-substituters = https://devenv.cachix.org
@@ -82,16 +87,42 @@ jobs:
           python3 scripts/development-container.py build docker
           python3 scripts/development-container.py run docker -- bash scripts/check-development.sh
 
+  devcontainer:
+    name: devcontainer (Docker)
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.devcontainer == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Build VS Code development image
+        run: docker build --tag aur-response-toolkit-devcontainer-ci --file .devcontainer/Dockerfile .devcontainer
+      - name: Verify mounted checkout and post-create setup
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" \
+            --env HOME=/tmp --env CARGO_HOME=/tmp/cargo \
+            --volume "$GITHUB_WORKSPACE:/workspace" --workdir /workspace \
+            aur-response-toolkit-devcontainer-ci bash .devcontainer/post-create.sh
+
   result:
     name: Development environment
     if: always()
-    needs: [changes, validate]
+    needs: [changes, validate, devcontainer]
     runs-on: ubuntu-latest
     steps:
       - name: Require selected environment checks
         env:
           CHANGES: ${{ needs.changes.result }}
           VALIDATE: ${{ needs.validate.result }}
+          DEVCONTAINER: ${{ needs.devcontainer.result }}
+          DEVCONTAINER_SELECTED: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.devcontainer == 'true' }}
         run: |
           test "$CHANGES" = success
           case "$VALIDATE" in success|skipped) ;; *) exit 1 ;; esac
+          if test "$DEVCONTAINER_SELECTED" = true; then
+            test "$DEVCONTAINER" = success
+          else
+            case "$DEVCONTAINER" in success|skipped) ;; *) exit 1 ;; esac
+          fi
