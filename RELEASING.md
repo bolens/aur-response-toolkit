@@ -3,9 +3,11 @@
 [Documentation](docs/README.md)
 
 AUR Response Toolkit publishes Semantic Versioning releases from signed
-`vX.Y.Z` tags. `VERSION` and `Cargo.toml` must agree. The Release workflow gates
-on CI, builds the locked Rust binary, publishes its archive, and updates Arch
-packaging through a squash-merged pull request.
+annotated `vX.Y.Z` tags. `VERSION` and `Cargo.toml` must agree. With
+`WOODPECKER_PUBLISHING=true`, Woodpecker validates, builds and publishes the
+locked Rust archive, then dispatches the retained Release packaging merge
+coordinator. The legacy Release publisher is the fallback when publication is
+disabled. Arch packaging updates use protected squash-merged pull requests.
 
 ## Woodpecker migration
 
