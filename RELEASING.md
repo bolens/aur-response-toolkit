@@ -39,9 +39,14 @@ release preparation must not execute untrusted PKGBUILDs or package sources.
 
 Do not push directly to `main`. Open a pull request, require all checks,
 resolve conversations, and
-squash-merge. Confirm CI succeeds on the merge SHA, then create and push a
-signed annotated tag on that exact commit. Watch the Release workflow and its
-packaging PR.
+squash-merge. Confirm CI succeeds on the merge SHA, then create a
+signed annotated tag on that exact commit and push only that tag. With
+`WOODPECKER_PUBLISHING=true`, follow native Woodpecker validation, build and
+publication, then the retained Release packaging merge coordinator. Watch the
+packaging PR through its protected merge; a green native build alone does not
+prove packaging completion. The legacy Release publisher is the fallback only
+when publication is disabled. Follow the
+[release transaction](docs/woodpecker-publishing.md#release-transaction).
 
 Verify the release archive and checksum, run the binary's version/help and a
 fixture-backed read-only scan, confirm the packaging hash matches, and confirm

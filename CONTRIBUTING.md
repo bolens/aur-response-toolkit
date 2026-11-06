@@ -32,9 +32,13 @@ container.
    includes `data/integrity.toml` and that a local scan can validate the bundled
    campaign data.
 3. Merge the release PR only after all required GitHub checks pass.
-4. Tag the merged `main` commit as `vX.Y.Z` and push the tag.
-5. Wait for the Release workflow. It verifies CI on the tagged commit, publishes
-   the native archive and checksums, then opens a PR with the tagged source hash.
+4. Confirm checks pass on the exact merged `main` commit, then create a signed
+   annotated `vX.Y.Z` tag on that commit and push only that tag.
+5. With `WOODPECKER_PUBLISHING=true`, follow native Woodpecker validation, build
+   and publication, then the retained Release packaging merge coordinator. The
+   legacy Release publisher runs only when publication is disabled. Verify the
+   native archive, checksums and packaging PR as described in the
+   [delivery contract](docs/woodpecker-publishing.md#release-transaction).
 6. Confirm the packaging PR passes CI and merges. If automation fails, run
    `python3 scripts/ci/update-release-packaging.py X.Y.Z SOURCE_SHA256`, then
    submit the two Arch manifest changes through a focused PR.
