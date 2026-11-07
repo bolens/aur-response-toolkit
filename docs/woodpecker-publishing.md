@@ -13,6 +13,20 @@ cutover: Woodpecker reports `pull_request_metadata` under a distinct context, so
 that result must never replace the required `pull_request` source-validation
 context. Keep both source validation and `conventional-commits` required.
 
+## CI organization
+
+Use the [shared CI vocabulary](https://github.com/bolens/.github/blob/main/docs/woodpecker-transition.md#ci-organization): `validate`, `test`, `site` and `publish` describe purpose; existing workflow names and required status identities stay unchanged. Run commands from the repository root with the documented toolchain.
+
+| Phase / group | Canonical local entrypoint | Native mapping / retained owner |
+| --- | --- | --- |
+| `validate` / Rust and contracts | `cargo fmt --check`; `cargo clippy --all-targets --locked -- -D warnings`; `cargo test --locked` | `woodpecker` / `verify` runs the native suite and packaging/site metadata contracts without executing suspect package content. |
+| `validate` / source and workflow policy | `bash scripts/ci/woodpecker-lint.sh`; `python3 scripts/ci/woodpecker-commitlint.py` in its CI event context | `source-and-workflow-policy`; the helper prepares pinned Linux/amd64 tools in `.woodpecker-out`. GitHub's `conventional-commits` result remains required for title edits. |
+| `test` / Arch and development | `cargo test --locked` inside the documented Arch environment; `devenv test` | `arch` and `development-environment` retain distinct toolchains. Hosted macOS and actual Docker/editor checks remain separate. |
+| `site` / build and acceptance | `bash scripts/ci/woodpecker-build-site.sh` | `pages-build` uses a disposable source copy and public release metadata, with existing browser/accessibility checks. |
+| `publish` / Pages and releases | The signed-tag and review procedure in [RELEASING.md](../RELEASING.md) | `pages-publish` and `release-build` / `release-publish` are protected-source broker consumers. GitHub retains the packaging merge coordinator and branch-based Pages hosting; AUR SSH publication stays manual. |
+
+Duplicate hosted CI, Pages and Source lint workflows are retired. The Commitlint title check, development-environment platform exceptions, Release coordinator, managed security and metadata automation remain hosted. The profile/flag/drain rules below preserve one publisher; validation and read-only scan fixtures do not authorize a release or remediation.
+
 ## Authority and migration
 
 GitHub `bolens/aur-response-toolkit` is the canonical release source. The direct GitHub forge
