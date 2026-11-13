@@ -44,6 +44,10 @@ Record Arch-specific integration coverage separately from host-native tests. Qua
 package removal, key changes, and real incident recovery require scoped operator
 authorization.
 
+The retained `.agents/skills/speckit-taskstoissues/SKILL.md` is a project-owned
+compatibility artifact. Spec Kit no longer manages it. Preserve its local contents
+when regenerating managed skills and review any retirement as a separate change.
+
 ## Working through Spec Kit
 
 Use Spec Kit for new capabilities, architectural or security-sensitive changes,
