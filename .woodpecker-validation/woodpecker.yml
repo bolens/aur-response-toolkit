@@ -55,7 +55,7 @@ steps:
   - pacman -Sy --noconfirm archlinux-keyring
   - pacman-key --init
   - pacman-key --populate archlinux
-  - pacman -Sy --noconfirm rust cargo curl git iproute2 procps-ng zstd
+  - pacman -Syu --noconfirm rust cargo curl git iproute2 procps-ng zstd
   - cargo test --locked
 - name: development-environment
   when:
